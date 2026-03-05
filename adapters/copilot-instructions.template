@@ -1,0 +1,19 @@
+# GitHub Copilot Instructions — HOTL Project
+
+This project follows Human-on-the-Loop (HOTL) development principles.
+
+## Approach to suggestions
+
+- Suggest minimal implementations that satisfy stated requirements (YAGNI)
+- Prioritize test coverage alongside implementation
+- Flag security-sensitive patterns (hardcoded secrets, unvalidated inputs, missing auth checks)
+
+## Risk awareness
+
+When suggesting changes to auth, encryption, billing, or access control:
+- Add a comment noting this is high-risk code requiring human review
+- Do not auto-complete sensitive logic — suggest structure and let human fill in details
+
+## Verification mindset
+
+Always suggest test code alongside implementation. Prefer testable patterns.

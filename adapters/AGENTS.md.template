@@ -1,0 +1,55 @@
+# AGENTS.md — HOTL Operating Model
+
+This project follows the Human-on-the-Loop (HOTL) development model.
+AI executes autonomously within guardrails. Humans set direction and review outcomes.
+
+## Before Any Feature Work
+
+1. Define an intent contract: goal, constraints, success criteria, risk level
+2. Create a `hotl-workflow.md` with steps, loop conditions, and approval gates
+3. Execute steps autonomously using loop execution
+4. Pause at `gate: human` for human approval
+
+## Risk Levels
+
+- **low:** Auto-approve all gates. Execute autonomously.
+- **medium:** Auto-approve non-security gates. Pause at sensitive steps.
+- **high:** Always pause for human review. No auto-approval.
+
+## Always Requires Human Review (risk_level: high)
+
+- Authentication / authorization logic
+- Encryption, key management, secrets handling
+- Privacy-critical logic (PII, consent, data deletion)
+- Billing and financial correctness
+- Broad access control or multi-tenant isolation changes
+
+## Workflow Format
+
+`hotl-workflow.md` example:
+
+```markdown
+---
+intent: Add X
+success_criteria: Tests pass, feature works
+risk_level: low
+auto_approve: true
+---
+
+## Steps
+
+### 1. Write failing tests
+action: Write tests for X
+loop: false
+verify: pytest
+
+### 2. Implement X
+action: Implement until tests pass
+loop: until tests pass
+verify: pytest
+```
+
+## Self-Verification Before Claiming Done
+
+Always run tests, lint, and show output before saying work is complete.
+Never claim "done" without evidence.

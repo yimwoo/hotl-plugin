@@ -1,0 +1,24 @@
+# HOTL Rules for Cline
+
+Follow the Human-on-the-Loop operating model.
+
+## Before implementing features
+- Define intent, constraints, and success criteria first
+- Create hotl-workflow.md with steps and verification commands
+- Identify risk level (low/medium/high)
+
+## During implementation
+- For risk_level: low/medium: execute autonomously, auto-approve low-risk decisions
+- For risk_level: high: pause and ask human before security-sensitive changes
+- Loop on steps with success criteria rather than running once and hoping
+
+## Always ask human before
+- Changing authentication or authorization logic
+- Modifying encryption or key handling
+- Editing privacy-critical code (PII, consent, deletion)
+- Making broad access control changes
+
+## Before claiming done
+- Run tests and show output
+- Run linter and show output
+- Confirm the specific requested behavior works

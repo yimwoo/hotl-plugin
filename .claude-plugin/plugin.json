@@ -1,0 +1,10 @@
+{
+  "name": "hotl",
+  "description": "Human-on-the-Loop operating model: skills, workflows, and adapters for AI-native development",
+  "version": "1.0.0",
+  "author": {
+    "name": "HOTL"
+  },
+  "license": "MIT",
+  "keywords": ["hotl", "human-on-the-loop", "ai-native", "workflows", "skills"]
+}

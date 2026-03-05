@@ -1,0 +1,23 @@
+---
+description: HOTL operating model rules for this project
+---
+
+# HOTL Rules
+
+This project uses Human-on-the-Loop development.
+
+## Core behavior
+
+Before feature work: define intent + success criteria + risk level
+During implementation: self-verify at each step, loop until criteria met
+High-risk work: always pause for human approval
+
+## Risk classification
+
+low/medium: auto-approve decisions, execute autonomously
+high: auth, encryption, privacy, billing — always ask human first
+
+## Verification
+
+Never claim work is done without running tests and showing output.
+Show test results. Show lint results. Evidence before assertions.
