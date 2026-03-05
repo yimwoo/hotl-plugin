@@ -1,6 +1,6 @@
 # HOTL Plugin
 
-A Claude Code plugin implementing the Human-on-the-Loop (HOTL) operating model.
+A Code plugin implementing the Human-on-the-Loop (HOTL) operating model.
 AI executes autonomously within guardrails you define. You review outcomes, not every step.
 
 ## What Makes This Different
@@ -12,13 +12,59 @@ AI executes autonomously within guardrails you define. You review outcomes, not 
 
 ## Install
 
+> Installation differs by platform. Claude Code and Cursor have built-in plugin marketplaces. Codex and OpenCode require manual setup.
+
+### Claude Code (via Plugin Marketplace)
+
+Register the marketplace, then install:
+
+```
+/plugin marketplace add yimwoo/hotl-plugin
+/plugin install hotl@hotl-plugin
+```
+
+### Cursor (via Plugin Marketplace)
+
+In Cursor Agent chat:
+
+```
+/plugin-add hotl
+```
+
+### Codex
+
+Tell Codex:
+
+```
+Fetch and follow instructions from https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/.codex/INSTALL.md
+```
+
+Detailed docs: [docs/README.codex.md](docs/README.codex.md)
+
+### OpenCode
+
+Tell OpenCode:
+
+```
+Fetch and follow instructions from https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/.opencode/INSTALL.md
+```
+
+### Cline
+
+Tell Cline:
+
+```
+Fetch and follow instructions from https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/.cline/INSTALL.md
+```
+
+Detailed docs: [docs/README.cline.md](docs/README.cline.md)
+
+### Manual (git)
+
 ```bash
 git clone https://github.com/yimwoo/hotl-plugin
 cd hotl-plugin && bash install.sh
 ```
-
-For Codex: see [docs/README.codex.md](docs/README.codex.md)
-For Cline: see [docs/README.cline.md](docs/README.cline.md)
 
 ## Update
 
