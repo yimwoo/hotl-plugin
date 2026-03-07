@@ -1,2 +1,18 @@
 *.DS_Store
 .env
+
+# HOTL workspace artifacts
+hotl-workflow.md
+docs/plans/
+CLAUDE.md
+
+# IDEs
+.idea/
+.vscode/
+
+# Vim
+*.swp
+*.swo
+
+# Logs
+*.log
