@@ -15,7 +15,11 @@ Do NOT write any code or create any files until design is approved and hotl-work
 
 ## Process
 
-1. **Explore context** — read relevant files, recent commits, existing patterns
+1. **Explore context**
+   - If user's message references a doc path → read it
+   - Scan `docs/plans/` for existing design docs → if found, read the most recent 1-2 and summarize prior decisions
+   - If neither exists, proceed normally
+   - Also read relevant files, recent commits, existing patterns
 2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 3. **Propose 2-3 approaches** — with trade-offs and recommendation
 4. **Present design in sections** — get approval after each section

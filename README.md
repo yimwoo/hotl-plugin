@@ -84,11 +84,12 @@ Before writing any code, use brainstorming to design with intent, verification, 
 /hotl:brainstorm
 ```
 
-Claude will ask about your objective, constraints, and success criteria. It produces a design doc with three HOTL contracts before any implementation begins.
+Claude first scans `docs/plans/` for existing design docs to understand prior decisions. If you reference a doc path in your message, it reads that too. Then it asks about your objective, constraints, and success criteria. It produces a design doc with three HOTL contracts before any implementation begins.
 
 **Example:**
 ```
 You: /hotl:brainstorm
+Claude: [reads docs/plans/ for prior decisions, if any]
 Claude: What feature are you building? What are the constraints? What does success look like?
 → Produces: intent contract, verification contract, governance contract
 ```
@@ -205,5 +206,7 @@ To contribute:
 2. Create a branch for your change
 3. Submit a pull request with a clear description of what you changed and why
 4. For new skills, follow the existing skill format and include a usage example
+
+Workspace artifacts generated while developing the plugin (`hotl-workflow.md`, `docs/plans/`, `CLAUDE.md`) are gitignored and should not be committed.
 
 Bug reports and feature requests: open an issue at [github.com/yimwoo/hotl-plugin/issues](https://github.com/yimwoo/hotl-plugin/issues)
