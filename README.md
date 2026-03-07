@@ -204,9 +204,18 @@ Contributions are welcome.
 To contribute:
 1. Fork the repo: [github.com/yimwoo/hotl-plugin](https://github.com/yimwoo/hotl-plugin)
 2. Create a branch for your change
-3. Submit a pull request with a clear description of what you changed and why
-4. For new skills, follow the existing skill format and include a usage example
+3. Run `bash scripts/dev-setup.sh` to install the pre-push smoke test hook
+4. Submit a pull request with a clear description of what you changed and why
+5. For new skills, follow the existing skill format and include a usage example
 
 Workspace artifacts generated while developing the plugin (`hotl-workflow.md`, `docs/plans/`, `CLAUDE.md`) are gitignored and should not be committed.
+
+### Running Tests
+
+```bash
+bats test/smoke.bats
+```
+
+The smoke suite validates JSON files, the session-start hook output, skill and command file integrity, and hook executability. It runs automatically before every push once you've run `dev-setup.sh`. CI also runs it on every push and PR to `main`.
 
 Bug reports and feature requests: open an issue at [github.com/yimwoo/hotl-plugin/issues](https://github.com/yimwoo/hotl-plugin/issues)
