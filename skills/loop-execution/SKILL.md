@@ -1,20 +1,30 @@
 ---
 name: loop-execution
-description: Use when executing a hotl-workflow.md — reads steps, loops until success criteria met, auto-approves low-risk gates, pauses at high-risk gates.
+description: Use when executing a hotl-workflow-*.md — reads steps, loops until success criteria met, auto-approves low-risk gates, pauses at high-risk gates.
 ---
 
 # HOTL Loop Execution
 
 ## Overview
 
-Execute a `hotl-workflow.md` file autonomously. Loop on steps with success criteria. Auto-approve low-risk gates. Always pause for high-risk gates.
+Execute a `hotl-workflow-<slug>.md` file autonomously. Loop on steps with success criteria. Auto-approve low-risk gates. Always pause for high-risk gates.
 
-**Announce:** "Starting HOTL loop execution. Reading hotl-workflow.md..."
+**Announce:** "Starting HOTL loop execution. Looking for workflow file..."
+
+## Workflow File Resolution
+
+Resolve which workflow file to execute:
+
+1. If the user specified a filename (e.g., `/hotl:loop hotl-workflow-add-auth.md`) → use that file
+2. Else, glob for `hotl-workflow*.md` in project root:
+   - **One match** → use it automatically
+   - **Multiple matches** → list them and ask the user to pick
+   - **No matches** → see "What to Do If No Workflow Found" below
 
 ## Execution Algorithm
 
 ```
-1. Read hotl-workflow.md from project root
+1. Resolve workflow file (see above)
 2. Parse frontmatter: intent, risk_level, auto_approve
 3. For each step in order:
 
@@ -68,9 +78,9 @@ After each step, log one line:
 ✓ Step 4: Update docs (1 iteration)
 ```
 
-## What to Do If hotl-workflow.md Is Missing
+## What to Do If No Workflow Found
 
-If no `hotl-workflow.md` found in project root:
-"No hotl-workflow.md found. Would you like to:
+If no `hotl-workflow*.md` found in project root:
+"No workflow file found. Would you like to:
 1. Create one from a template (`/hotl:write-plan`)
 2. Use a workflow template from the plugin (`workflows/feature.md`, `workflows/bugfix.md`, `workflows/refactor.md`)"

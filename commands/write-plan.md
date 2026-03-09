@@ -1,5 +1,5 @@
 ---
-description: "Create a hotl-workflow.md implementation plan with loops and gates"
+description: "Create a hotl-workflow-<slug>.md implementation plan with loops and gates"
 disable-model-invocation: true
 ---
 

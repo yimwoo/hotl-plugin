@@ -8,7 +8,7 @@ description: Use after completing implementation steps and before merging — re
 ## Checklist
 
 **Plan alignment:**
-- [ ] All steps in hotl-workflow.md completed
+- [ ] All steps in the workflow file (`hotl-workflow-*.md`) completed
 - [ ] success_criteria from frontmatter met
 - [ ] No unplanned scope added (YAGNI)
 

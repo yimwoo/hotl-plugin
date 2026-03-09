@@ -102,11 +102,11 @@ After design approval, convert the design doc into a step-by-step execution plan
 /hotl:write-plan
 ```
 
-Produces a `hotl-workflow.md` with bite-sized tasks, exact file paths, loop definitions, and approval gates.
+Produces a `hotl-workflow-<slug>.md` (e.g., `hotl-workflow-add-auth.md`) with bite-sized tasks, exact file paths, loop definitions, and approval gates. Each plan gets a unique filename, so multiple agents can work on the same project without conflicts.
 
 ### Loop execute (autonomous)
 
-Execute `hotl-workflow.md` with loop execution and auto-approve for low-risk steps:
+Execute the workflow file with loop execution and auto-approve for low-risk steps:
 
 ```
 /hotl:loop
@@ -158,8 +158,8 @@ Generate adapter config files for Codex, Cline, Cursor, or GitHub Copilot:
 | Command | Purpose |
 |---|---|
 | `/hotl:brainstorm` | Design a feature with HOTL contracts before writing code |
-| `/hotl:write-plan` | Create a `hotl-workflow.md` plan |
-| `/hotl:loop` | Execute `hotl-workflow.md` with loop execution + auto-approve |
+| `/hotl:write-plan` | Create a `hotl-workflow-<slug>.md` plan |
+| `/hotl:loop` | Execute a workflow file with loop execution + auto-approve |
 | `/hotl:execute-plan` | Linear execution with explicit checkpoints |
 | `/hotl:dispatch` | Dispatch parallel sub-agents for independent tasks |
 | `/hotl:setup` | Generate adapter files for your team's tools |
@@ -168,7 +168,7 @@ Generate adapter config files for Codex, Cline, Cursor, or GitHub Copilot:
 
 ```
 /hotl:brainstorm  → design doc with intent/verification/governance contracts
-/hotl:write-plan  → hotl-workflow.md
+/hotl:write-plan  → hotl-workflow-<slug>.md
 /hotl:loop        → autonomous execution, auto-approve low-risk, pause at high-risk
 ```
 
@@ -177,7 +177,7 @@ Generate adapter config files for Codex, Cline, Cursor, or GitHub Copilot:
 | Skill | Description |
 |---|---|
 | `hotl:brainstorming` | Design-first with HOTL contracts |
-| `hotl:writing-plans` | Produces `hotl-workflow.md` |
+| `hotl:writing-plans` | Produces `hotl-workflow-<slug>.md` |
 | `hotl:loop-execution` | Loop execution with auto-approve |
 | `hotl:executing-plans` | Linear execution with checkpoints |
 | `hotl:dispatch-agents` | Parallel sub-agent execution |
@@ -208,7 +208,7 @@ To contribute:
 4. Submit a pull request with a clear description of what you changed and why
 5. For new skills, follow the existing skill format and include a usage example
 
-Workspace artifacts generated while developing the plugin (`hotl-workflow.md`, `docs/plans/`, `CLAUDE.md`) are gitignored and should not be committed.
+Workspace artifacts generated while developing the plugin (`hotl-workflow-*.md`, `docs/plans/`, `CLAUDE.md`) are gitignored and should not be committed.
 
 ### Running Tests
 

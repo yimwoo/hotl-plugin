@@ -1,19 +1,21 @@
 ---
 name: writing-plans
-description: Use after design approval to create a hotl-workflow.md implementation plan with bite-sized tasks, exact file paths, and loop/gate definitions.
+description: Use after design approval to create a hotl-workflow-<slug>.md implementation plan with bite-sized tasks, exact file paths, and loop/gate definitions.
 ---
 
 # Writing HOTL Plans
 
 ## Overview
 
-Produce a `hotl-workflow.md` file that `loop-execution` can execute. Each step should be 2-5 minutes of work. Include loop conditions and gates from the design's governance contract.
+Produce a `hotl-workflow-<slug>.md` file that `loop-execution` can execute. The `<slug>` is a short kebab-case name from the intent (e.g., `hotl-workflow-add-rate-limiting.md`). Each step should be 2-5 minutes of work. Include loop conditions and gates from the design's governance contract.
 
 **Announce:** "I'm using the writing-plans skill to create the implementation plan."
 
-## Output: hotl-workflow.md
+## Output Filename
 
-Save to project root. Format:
+Save to project root as `hotl-workflow-<slug>.md`, where `<slug>` is a short kebab-case slug derived from the intent (e.g., `hotl-workflow-add-user-auth.md`, `hotl-workflow-refactor-api.md`). This prevents conflicts when multiple agents work on the same project simultaneously.
+
+Format:
 
 ```markdown
 ---
@@ -53,8 +55,10 @@ Break work into atomic steps:
 
 Offer execution options:
 
-**"Plan saved to `hotl-workflow.md`. Two options:**
+**"Plan saved to `hotl-workflow-<slug>.md`. Two options:**
 1. **Loop execution (this session)** — `/hotl:loop` runs steps autonomously with auto-approve
 2. **Manual execution** — `/hotl:execute-plan` for linear execution with explicit checkpoints
 
 Which approach?"
+
+*(Always tell the user the exact filename so they can pass it to the execution command if multiple workflow files exist.)*

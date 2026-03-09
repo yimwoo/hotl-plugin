@@ -32,7 +32,7 @@ Generate the right config files so every code assistant on your team follows HOT
 
 3. Each generated file contains:
    - HOTL operating principles (intent/verification/governance contracts)
-   - Link to `hotl-workflow.md` format
+   - Link to `hotl-workflow-<slug>.md` format
    - Risk level guidelines
    - What always requires human review
 
@@ -53,7 +53,7 @@ This project follows the Human-on-the-Loop (HOTL) development model.
 ## How to Work
 
 1. Before feature work: brainstorm with intent/verification/governance contracts
-2. Create a `hotl-workflow.md` with steps, loop conditions, and gates
+2. Create a `hotl-workflow-<slug>.md` with steps, loop conditions, and gates
 3. Execute steps autonomously within guardrails
 4. Pause at `gate: human` for high-risk steps
 
@@ -72,5 +72,5 @@ This project follows the Human-on-the-Loop (HOTL) development model.
 
 ## Workflow Format
 
-See `hotl-workflow.md` in project root or `workflows/` in the plugin for templates.
+See `hotl-workflow-*.md` in project root or `workflows/` in the plugin for templates.
 ```

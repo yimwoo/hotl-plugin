@@ -1,6 +1,6 @@
-# hotl-workflow.md Format Reference
+# Workflow File Format Reference
 
-The `hotl-workflow.md` file defines work to be executed by the `loop-execution` skill.
+The workflow file (`hotl-workflow-<slug>.md`) defines work to be executed by the `loop-execution` skill. The `<slug>` is a short kebab-case name derived from the intent (e.g., `hotl-workflow-add-rate-limiting.md`). This naming convention prevents file conflicts when multiple agents work on the same project.
 
 ## Frontmatter Fields
 

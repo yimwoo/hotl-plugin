@@ -15,9 +15,9 @@ Use the `Skill` tool to invoke any of these before responding:
 | Skill | When to Use |
 |---|---|
 | `hotl:brainstorming` | Before any feature work — design with HOTL contracts |
-| `hotl:writing-plans` | After design approval — produces `hotl-workflow.md` |
+| `hotl:writing-plans` | After design approval — produces `hotl-workflow-<slug>.md` |
 | `hotl:executing-plans` | Linear execution with human checkpoints |
-| `hotl:loop-execution` | Execute a `hotl-workflow.md` with loops + auto-approve |
+| `hotl:loop-execution` | Execute a `hotl-workflow-*.md` with loops + auto-approve |
 | `hotl:dispatch-agents` | 2+ independent tasks that can run in parallel |
 | `hotl:tdd` | Before writing any implementation code |
 | `hotl:systematic-debugging` | When encountering any bug or unexpected behavior |

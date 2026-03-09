@@ -1,5 +1,5 @@
 ---
-description: "Execute hotl-workflow.md with loop execution and auto-approve"
+description: "Execute hotl-workflow-*.md with loop execution and auto-approve"
 disable-model-invocation: true
 ---
 

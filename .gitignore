@@ -2,7 +2,7 @@
 .env
 
 # HOTL workspace artifacts
-hotl-workflow.md
+hotl-workflow*.md
 docs/plans/
 CLAUDE.md
 
