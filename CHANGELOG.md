@@ -2,6 +2,18 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [1.2.0] - 2026-03-10
+
+### Added
+- **Cline integration** — 7 global rule files for brainstorming, planning, execution, TDD, debugging, and code review
+- `install-cline.sh` — one-command installer that copies rules to `~/Documents/Cline/Rules/` (applies to all projects)
+- Works with any Cline API provider: Oracle Code Assist, OpenAI, Anthropic, Google, local models
+
+### Changed
+- README rewritten with SEO-friendly content and multi-tool install instructions
+- Cline docs (`docs/README.cline.md`) expanded with FAQ, provider compatibility, workflow examples
+- `.cline/INSTALL.md` updated to reflect global rules approach
+
 ## [1.1.0] - 2026-03-10
 
 ### Added
