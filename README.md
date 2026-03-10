@@ -1,33 +1,62 @@
-# HOTL Plugin
+# HOTL Plugin — Human-on-the-Loop AI Development for Claude Code, Cline, Cursor, Codex
 
-A Code plugin implementing the Human-on-the-Loop (HOTL) operating model.
-AI executes autonomously within guardrails you define. You review outcomes, not every step.
+Stop AI from blindly writing code. HOTL (Human-on-the-Loop) enforces structured workflows — brainstorm before coding, plan before implementing, verify before claiming done. Works with Claude Code, Cline (with Oracle Code Assist, OpenAI, Anthropic, or any provider), Cursor, Codex, and GitHub Copilot.
 
-## What Makes This Different
+## Why HOTL
 
-**Loop execution:** Define steps with success criteria. Claude loops until criteria are met.
-**Auto-approve:** Low-risk gates skip automatically. High-risk gates always pause.
-**Multi-tool:** Works with Claude Code, Codex, Cline, Cursor, and GitHub Copilot.
-**Offline:** No external dependencies. Works on corporate networks without internet.
+AI coding assistants jump straight to implementation. HOTL adds guardrails:
 
-## Install
+- **Brainstorm first** — define intent, constraints, and success criteria before any code
+- **Plan before coding** — atomic steps with verification commands and approval gates
+- **Loop execution** — AI retries steps until success criteria are met, not just once
+- **Risk-aware** — low-risk gates auto-approve; high-risk gates (auth, encryption, billing) always pause for human review
+- **Multi-tool** — same workflow across Claude Code, Cline, Cursor, Codex, and Copilot
+- **Offline** — no external dependencies, works on corporate networks
 
-> Installation differs by platform. Claude Code and Cursor have built-in plugin marketplaces. Codex and OpenCode require manual setup.
+## Quick Start
 
-### Claude Code (via Plugin Marketplace)
+### Claude Code
 
-Register the marketplace, then install:
-
-```
+```text
 /plugin marketplace add yimwoo/hotl-plugin
 /plugin install hotl@hotl-plugin
 ```
 
-### Cursor (via Plugin Marketplace)
+Then use `/hotl:brainstorm`, `/hotl:write-plan`, `/hotl:loop`, etc.
+
+### Cline (VS Code)
+
+Works with any API provider — Oracle Code Assist (OCA), OpenAI, Anthropic, Google, etc.
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/install-cline.sh)
+```
+
+This one command does everything:
+
+1. Installs HOTL skills to `~/.cline/hotl/` (full skill files for on-demand reading)
+2. Copies HOTL rules to `~/Documents/Cline/Rules/` (Cline's global rules directory)
+
+**Rules apply to all projects automatically.** No per-project setup. No settings to paste.
+
+After installing, just tell Cline what you need in natural language:
+
+```text
+"brainstorm this feature"       → design with HOTL contracts before coding
+"plan the implementation"       → create a step-by-step workflow file
+"execute the plan"              → run the workflow with checkpoints
+"use TDD"                       → RED-GREEN-REFACTOR cycle
+"debug this"                    → systematic 4-phase debugging
+"review the code"               → checklist-based code review
+```
+
+Detailed docs: [docs/README.cline.md](docs/README.cline.md)
+
+### Cursor
 
 In Cursor Agent chat:
 
-```
+```text
 /plugin-add hotl
 ```
 
@@ -35,7 +64,7 @@ In Cursor Agent chat:
 
 Tell Codex:
 
-```
+```text
 Fetch and follow instructions from https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/.codex/INSTALL.md
 ```
 
@@ -45,21 +74,11 @@ Detailed docs: [docs/README.codex.md](docs/README.codex.md)
 
 Tell OpenCode:
 
-```
+```text
 Fetch and follow instructions from https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/.opencode/INSTALL.md
 ```
 
-### Cline
-
-Tell Cline:
-
-```
-Fetch and follow instructions from https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/.cline/INSTALL.md
-```
-
-Detailed docs: [docs/README.cline.md](docs/README.cline.md)
-
-### Manual (git)
+### Manual (git clone)
 
 ```bash
 git clone https://github.com/yimwoo/hotl-plugin
@@ -69,94 +88,105 @@ cd hotl-plugin && bash install.sh
 ## Update
 
 ```bash
+# Claude Code
 cd ~/.claude/plugins/hotl && git pull
+
+# Cline
+cd ~/.cline/hotl && git pull && bash install-cline.sh
 ```
 
 ---
 
-## Usage
+## How It Works
+
+### The Workflow
+
+```text
+brainstorm  →  design doc with intent/verification/governance contracts
+write-plan  →  hotl-workflow-<slug>.md with atomic steps and gates
+loop/execute →  autonomous or checkpoint-based execution with verification
+```
+
+### Three Contracts
+
+Every HOTL workflow defines:
+
+1. **Intent contract** — objective, constraints, success criteria, risk level
+2. **Verification contract** — test commands, checks, success signals for each step
+3. **Governance contract** — approval gates, rollback strategy, ownership
+
+### Risk Levels
+
+| Level | Examples | Behavior |
+| --- | --- | --- |
+| **low** | UI changes, new endpoints, non-critical features | Auto-approve gates |
+| **medium** | Schema changes, refactors, performance work | Proceed with caution |
+| **high** | Auth, encryption, privacy, billing | Always pauses for human approval |
+
+---
+
+## Usage (Claude Code)
 
 ### Brainstorm a feature
 
-Before writing any code, use brainstorming to design with intent, verification, and governance contracts:
+Before writing any code, design with intent, verification, and governance contracts:
 
-```
+```text
 /hotl:brainstorm
 ```
 
-Claude first scans `docs/plans/` for existing design docs to understand prior decisions. If you reference a doc path in your message, it reads that too. Then it asks about your objective, constraints, and success criteria. It produces a design doc with three HOTL contracts before any implementation begins.
-
-**Example:**
-```
-You: /hotl:brainstorm
-Claude: [reads docs/plans/ for prior decisions, if any]
-Claude: What feature are you building? What are the constraints? What does success look like?
-→ Produces: intent contract, verification contract, governance contract
-```
+Scans `docs/plans/` for existing design docs. Asks about your objective, constraints, and success criteria. Produces a design doc with three HOTL contracts before any implementation begins.
 
 ### Write a plan
 
 After design approval, convert the design doc into a step-by-step execution plan:
 
-```
+```text
 /hotl:write-plan
 ```
 
-Produces a `hotl-workflow-<slug>.md` (e.g., `hotl-workflow-add-auth.md`) with bite-sized tasks, exact file paths, loop definitions, and approval gates. Each plan gets a unique filename, so multiple agents can work on the same project without conflicts.
+Produces a `hotl-workflow-<slug>.md` with bite-sized tasks, verify commands, loop definitions, and approval gates.
 
 ### Loop execute (autonomous)
 
 Execute the workflow file with loop execution and auto-approve for low-risk steps:
 
-```
+```text
 /hotl:loop
 ```
 
-Claude reads each step, executes it, verifies success criteria, and loops until done. Low-risk gates auto-approve. High-risk gates (deploy, delete, push) always pause for your review.
-
-**Example flow:**
-```
-/hotl:loop
-→ Step 1: Create file X... done. Criteria met.
-→ Step 2: Run tests... failed. Retrying...
-→ Step 2: Run tests... passed. Criteria met.
-→ [HIGH-RISK GATE] About to push to main. Approve? (y/n)
-```
+Reads each step, executes it, verifies success criteria, and loops until done. High-risk gates always pause.
 
 ### Linear execute (with checkpoints)
 
-Execute a plan step by step with an explicit human checkpoint between each batch:
-
-```
+```text
 /hotl:execute-plan
 ```
 
-Use this when you want to review and approve each step before Claude proceeds.
+Executes 3 steps at a time with an explicit human checkpoint between each batch.
 
 ### Parallel agents
 
-Dispatch 2+ independent tasks to run in parallel:
-
-```
+```text
 /hotl:dispatch
 ```
 
-Claude spawns sub-agents for each independent task and consolidates results.
+Dispatches 2+ independent tasks to sub-agents running in parallel.
 
-### Setup for your team's tools
+### Setup for your team
 
-Generate adapter config files for Codex, Cline, Cursor, or GitHub Copilot:
-
-```
+```text
 /hotl:setup
 ```
 
+Generates adapter config files for Codex, Cline, Cursor, or GitHub Copilot.
+
 ---
 
-## Commands
+## Commands Reference
 
 | Command | Purpose |
-|---|---|
+| --- | --- |
 | `/hotl:brainstorm` | Design a feature with HOTL contracts before writing code |
 | `/hotl:write-plan` | Create a `hotl-workflow-<slug>.md` plan |
 | `/hotl:loop` | Execute a workflow file with loop execution + auto-approve |
@@ -164,18 +194,10 @@ Generate adapter config files for Codex, Cline, Cursor, or GitHub Copilot:
 | `/hotl:dispatch` | Dispatch parallel sub-agents for independent tasks |
 | `/hotl:setup` | Generate adapter files for your team's tools |
 
-## The Workflow
-
-```
-/hotl:brainstorm  → design doc with intent/verification/governance contracts
-/hotl:write-plan  → hotl-workflow-<slug>.md
-/hotl:loop        → autonomous execution, auto-approve low-risk, pause at high-risk
-```
-
 ## Skills Reference
 
 | Skill | Description |
-|---|---|
+| --- | --- |
 | `hotl:brainstorming` | Design-first with HOTL contracts |
 | `hotl:writing-plans` | Produces `hotl-workflow-<slug>.md` |
 | `hotl:loop-execution` | Loop execution with auto-approve |
@@ -190,8 +212,10 @@ Generate adapter config files for Codex, Cline, Cursor, or GitHub Copilot:
 ## Multi-Tool Support
 
 Run `/hotl:setup` to generate config files for your team's tools:
+
+- **Claude Code:** Plugin with skills, commands, and hooks
+- **Cline:** Global rules in `~/Documents/Cline/Rules/`
 - **Codex:** `AGENTS.md`
-- **Cline:** `.clinerules`
 - **Cursor:** `.cursor/rules/hotl.md`
 - **GitHub Copilot:** `.github/copilot-instructions.md`
 
@@ -202,6 +226,7 @@ Run `/hotl:setup` to generate config files for your team's tools:
 Contributions are welcome.
 
 To contribute:
+
 1. Fork the repo: [github.com/yimwoo/hotl-plugin](https://github.com/yimwoo/hotl-plugin)
 2. Create a branch for your change
 3. Run `bash scripts/dev-setup.sh` to install the pre-push smoke test hook

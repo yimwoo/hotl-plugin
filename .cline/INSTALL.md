@@ -1,45 +1,42 @@
 # Installing HOTL for Cline
 
-Cline uses `.clinerules` files in your project root to define AI behaviour rules.
+One command. No settings to paste. Works with any API provider (Oracle Code Assist, OpenAI, Anthropic, etc.).
 
-## Prerequisites
+## Install
 
-- Git
-- [Cline](https://github.com/cline/cline) extension installed in VS Code
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/install-cline.sh)
+```
 
-## Installation
-
-### 1. Clone the HOTL repository
+Or clone first:
 
 ```bash
 git clone https://github.com/yimwoo/hotl-plugin.git ~/.cline/hotl
+bash ~/.cline/hotl/install-cline.sh
 ```
 
-### 2. Copy the rules template into your project
+## What Happens
 
-```bash
-cp ~/.cline/hotl/adapters/.clinerules.template /path/to/your/project/.clinerules
-```
+1. HOTL skills install to `~/.cline/hotl/`
+2. HOTL rules install to `~/Documents/Cline/Rules/` (Cline's global rules directory)
 
-Edit `.clinerules` to add any project-specific guidelines on top of the HOTL defaults.
+Rules apply to **all projects** automatically. No per-project setup needed. Start a new Cline task to activate.
 
-### 3. (Optional) Generate via Claude Code
+## How to Use
 
-If you have Claude Code with HOTL installed, run `/hotl:setup` in your project to auto-generate `.clinerules`.
+Tell Cline what you need:
 
-## What the Rules Do
-
-The `.clinerules` file instructs Cline to:
-- Define intent, constraints, and success criteria before implementing features
-- Loop on steps with success criteria rather than running once
-- Pause for human approval on high-risk changes (auth, encryption, billing)
-- Show test and lint output before claiming work is done
+- **"brainstorm this feature"** — design with contracts before coding
+- **"plan the implementation"** — create a workflow file with steps and gates
+- **"execute the plan"** — run the workflow with checkpoints
+- **"use TDD"** — RED-GREEN-REFACTOR cycle
+- **"debug this"** — systematic 4-phase debugging
+- **"review the code"** — checklist-based code review
 
 ## Updating
 
 ```bash
-cd ~/.cline/hotl && git pull
-cp ~/.cline/hotl/adapters/.clinerules.template /path/to/your/project/.clinerules
+cd ~/.cline/hotl && git pull && bash install-cline.sh
 ```
 
 ## More
