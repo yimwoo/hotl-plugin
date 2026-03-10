@@ -2,6 +2,13 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [1.4.0] - 2026-03-10
+
+### Added
+- **Unified update script** (`update.sh`) — single command updates both Claude Code and Cline installations, refreshes plugin cache and global rules
+- **README rewrite** — end-to-end workflow examples, natural language trigger showcase, SEO-friendly structure
+- **Realistic execution example** — Python FastAPI rate limiter walkthrough replacing generic placeholder
+
 ## [1.3.0] - 2026-03-10
 
 ### Added
