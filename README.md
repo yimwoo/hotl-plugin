@@ -1,19 +1,48 @@
-# HOTL Plugin — Human-on-the-Loop AI Development for Claude Code, Cline, Cursor, Codex
+# HOTL — Human-on-the-Loop AI Development for Claude Code, Cline, Cursor, Codex
 
-Stop AI from blindly writing code. HOTL (Human-on-the-Loop) enforces structured workflows — brainstorm before coding, plan before implementing, verify before claiming done. Works with Claude Code, Cline (with Oracle Code Assist, OpenAI, Anthropic, or any provider), Cursor, Codex, and GitHub Copilot.
+Stop AI from blindly writing code. HOTL enforces structured workflows — brainstorm before coding, plan before implementing, verify before claiming done. One natural language request triggers the entire pipeline automatically.
 
-## Why HOTL
+Works with **Claude Code**, **Cline** (Oracle Code Assist, OpenAI, Anthropic, any provider), **Cursor**, **Codex**, and **GitHub Copilot**. No external dependencies. Works offline on corporate networks.
 
-AI coding assistants jump straight to implementation. HOTL adds guardrails:
+---
 
-- **Brainstorm first** — define intent, constraints, and success criteria before any code
-- **Plan before coding** — atomic steps with verification commands and approval gates
-- **Loop execution** — AI retries steps until success criteria are met, not just once
-- **Risk-aware** — low-risk gates auto-approve; high-risk gates (auth, encryption, billing) always pause for human review
-- **Multi-tool** — same workflow across Claude Code, Cline, Cursor, Codex, and Copilot
-- **Offline** — no external dependencies, works on corporate networks
+## Just Tell It What You Want
 
-## Quick Start
+You don't call skills one by one. Describe what you need, and HOTL handles the workflow:
+
+```text
+You:  "Help me add user authentication to this FastAPI app"
+
+HOTL: → Brainstorm: asks about auth method, session handling, security constraints
+      → Design doc saved with intent/verification/governance contracts
+      → Plan: creates hotl-workflow-add-auth.md with 9 atomic steps
+      → Execute: writes tests first, implements, retries on failure, pauses at security gates
+      → Review: verifies all tests pass, lint clean, contracts met
+```
+
+```text
+You:  "Let's debug why the payment webhook is timing out"
+
+HOTL: → Reproduce: finds minimal reproduction case
+      → Understand: reads error logs, traces call path, checks recent commits
+      → Hypothesize: forms 2 theories (connection pool exhaustion vs retry storm)
+      → Fix + Verify: patches root cause, runs reproduction, full test suite passes
+```
+
+```text
+You:  "Plan and build a rate limiter for our API"
+
+HOTL: → Brainstorm: proposes sliding window vs token bucket vs fixed window
+      → Design doc with contracts: 60 req/min default, Redis-backed, human gate on config
+      → Plan: 7 steps from failing test to Docker build
+      → Loop execute: retries automatically on test failures, pauses at security gate
+```
+
+HOTL picks the right skills based on what you say. No memorizing commands.
+
+---
+
+## Install
 
 ### Claude Code
 
@@ -22,39 +51,19 @@ AI coding assistants jump straight to implementation. HOTL adds guardrails:
 /plugin install hotl@hotl-plugin
 ```
 
-Then use `/hotl:brainstorm`, `/hotl:write-plan`, `/hotl:loop`, etc.
-
 ### Cline (VS Code)
 
-Works with any API provider — Oracle Code Assist (OCA), OpenAI, Anthropic, Google, etc.
+Works with any API provider — Oracle Code Assist, OpenAI, Anthropic, Google, local models.
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/install-cline.sh)
 ```
 
-This one command does everything:
-
-1. Installs HOTL skills to `~/.cline/hotl/` (full skill files for on-demand reading)
-2. Copies HOTL rules to `~/Documents/Cline/Rules/` (Cline's global rules directory)
-
-**Rules apply to all projects automatically.** No per-project setup. No settings to paste.
-
-After installing, just tell Cline what you need in natural language:
-
-```text
-"brainstorm this feature"       → design with HOTL contracts before coding
-"plan the implementation"       → create a step-by-step workflow file
-"execute the plan"              → run the workflow with checkpoints
-"use TDD"                       → RED-GREEN-REFACTOR cycle
-"debug this"                    → systematic 4-phase debugging
-"review the code"               → checklist-based code review
-```
+Installs globally. Rules apply to all projects. No per-project setup.
 
 Detailed docs: [docs/README.cline.md](docs/README.cline.md)
 
 ### Cursor
-
-In Cursor Agent chat:
 
 ```text
 /plugin-add hotl
@@ -62,110 +71,76 @@ In Cursor Agent chat:
 
 ### Codex
 
-Tell Codex:
-
 ```text
 Fetch and follow instructions from https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/.codex/INSTALL.md
 ```
 
-Detailed docs: [docs/README.codex.md](docs/README.codex.md)
-
-### OpenCode
-
-Tell OpenCode:
-
-```text
-Fetch and follow instructions from https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/.opencode/INSTALL.md
-```
-
-### Manual (git clone)
+### Manual
 
 ```bash
 git clone https://github.com/yimwoo/hotl-plugin
 cd hotl-plugin && bash install.sh
 ```
 
-## Update
+### Update
 
-One script updates both Claude Code and Cline (whichever is installed):
+One script updates all installed platforms:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh)
 ```
 
-Or if already cloned:
-
-```bash
-bash ~/.claude/plugins/hotl/update.sh
-# or
-bash ~/.cline/hotl/update.sh
-```
-
-This pulls the latest code, refreshes the Claude Code plugin cache, and syncs Cline global rules — all automatically.
+Pulls latest code, refreshes Claude Code plugin cache, syncs Cline global rules.
 
 ---
 
-## How It Works
+## End-to-End Workflow
 
-### The Workflow
+Here's what happens when you say **"help me add rate limiting to our API"**:
 
-```text
-brainstorm  →  design doc with intent/verification/governance contracts
-write-plan  →  hotl-workflow-<slug>.md with atomic steps and gates
-loop/execute →  autonomous or checkpoint-based execution with verification
+### 1. Brainstorm
+
+HOTL asks clarifying questions one at a time, proposes 2-3 approaches with trade-offs, then defines three contracts:
+
+```yaml
+# Intent Contract
+intent: Add Redis-backed sliding window rate limiter to FastAPI service
+constraints: Must not break existing auth middleware; no new external dependencies beyond Redis
+success_criteria: Rate limiter returns 429 after threshold; configurable per-endpoint
+risk_level: medium
+
+# Verification Contract
+verify_steps:
+  - run tests: pytest tests/test_rate_limiter.py
+  - check: 429 response after exceeding limit
+  - confirm: existing test suite still passes
+
+# Governance Contract
+approval_gates: rate limit config review (security-sensitive)
+rollback: revert rate limiter middleware registration
+ownership: you
 ```
 
-### Three Contracts
+Design doc saved to `docs/plans/2026-03-10-rate-limiter-design.md`.
 
-Every HOTL workflow defines:
+### 2. Plan
 
-1. **Intent contract** — objective, constraints, success criteria, risk level
-2. **Verification contract** — test commands, checks, success signals for each step
-3. **Governance contract** — approval gates, rollback strategy, ownership
+HOTL creates `hotl-workflow-add-rate-limiter.md` with atomic steps:
 
-### Risk Levels
-
-| Level | Examples | Behavior |
-| --- | --- | --- |
-| **low** | UI changes, new endpoints, non-critical features | Auto-approve gates |
-| **medium** | Schema changes, refactors, performance work | Proceed with caution |
-| **high** | Auth, encryption, privacy, billing | Always pauses for human approval |
-
+```yaml
 ---
-
-## Usage (Claude Code)
-
-### Brainstorm a feature
-
-Before writing any code, design with intent, verification, and governance contracts:
-
-```text
-/hotl:brainstorm
+intent: Add Redis-backed sliding window rate limiter to FastAPI service
+success_criteria: 429 after threshold, configurable per-endpoint, all tests pass
+risk_level: medium
+auto_approve: true
+---
 ```
 
-Scans `docs/plans/` for existing design docs. Asks about your objective, constraints, and success criteria. Produces a design doc with three HOTL contracts before any implementation begins.
+Each step has an action, loop condition, verify command, and optional gate.
 
-### Write a plan
+### 3. Execute
 
-After design approval, convert the design doc into a step-by-step execution plan:
-
-```text
-/hotl:write-plan
-```
-
-Produces a `hotl-workflow-<slug>.md` with bite-sized tasks, verify commands, loop definitions, and approval gates.
-
-### Loop execute (autonomous)
-
-Execute the workflow file with loop execution and auto-approve for low-risk steps:
-
-```text
-/hotl:loop
-```
-
-Reads each step, executes it, verifies success criteria, and loops until done. High-risk gates always pause.
-
-**Example — adding a rate limiter to a Python FastAPI service:**
+HOTL runs each step, retries on failure, pauses at gates:
 
 ```text
 → Step 1: Write failing test for rate limit middleware
@@ -200,7 +175,7 @@ Reads each step, executes it, verifies success criteria, and loops until done. H
 ✓ Step 7: Docker build + health check passed (1 iteration)
 ```
 
-**Execution summary:**
+### 4. Summary
 
 | Step | Status | Iterations |
 | --- | --- | --- |
@@ -212,85 +187,90 @@ Reads each step, executes it, verifies success criteria, and loops until done. H
 | 6. Review rate limit config | done | 1 (human gate) |
 | 7. Build Docker image | done | 1 |
 
-Steps that fail verification retry automatically (up to `max_iterations`). High-risk gates always pause for human approval regardless of `auto_approve` setting.
-
-### Linear execute (with checkpoints)
-
-```text
-/hotl:execute-plan
-```
-
-Executes 3 steps at a time with an explicit human checkpoint between each batch.
-
-### Parallel agents
-
-```text
-/hotl:dispatch
-```
-
-Dispatches 2+ independent tasks to sub-agents running in parallel.
-
-### Setup for your team
-
-```text
-/hotl:setup
-```
-
-Generates adapter config files for Codex, Cline, Cursor, or GitHub Copilot.
+Steps retry automatically on failure. High-risk gates always pause for human approval.
 
 ---
 
-## Commands Reference
+## How It Works
 
-| Command | Purpose |
-| --- | --- |
-| `/hotl:brainstorm` | Design a feature with HOTL contracts before writing code |
-| `/hotl:write-plan` | Create a `hotl-workflow-<slug>.md` plan |
-| `/hotl:loop` | Execute a workflow file with loop execution + auto-approve |
-| `/hotl:execute-plan` | Linear execution with explicit checkpoints |
-| `/hotl:dispatch` | Dispatch parallel sub-agents for independent tasks |
-| `/hotl:setup` | Generate adapter files for your team's tools |
+### Three Contracts
+
+Every HOTL workflow defines:
+
+1. **Intent contract** — what you're building, what must not break, how you know it's done
+2. **Verification contract** — test commands and checks for each step
+3. **Governance contract** — which steps need human approval, how to roll back
+
+### Document Review
+
+Before execution, HOTL validates your design docs and plans:
+
+- **Structural lint** (`scripts/document-lint.sh`) — deterministic checks, runs in CI or locally
+- **AI review** (`hotl:document-review`) — catches YAGNI violations, oversized steps, missing gates
+
+Lint failures are hard blockers. AI review concerns can be human-overridden.
+
+### Risk Levels
+
+| Level | Examples | Behavior |
+| --- | --- | --- |
+| **low** | UI changes, new endpoints, non-critical features | Auto-approve gates |
+| **medium** | Schema changes, refactors, performance work | Proceed with caution |
+| **high** | Auth, encryption, privacy, billing | Always pauses for human approval |
+
+---
 
 ## Skills Reference
 
-| Skill | Description |
+HOTL automatically selects the right skill based on your request:
+
+| Skill | Triggered by | What it does |
+| --- | --- | --- |
+| `hotl:brainstorming` | "brainstorm", "design this", "let's think about" | Explores intent, proposes approaches, defines three contracts |
+| `hotl:writing-plans` | "plan this", "create a workflow" | Creates `hotl-workflow-<slug>.md` with atomic steps and gates |
+| `hotl:loop-execution` | "execute", "run the plan", "loop" | Autonomous execution with retries and auto-approve |
+| `hotl:executing-plans` | "execute with checkpoints" | Linear execution with human review every 3 steps |
+| `hotl:document-review` | "review the design", "check the plan" | Two-phase review: structural lint + AI quality check |
+| `hotl:tdd` | "use TDD", "test first" | RED-GREEN-REFACTOR cycle |
+| `hotl:systematic-debugging` | "debug this", "why is this failing" | 4-phase: reproduce, understand, hypothesize, fix |
+| `hotl:code-review` | "review the code" | Checklist review with BLOCK/WARN/NOTE severity |
+| `hotl:dispatch-agents` | "run these in parallel" | Dispatches independent tasks to sub-agents |
+| `hotl:verification-before-completion` | (automatic before claiming done) | Runs tests, linter, confirms behavior — evidence before assertions |
+| `hotl:setup-project` | "set up HOTL for my team" | Generates adapter files for Codex, Cline, Cursor, Copilot |
+
+### Commands (Claude Code)
+
+| Command | Purpose |
 | --- | --- |
-| `hotl:brainstorming` | Design-first with HOTL contracts |
-| `hotl:writing-plans` | Produces `hotl-workflow-<slug>.md` |
-| `hotl:loop-execution` | Loop execution with auto-approve |
-| `hotl:executing-plans` | Linear execution with checkpoints |
-| `hotl:dispatch-agents` | Parallel sub-agent execution |
-| `hotl:tdd` | RED-GREEN-REFACTOR cycle |
-| `hotl:systematic-debugging` | 4-phase root cause process |
-| `hotl:code-review` | BLOCK/WARN/NOTE review against plan |
-| `hotl:verification-before-completion` | Evidence before claiming done |
-| `hotl:setup-project` | Generate multi-tool adapter files |
+| `/hotl:brainstorm` | Design a feature with HOTL contracts |
+| `/hotl:write-plan` | Create an implementation plan |
+| `/hotl:loop` | Autonomous execution with auto-approve |
+| `/hotl:execute-plan` | Linear execution with checkpoints |
+| `/hotl:dispatch` | Parallel sub-agent execution |
+| `/hotl:setup` | Generate adapter files for your team |
+
+---
 
 ## Multi-Tool Support
 
-Run `/hotl:setup` to generate config files for your team's tools:
+| Tool | How HOTL integrates |
+| --- | --- |
+| **Claude Code** | Plugin with skills, commands, and hooks — fully automatic |
+| **Cline** | Global rules in `~/Documents/Cline/Rules/` — works with any API provider |
+| **Cursor** | Plugin marketplace |
+| **Codex** | `AGENTS.md` adapter |
+| **GitHub Copilot** | `.github/copilot-instructions.md` |
 
-- **Claude Code:** Plugin with skills, commands, and hooks
-- **Cline:** Global rules in `~/Documents/Cline/Rules/`
-- **Codex:** `AGENTS.md`
-- **Cursor:** `.cursor/rules/hotl.md`
-- **GitHub Copilot:** `.github/copilot-instructions.md`
+Run `/hotl:setup` to generate the right config files for your team.
 
 ---
 
 ## Contributing
 
-Contributions are welcome.
-
-To contribute:
-
 1. Fork the repo: [github.com/yimwoo/hotl-plugin](https://github.com/yimwoo/hotl-plugin)
 2. Create a branch for your change
 3. Run `bash scripts/dev-setup.sh` to install the pre-push smoke test hook
-4. Submit a pull request with a clear description of what you changed and why
-5. For new skills, follow the existing skill format and include a usage example
-
-Workspace artifacts generated while developing the plugin (`hotl-workflow-*.md`, `docs/plans/`, `CLAUDE.md`) are gitignored and should not be committed.
+4. Submit a pull request
 
 ### Running Tests
 
@@ -298,6 +278,6 @@ Workspace artifacts generated while developing the plugin (`hotl-workflow-*.md`,
 bats test/smoke.bats
 ```
 
-The smoke suite validates JSON files, the session-start hook output, skill and command file integrity, and hook executability. It runs automatically before every push once you've run `dev-setup.sh`. CI also runs it on every push and PR to `main`.
+Validates JSON files, session-start hook output, skill and command file integrity, and hook executability. Runs automatically before every push and in CI.
 
-Bug reports and feature requests: open an issue at [github.com/yimwoo/hotl-plugin/issues](https://github.com/yimwoo/hotl-plugin/issues)
+Bug reports and feature requests: [github.com/yimwoo/hotl-plugin/issues](https://github.com/yimwoo/hotl-plugin/issues)
