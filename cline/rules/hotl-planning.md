@@ -24,7 +24,7 @@ auto_approve: true | false
 
 ## Steps
 
-### N. [Step name]
+- [ ] **Step N: [Step name]**
 action: [what to do]
 loop: false | until [condition]
 max_iterations: [number, default 3]
@@ -53,4 +53,4 @@ Examples:
 
 ### After Saving the Plan
 
-Ask the user: "Plan saved to `hotl-workflow-<slug>.md`. Ready to execute?" Do NOT auto-execute. Wait for explicit approval.
+Ask the user to run document review on the workflow, then offer loop, manual, or subagent execution. Do NOT auto-execute. Wait for explicit approval.

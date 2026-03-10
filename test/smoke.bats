@@ -57,3 +57,8 @@ assert len(data['additional_context']) > 0, 'additional_context is empty'
 @test "hooks/run-hook.cmd is executable" {
     [ -x "$REPO_ROOT/hooks/run-hook.cmd" ]
 }
+
+@test "document-lint accepts checkbox-style workflow steps" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/hotl-workflow-add-subagent-execution.md"
+    [ "$status" -eq 0 ]
+}

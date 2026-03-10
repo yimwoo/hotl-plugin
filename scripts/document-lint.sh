@@ -38,6 +38,40 @@ fi
 
 CONTENT="$(cat "$FILE")"
 
+is_step_header() {
+    local line="$1"
+    echo "$line" | grep -Eq '^### [0-9]+\.|^- \[[ xX]\] \*\*Step [0-9]+:'
+}
+
+step_name_from_line() {
+    local line="$1"
+    if echo "$line" | grep -Eq '^### [0-9]+\.'; then
+        echo "$line" | sed -E 's/^### [0-9]+\. //'
+    else
+        echo "$line" | sed -E 's/^- \[[ xX]\] \*\*Step [0-9]+:[[:space:]]*(.*)\*\*$/\1/'
+    fi
+}
+
+check_step_block() {
+    local step_name="$1"
+    local step_block="$2"
+
+    printf '%s\n' "$step_block" | grep -qi '^action:' || error "Step '$step_name' missing 'action:' field"
+    printf '%s\n' "$step_block" | grep -qi '^loop:' || error "Step '$step_name' missing 'loop:' field"
+
+    if printf '%s\n' "$step_block" | grep -qi '^loop:.*until'; then
+        printf '%s\n' "$step_block" | grep -qi '^verify:' || error "Step '$step_name' has loop:until but missing 'verify:' field"
+        printf '%s\n' "$step_block" | grep -qi '^max_iterations:' || error "Step '$step_name' has loop:until but missing 'max_iterations:' field"
+    fi
+
+    if [ -n "${RISK:-}" ] && [ "$RISK" = "high" ]; then
+        SECURITY_KEYWORDS="auth\|encrypt\|secret\|password\|token\|billing\|permission"
+        if printf '%s\n' "$step_block" | grep -qi "$SECURITY_KEYWORDS"; then
+            printf '%s\n' "$step_block" | grep -qi '^gate:.*human' || error "Step '$step_name' has security keywords with risk_level:high but missing 'gate: human'"
+        fi
+    fi
+}
+
 # ── Design doc checks ────────────────────────────────────────────────────────
 
 if [ "$FILE_TYPE" = "design" ]; then
@@ -102,64 +136,30 @@ if [ "$FILE_TYPE" = "workflow" ]; then
     fi
 
     # Step structure checks
-    # Extract step blocks (### N. ...)
-    STEP_COUNT=$(echo "$CONTENT" | grep -c '^### [0-9]' || true)
+    # Accept both legacy numbered headings and checkbox-style step bullets.
+    STEP_COUNT=$(printf '%s\n' "$CONTENT" | grep -Ec '^### [0-9]+\.|^- \[[ xX]\] \*\*Step [0-9]+:' || true)
     if [ "$STEP_COUNT" -eq 0 ]; then
-        error "No steps found (expected ### N. Step name)"
+        error "No steps found (expected either '### N. Step name' or '- [ ] **Step N: Step name**')"
     else
-        # Check each step has action and loop
-        STEP_NUM=0
         CURRENT_STEP=""
         CURRENT_BLOCK=""
 
         while IFS= read -r line; do
-            if echo "$line" | grep -q '^### [0-9]'; then
-                # Process previous block
+            if is_step_header "$line"; then
                 if [ -n "$CURRENT_STEP" ] && [ -n "$CURRENT_BLOCK" ]; then
-                    echo "$CURRENT_BLOCK" | grep -qi '^action:' || error "Step '$CURRENT_STEP' missing 'action:' field"
-                    echo "$CURRENT_BLOCK" | grep -qi '^loop:' || error "Step '$CURRENT_STEP' missing 'loop:' field"
-
-                    # If loop: until, must have verify and max_iterations
-                    # Only match lines starting with loop: to avoid matching inside action text
-                    if echo "$CURRENT_BLOCK" | grep -qi '^loop:.*until'; then
-                        echo "$CURRENT_BLOCK" | grep -qi '^verify:' || error "Step '$CURRENT_STEP' has loop:until but missing 'verify:' field"
-                        echo "$CURRENT_BLOCK" | grep -qi '^max_iterations:' || error "Step '$CURRENT_STEP' has loop:until but missing 'max_iterations:' field"
-                    fi
-
-                    # High-risk security gate check
-                    if [ -n "$RISK" ] && [ "$RISK" = "high" ]; then
-                        SECURITY_KEYWORDS="auth\|encrypt\|secret\|password\|token\|billing\|permission"
-                        if echo "$CURRENT_BLOCK" | grep -qi "$SECURITY_KEYWORDS"; then
-                            echo "$CURRENT_BLOCK" | grep -qi '^gate:.*human' || error "Step '$CURRENT_STEP' has security keywords with risk_level:high but missing 'gate: human'"
-                        fi
-                    fi
+                    check_step_block "$CURRENT_STEP" "$CURRENT_BLOCK"
                 fi
 
-                CURRENT_STEP=$(echo "$line" | sed 's/^### [0-9]*\. //')
+                CURRENT_STEP="$(step_name_from_line "$line")"
                 CURRENT_BLOCK=""
-                STEP_NUM=$((STEP_NUM + 1))
             else
                 CURRENT_BLOCK="${CURRENT_BLOCK}
 ${line}"
             fi
         done <<< "$CONTENT"
 
-        # Process last block
         if [ -n "$CURRENT_STEP" ] && [ -n "$CURRENT_BLOCK" ]; then
-            echo "$CURRENT_BLOCK" | grep -qi 'action:' || error "Step '$CURRENT_STEP' missing 'action:' field"
-            echo "$CURRENT_BLOCK" | grep -qi 'loop:' || error "Step '$CURRENT_STEP' missing 'loop:' field"
-
-            if echo "$CURRENT_BLOCK" | grep -qi 'loop:.*until'; then
-                echo "$CURRENT_BLOCK" | grep -qi 'verify:' || error "Step '$CURRENT_STEP' has loop:until but missing 'verify:' field"
-                echo "$CURRENT_BLOCK" | grep -qi 'max_iterations:' || error "Step '$CURRENT_STEP' has loop:until but missing 'max_iterations:' field"
-            fi
-
-            if [ -n "${RISK:-}" ] && [ "$RISK" = "high" ]; then
-                SECURITY_KEYWORDS="auth\|encrypt\|secret\|password\|token\|billing\|permission"
-                if echo "$CURRENT_BLOCK" | grep -qi "$SECURITY_KEYWORDS"; then
-                    echo "$CURRENT_BLOCK" | grep -qi '^gate:.*human' || error "Step '$CURRENT_STEP' has security keywords with risk_level:high but missing 'gate: human'"
-                fi
-            fi
+            check_step_block "$CURRENT_STEP" "$CURRENT_BLOCK"
         fi
     fi
 fi

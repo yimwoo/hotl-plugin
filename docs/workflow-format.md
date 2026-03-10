@@ -32,6 +32,26 @@ else:
 
 `risk_level: high` always forces human gates regardless of `auto_approve`.
 
+## Step Syntax
+
+Preferred syntax uses checkboxes so progress is visible in the workflow file itself:
+
+```markdown
+- [ ] **Step 1: Write failing tests**
+action: Write tests for rate limit behavior (429 response after N requests)
+loop: false
+verify: pytest tests/test_rate_limit.py -v
+```
+
+Legacy numbered headings are still accepted during transition:
+
+```markdown
+### 1. Write failing tests
+action: Write tests for rate limit behavior (429 response after N requests)
+loop: false
+verify: pytest tests/test_rate_limit.py -v
+```
+
 ## Example
 
 ```markdown
@@ -44,23 +64,23 @@ auto_approve: true
 
 ## Steps
 
-### 1. Write failing tests
+- [ ] **Step 1: Write failing tests**
 action: Write tests for rate limit behavior (429 response after N requests)
 loop: false
 verify: pytest tests/test_rate_limit.py -v
 
-### 2. Implement rate limiting
+- [ ] **Step 2: Implement rate limiting**
 action: Add rate limiting middleware
 loop: until tests pass
 max_iterations: 5
 verify: pytest tests/test_rate_limit.py -v
 
-### 3. Full regression check
+- [ ] **Step 3: Full regression check**
 action: Run complete test suite
 loop: false
 verify: pytest -v
 
-### 4. Final approval
+- [ ] **Step 4: Final approval**
 action: Summarize what was implemented
 loop: false
 gate: human

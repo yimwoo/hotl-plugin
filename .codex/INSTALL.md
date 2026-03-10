@@ -39,8 +39,10 @@ You should see a symlink pointing to your HOTL skills directory.
 
 - `hotl:brainstorming` — Design a feature with HOTL contracts before writing code
 - `hotl:writing-plans` — Create a `hotl-workflow-<slug>.md` plan
+- `hotl:document-review` — Review design docs and workflow plans before execution
 - `hotl:loop-execution` — Execute workflow files with auto-approve
 - `hotl:executing-plans` — Linear execution with checkpoints
+- `hotl:subagent-execution` — Execute reviewed workflows in-session with delegated subagent steps
 - `hotl:tdd` — RED-GREEN-REFACTOR cycle
 - `hotl:systematic-debugging` — 4-phase root cause process
 

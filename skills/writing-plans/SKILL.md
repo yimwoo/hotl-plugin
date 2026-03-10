@@ -55,9 +55,10 @@ Break work into atomic steps:
 
 Offer execution options:
 
-**"Plan saved to `hotl-workflow-<slug>.md`. Two options:**
+**"Plan saved to `hotl-workflow-<slug>.md`. Before execution, run `hotl:document-review` on the workflow file. Then choose one of three options:**
 1. **Loop execution (this session)** — `/hotl:loop` runs steps autonomously with auto-approve
 2. **Manual execution** — `/hotl:execute-plan` for linear execution with explicit checkpoints
+3. **Subagent execution (this session)** — `/hotl:subagent-execute` delegates implementation-friendly steps to fresh subagents while the controller keeps gates and verification
 
 Which approach?"
 

@@ -26,6 +26,15 @@ ln -s ~/.codex/hotl-plugin/skills ~/.agents/skills/hotl
 Codex discovers skills in `~/.agents/skills/` at startup. The `using-hotl` skill
 is loaded automatically and guides Codex to use the right skill for each task.
 
+## Key Skills
+
+- `hotl:brainstorming` — design with HOTL contracts before implementation
+- `hotl:writing-plans` — create `hotl-workflow-<slug>.md` files
+- `hotl:document-review` — run structural lint and qualitative review before execution
+- `hotl:loop-execution` — autonomous execution with retries
+- `hotl:executing-plans` — manual checkpointed execution
+- `hotl:subagent-execution` — same-session delegated execution with controller-owned verification
+
 ## Updating
 
 ```bash

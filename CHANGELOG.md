@@ -2,6 +2,18 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [1.5.0] - 2026-03-10
+
+### Added
+- `hotl:subagent-execution` skill and `/hotl:subagent-execute` command for governed same-session workflow execution with delegated subagent steps
+- `hotl-subagent-execution.md` rule for Cline users
+
+### Changed
+- Workflow parsing and documentation now recognize checkbox-style steps as the preferred format
+- Planning guidance now offers three reviewed execution options: loop, manual, and subagent execution
+- Codex install docs now list the current HOTL skill set
+- README rewritten around Claude Code, Codex, and Cline workflow discovery with explicit execution-mode guidance
+
 ## [1.4.0] - 2026-03-10
 
 ### Added

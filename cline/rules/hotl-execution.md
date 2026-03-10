@@ -2,7 +2,7 @@
 
 **When to use:** When you have a `hotl-workflow-<slug>.md` to execute.
 
-**Full skills:** Read `~/.cline/hotl/skills/executing-plans/SKILL.md` (linear) or `~/.cline/hotl/skills/loop-execution/SKILL.md` (autonomous) for complete processes. If unavailable, follow the condensed version below.
+**Full skills:** Read `~/.cline/hotl/skills/executing-plans/SKILL.md` (linear), `~/.cline/hotl/skills/loop-execution/SKILL.md` (autonomous), or `~/.cline/hotl/skills/subagent-execution/SKILL.md` (delegated same-session execution) for complete processes. If unavailable, follow the condensed version below.
 
 ### MANDATORY RULES
 

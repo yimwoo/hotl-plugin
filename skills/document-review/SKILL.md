@@ -42,6 +42,7 @@ If the script is not found at `scripts/document-lint.sh`, check `~/.cline/hotl/s
 - YAML frontmatter with intent, success_criteria, risk_level
 - Every step has action and loop fields
 - Every looped step (loop: until) has verify and max_iterations
+- Preferred workflow step syntax is `- [ ] **Step N: ...**`, though legacy `### N.` headings may still appear
 - High-risk steps with security keywords have gate: human
 
 ## Phase 2: AI-Driven Review (Soft Gate)
@@ -109,3 +110,15 @@ AI Review: Serious concern(s) requiring human judgment.
 Concerns:
 1. [CONCERN]: <description>
    Risk: <what could go wrong>
+2. [CONCERN]: <description>
+   Risk: <what could go wrong>
+
+Do not continue until a human explicitly says to override these concerns.
+```
+
+## Rules
+
+- Never skip lint.
+- Never continue to execution when lint fails.
+- If review outcome is `REVISE`, the author fixes the document first.
+- If review outcome is `HUMAN_OVERRIDE_REQUIRED`, only an explicit human decision allows execution to proceed.

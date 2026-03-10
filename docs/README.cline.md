@@ -33,13 +33,14 @@ Tell Cline what you need in natural language. HOTL rules teach Cline to follow s
 | "brainstorm this feature" | Asks clarifying questions one at a time, proposes 2-3 approaches, defines HOTL contracts (intent, verification, governance), saves a design doc |
 | "plan the implementation" | Creates a `hotl-workflow-<slug>.md` with atomic steps, verify commands, and approval gates |
 | "execute the plan" | Runs the workflow step by step with human checkpoints every 3 steps |
+| "subagent execute the plan" | Delegates implementation-friendly workflow steps to fresh subagents while keeping verification and gates in the controller |
 | "use TDD" | Follows RED-GREEN-REFACTOR — writes a failing test before any implementation code |
 | "debug this" | Systematic 4-phase process: reproduce, understand, hypothesize, fix and verify |
 | "review the code" | Checklist review: plan alignment, code quality, governance — reports BLOCK/WARN/NOTE issues |
 
 ## How It Works
 
-Cline reads `~/Documents/Cline/Rules/` for global rules. HOTL installs 7 rule files that teach Cline structured workflows:
+Cline reads `~/Documents/Cline/Rules/` for global rules. HOTL installs 8 rule files that teach Cline structured workflows:
 
 | Rule file | What it enforces |
 | --- | --- |
@@ -47,6 +48,7 @@ Cline reads `~/Documents/Cline/Rules/` for global rules. HOTL installs 7 rule fi
 | `hotl-brainstorming.md` | Full brainstorming process — questions, approaches, contracts, design doc |
 | `hotl-planning.md` | Create workflow files with atomic steps, verify commands, gates |
 | `hotl-execution.md` | Execute plans with checkpoints, never skip failed steps, show evidence |
+| `hotl-subagent-execution.md` | Execute reviewed plans in-session with delegated subagent steps and controller-owned gates |
 | `hotl-tdd.md` | RED-GREEN-REFACTOR — never write code before a failing test |
 | `hotl-debugging.md` | 4-phase debugging — reproduce, understand, hypothesize, fix |
 | `hotl-code-review.md` | Review against plan with BLOCK/WARN/NOTE severity |
@@ -97,13 +99,13 @@ auto_approve: true | false
 
 ## Steps
 
-### 1. Write failing test for auth
+- [ ] **Step 1: Write failing test for auth**
 action: Create test for login endpoint
 loop: false
 verify: npm test -- --grep "login"
 gate: auto
 
-### 2. Implement auth logic
+- [ ] **Step 2: Implement auth logic**
 action: Add login handler
 loop: until tests pass
 max_iterations: 3
