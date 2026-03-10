@@ -157,6 +157,53 @@ Execute the workflow file with loop execution and auto-approve for low-risk step
 
 Reads each step, executes it, verifies success criteria, and loops until done. High-risk gates always pause.
 
+**Example output — real execution of adding a document review system:**
+
+```text
+→ Step 1: Create scripts directory
+✓ Step 1: Create scripts directory (1 iteration)
+
+→ Step 2: Write document-lint.sh
+✓ Step 2: Write document-lint.sh (1 iteration)
+
+→ Step 3: Test lint on valid design doc
+✓ Step 3: Test lint on valid design doc (1 iteration)
+
+→ Step 5: Add workflow validation
+✗ Step 5: False positive — action text matched loop pattern
+↻ Retrying (1/3)... fixed grep anchors
+✓ Step 5: Add workflow validation (2 iterations)
+
+→ Step 7: Test lint on broken workflow
+✓ Step 7: Lint caught 6 errors — FAIL as expected (1 iteration)
+
+→ Step 8: Write document-review skill
+✓ Step 8: Write document-review skill (1 iteration)
+
+→ Step 12: Run smoke tests
+✓ Step 12: Run smoke tests (1 iteration)
+```
+
+**Execution summary table:**
+
+| Step | Status | Iterations |
+| --- | --- | --- |
+| 1. Create scripts directory | done | 1 |
+| 2. Write document-lint.sh | done | 1 |
+| 3. Test lint on valid design doc | done | 1 |
+| 4. Test lint on broken design doc | done | 1 |
+| 5. Add workflow validation | done | 2 (fixed false positive) |
+| 6. Test lint on valid workflow | done | 1 |
+| 7. Test lint on broken workflow | done | 1 |
+| 8. Write document-review skill | done | 1 |
+| 9. Update skill index | done | 1 |
+| 10. Write Cline rule file | done | 1 |
+| 11. Checkbox progress tracking | done | 1 |
+| 12. Run smoke tests | done | 1 |
+| 13. End-to-end lint test | done | 1 |
+
+Steps that fail verification are retried automatically (up to `max_iterations`). High-risk gates always pause for human approval regardless of `auto_approve` setting.
+
 ### Linear execute (with checkpoints)
 
 ```text

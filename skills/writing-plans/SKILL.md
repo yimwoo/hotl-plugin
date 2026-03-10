@@ -27,7 +27,7 @@ auto_approve: true | false
 
 ## Steps
 
-### N. [Step name]
+- [ ] **Step N: [Step name]**
 action: [what to do]
 loop: false | until [condition]
 max_iterations: [number, default 3]

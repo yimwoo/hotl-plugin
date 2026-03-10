@@ -21,6 +21,7 @@ Use the `Skill` tool to invoke any of these before responding:
 | `hotl:dispatch-agents` | 2+ independent tasks that can run in parallel |
 | `hotl:tdd` | Before writing any implementation code |
 | `hotl:systematic-debugging` | When encountering any bug or unexpected behavior |
+| `hotl:document-review` | Review design specs and workflow plans before execution |
 | `hotl:code-review` | After completing implementation, before merging |
 | `hotl:verification-before-completion` | Before claiming work is done |
 | `hotl:setup-project` | To generate adapter files for Codex, Cline, Cursor, Copilot |
