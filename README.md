@@ -157,52 +157,54 @@ Execute the workflow file with loop execution and auto-approve for low-risk step
 
 Reads each step, executes it, verifies success criteria, and loops until done. High-risk gates always pause.
 
-**Example output — real execution of adding a document review system:**
+**Example — adding a rate limiter to a Python FastAPI service:**
 
 ```text
-→ Step 1: Create scripts directory
-✓ Step 1: Create scripts directory (1 iteration)
+→ Step 1: Write failing test for rate limit middleware
+✓ Step 1: Write failing test (1 iteration)
 
-→ Step 2: Write document-lint.sh
-✓ Step 2: Write document-lint.sh (1 iteration)
+→ Step 2: Implement rate limiter middleware
+✗ Step 2: pytest — 2 of 3 tests failing (missing Redis connection)
+↻ Retrying (1/3)... added Redis mock
+✗ Step 2: pytest — 1 test still failing (off-by-one in window calc)
+↻ Retrying (2/3)... fixed sliding window logic
+✓ Step 2: Implement rate limiter (3 iterations, all tests pass)
 
-→ Step 3: Test lint on valid design doc
-✓ Step 3: Test lint on valid design doc (1 iteration)
+→ Step 3: Fix lint errors
+✗ Step 3: ruff check — 4 violations (unused import, line length)
+↻ Retrying (1/3)... applied ruff fixes
+✓ Step 3: Fix lint errors (2 iterations)
 
-→ Step 5: Add workflow validation
-✗ Step 5: False positive — action text matched loop pattern
-↻ Retrying (1/3)... fixed grep anchors
-✓ Step 5: Add workflow validation (2 iterations)
+→ Step 4: Add integration test with TestClient
+✓ Step 4: Add integration test (1 iteration)
 
-→ Step 7: Test lint on broken workflow
-✓ Step 7: Lint caught 6 errors — FAIL as expected (1 iteration)
+→ Step 5: Run full test suite
+✓ Step 5: Full test suite — 47 passed, 0 failed (1 iteration)
 
-→ Step 8: Write document-review skill
-✓ Step 8: Write document-review skill (1 iteration)
+→ Step 6: Review rate limit config
+⏸ [HUMAN GATE] Rate limit thresholds set to 100 req/min.
+  Security-sensitive: controls API abuse protection.
+  Approve? (yes/no/show-details)
+  → Human approved with note: "lower to 60 req/min for /auth endpoints"
+✓ Step 6: Config review (1 iteration, human-approved)
 
-→ Step 12: Run smoke tests
-✓ Step 12: Run smoke tests (1 iteration)
+→ Step 7: Build and verify Docker image
+✓ Step 7: Docker build + health check passed (1 iteration)
 ```
 
-**Execution summary table:**
+**Execution summary:**
 
 | Step | Status | Iterations |
 | --- | --- | --- |
-| 1. Create scripts directory | done | 1 |
-| 2. Write document-lint.sh | done | 1 |
-| 3. Test lint on valid design doc | done | 1 |
-| 4. Test lint on broken design doc | done | 1 |
-| 5. Add workflow validation | done | 2 (fixed false positive) |
-| 6. Test lint on valid workflow | done | 1 |
-| 7. Test lint on broken workflow | done | 1 |
-| 8. Write document-review skill | done | 1 |
-| 9. Update skill index | done | 1 |
-| 10. Write Cline rule file | done | 1 |
-| 11. Checkbox progress tracking | done | 1 |
-| 12. Run smoke tests | done | 1 |
-| 13. End-to-end lint test | done | 1 |
+| 1. Write failing test | done | 1 |
+| 2. Implement rate limiter | done | 3 (Redis mock + window fix) |
+| 3. Fix lint errors | done | 2 (ruff auto-fix) |
+| 4. Integration test | done | 1 |
+| 5. Full test suite | done | 1 |
+| 6. Review rate limit config | done | 1 (human gate) |
+| 7. Build Docker image | done | 1 |
 
-Steps that fail verification are retried automatically (up to `max_iterations`). High-risk gates always pause for human approval regardless of `auto_approve` setting.
+Steps that fail verification retry automatically (up to `max_iterations`). High-risk gates always pause for human approval regardless of `auto_approve` setting.
 
 ### Linear execute (with checkpoints)
 
