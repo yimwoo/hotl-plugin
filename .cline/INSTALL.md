@@ -5,7 +5,7 @@ One command. No settings to paste. Works with any API provider (Oracle Code Assi
 ## Install
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/install-cline.sh)
+curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/install-cline.sh | bash
 ```
 
 Or clone first:

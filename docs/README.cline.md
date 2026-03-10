@@ -7,7 +7,7 @@ Works with **any API provider** — Oracle Code Assist (OCA), OpenAI (GPT-4, GPT
 ## Install (One Command)
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/install-cline.sh)
+curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/install-cline.sh | bash
 ```
 
 Or clone first:
@@ -116,7 +116,7 @@ gate: human
 ## Updating
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh)
+curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
 ```
 
 Or if already cloned:

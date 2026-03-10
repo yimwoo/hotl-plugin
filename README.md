@@ -183,7 +183,7 @@ HOTL works in Cline by installing global rules and local skill files.
 ### Install for Cline
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/install-cline.sh)
+curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/install-cline.sh | bash
 ```
 
 Detailed instructions: [`docs/README.cline.md`](docs/README.cline.md)
@@ -268,7 +268,7 @@ bash install.sh
 For Claude Code and Cline, use the update script:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh)
+curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
 ```
 
 If you already have a local clone:
