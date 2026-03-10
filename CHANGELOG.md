@@ -2,6 +2,19 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [1.3.0] - 2026-03-10
+
+### Added
+- **Document review system** — two-layer validation before execution
+  - `scripts/document-lint.sh` — deterministic structural lint for design docs and workflow files (hard gate)
+  - `hotl:document-review` skill — AI-driven qualitative review with PASS/REVISE/HUMAN_OVERRIDE_REQUIRED outcomes (soft gate)
+  - Cline rule file `hotl-document-review.md` for Cline users
+- **Checkbox progress tracking** — `writing-plans` skill now uses `- [ ] **Step N:**` syntax for visible progress in workflow files
+- **Execution summary example** in README showing real loop execution output with varied iterations
+
+### Changed
+- `using-hotl` skill index updated with `hotl:document-review` entry
+
 ## [1.2.0] - 2026-03-10
 
 ### Added
