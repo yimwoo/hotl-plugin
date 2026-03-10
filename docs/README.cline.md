@@ -114,10 +114,16 @@ gate: human
 ## Updating
 
 ```bash
-cd ~/.cline/hotl && git pull && bash install-cline.sh
+bash <(curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh)
 ```
 
-Rules are updated globally — no need to update individual projects.
+Or if already cloned:
+
+```bash
+bash ~/.cline/hotl/update.sh
+```
+
+This pulls the latest code and syncs global rules automatically. Also updates Claude Code if installed.
 
 ## FAQ
 

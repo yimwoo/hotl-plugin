@@ -87,13 +87,21 @@ cd hotl-plugin && bash install.sh
 
 ## Update
 
-```bash
-# Claude Code
-cd ~/.claude/plugins/hotl && git pull
+One script updates both Claude Code and Cline (whichever is installed):
 
-# Cline
-cd ~/.cline/hotl && git pull && bash install-cline.sh
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh)
 ```
+
+Or if already cloned:
+
+```bash
+bash ~/.claude/plugins/hotl/update.sh
+# or
+bash ~/.cline/hotl/update.sh
+```
+
+This pulls the latest code, refreshes the Claude Code plugin cache, and syncs Cline global rules — all automatically.
 
 ---
 
