@@ -6,7 +6,7 @@
 
 ```bash
 # From GitHub (internet)
-git clone https://github.com/your-org/hotl-plugin ~/.codex/hotl-plugin
+git clone https://github.com/yimwoo/hotl-plugin ~/.codex/hotl-plugin
 
 # From OraHub (corporate network)
 git clone git@orahub.oci.oraclecorp.com:.../hotl-plugin ~/.codex/hotl-plugin

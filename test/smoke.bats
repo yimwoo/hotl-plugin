@@ -59,6 +59,6 @@ assert len(data['additional_context']) > 0, 'additional_context is empty'
 }
 
 @test "document-lint accepts checkbox-style workflow steps" {
-    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/hotl-workflow-add-subagent-execution.md"
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/hotl-workflow-checkbox-sample.md"
     [ "$status" -eq 0 ]
 }
