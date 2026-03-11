@@ -48,6 +48,16 @@ case "$cmd" in
         echo "pull $repo" >> "$LOG_FILE"
         exit 0
         ;;
+    switch)
+        target_branch="${1:-}"
+        [ -n "$target_branch" ] || {
+            echo "Missing branch name for fake git switch" >&2
+            exit 1
+        }
+        printf '%s\n' "$target_branch" > "$branch_file"
+        echo "switch $repo $target_branch" >> "$LOG_FILE"
+        exit 0
+        ;;
 esac
 
 echo "Unexpected fake git invocation: $repo $cmd $*" >&2
@@ -230,6 +240,15 @@ print(match.group(1) if match else '')
     grep -q 'Ask Codex to use `hotl:brainstorming`' "$REPO_ROOT/docs/README.codex.md"
 }
 
+@test "Codex docs explain the stable channel and HOTL skill discovery path" {
+    grep -q 'stable channel' "$REPO_ROOT/README.md"
+    grep -q '~/.agents/skills/hotl' "$REPO_ROOT/README.md"
+    grep -q 'stable channel' "$REPO_ROOT/docs/README.codex.md"
+    grep -q '~/.agents/skills/hotl' "$REPO_ROOT/docs/README.codex.md"
+    grep -q 'stable channel' "$REPO_ROOT/.codex/INSTALL.md"
+    grep -q '~/.agents/skills/hotl' "$REPO_ROOT/.codex/INSTALL.md"
+}
+
 @test "Codex prompt examples resolve to installed HOTL skills locally" {
     assert_codex_prompt_resolves 'Use hotl:brainstorming to design this feature before writing code.'
     assert_codex_prompt_resolves 'Use hotl:writing-plans to create a hotl-workflow file for adding OAuth login.'
@@ -281,7 +300,7 @@ print(match.group(1) if match else '')
     grep -q "pull ${tmp_home}/.codex/hotl" "$fake_log"
 }
 
-@test "update.sh skips Codex on non-main branch unless forced" {
+@test "update.sh switches Codex back to main on a clean non-main branch" {
     tmp_home="$(mktemp -d)"
     fake_bin="$tmp_home/bin"
     fake_log="$tmp_home/git.log"
@@ -294,12 +313,13 @@ print(match.group(1) if match else '')
     run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh"
 
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Codex install is on branch feature/hotl-test; skipping to avoid mutating a feature branch."* ]]
-    [[ "$output" == *"--force-codex"* ]]
-    [ ! -f "$fake_log" ] || ! grep -q "pull ${tmp_home}/.codex/hotl" "$fake_log"
+    [[ "$output" == *"Codex install is on branch feature/hotl-test; switching back to stable branch main."* ]]
+    [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
+    grep -q "switch ${tmp_home}/.codex/hotl main" "$fake_log"
+    grep -q "pull ${tmp_home}/.codex/hotl" "$fake_log"
 }
 
-@test "update.sh force-updates Codex on non-main branch with --force-codex" {
+@test "update.sh still accepts --force-codex while returning Codex to main" {
     tmp_home="$(mktemp -d)"
     fake_bin="$tmp_home/bin"
     fake_log="$tmp_home/git.log"
@@ -312,7 +332,9 @@ print(match.group(1) if match else '')
     run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh" --force-codex
 
     [ "$status" -eq 0 ]
+    [[ "$output" == *"switching back to stable branch main."* ]]
     [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
+    grep -q "switch ${tmp_home}/.codex/hotl main" "$fake_log"
     grep -q "pull ${tmp_home}/.codex/hotl" "$fake_log"
 }
 

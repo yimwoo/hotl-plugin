@@ -98,13 +98,23 @@ if is_git_work_tree "${CODEX_HOTL_DIR}"; then
         echo "Codex install at ${CODEX_HOTL_DIR} has uncommitted changes; skipping update."
         SKIPPED=$((SKIPPED + 1))
         echo ""
-    elif [ "${FORCE_CODEX}" -ne 1 ] && [ "${CODEX_BRANCH_DISPLAY}" != "main" ] && [ "${CODEX_BRANCH_DISPLAY}" != "master" ]; then
-        echo "Codex install is on branch ${CODEX_BRANCH_DISPLAY}; skipping to avoid mutating a feature branch. Re-run with --force-codex to update anyway."
-        SKIPPED=$((SKIPPED + 1))
+    elif [ "${CODEX_BRANCH_DISPLAY}" != "main" ]; then
+        echo "Codex install is on branch ${CODEX_BRANCH_DISPLAY}; switching back to stable branch main."
+        git -C "${CODEX_HOTL_DIR}" switch main
+        echo ""
+        echo "Updating Codex plugin at ${CODEX_HOTL_DIR}..."
+        git -C "${CODEX_HOTL_DIR}" pull --ff-only origin main
+
+        if [ -L "${HOME}/.agents/skills/hotl" ]; then
+            echo "  Skills symlink intact at ~/.agents/skills/hotl"
+        fi
+
+        UPDATED=$((UPDATED + 1))
+        echo "  Codex plugin updated."
         echo ""
     else
         echo "Updating Codex plugin at ${CODEX_HOTL_DIR}..."
-        git -C "${CODEX_HOTL_DIR}" pull
+        git -C "${CODEX_HOTL_DIR}" pull --ff-only origin main
 
         if [ -L "${HOME}/.agents/skills/hotl" ]; then
             echo "  Skills symlink intact at ~/.agents/skills/hotl"

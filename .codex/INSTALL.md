@@ -27,6 +27,12 @@ Enable HOTL skills in Codex via native skill discovery.
 
 3. **Restart Codex** to discover the skills.
 
+## Stable Channel
+
+`~/.codex/hotl` is the HOTL stable channel and should track `origin/main`.
+If you want to modify HOTL itself, use a separate clone or worktree elsewhere
+and keep this install on `main`.
+
 ## Verify
 
 ```bash
@@ -34,6 +40,8 @@ ls -la ~/.agents/skills/hotl
 ```
 
 You should see a symlink pointing to your HOTL skills directory.
+Codex discovers every entry under `~/.agents/skills/`, so HOTL skills are the
+ones coming from `~/.agents/skills/hotl`.
 
 ## Available Skills
 
@@ -54,6 +62,9 @@ You should see a symlink pointing to your HOTL skills directory.
 ```bash
 bash ~/.codex/hotl/update.sh
 ```
+
+If the install drifted onto another branch, the updater switches it back to the
+stable `main` branch before pulling the latest HOTL skills.
 
 Restart Codex after updating so it re-discovers the latest skill files.
 

@@ -25,6 +25,8 @@ mkdir -p ~/.agents/skills && ln -s ~/.codex/hotl/skills ~/.agents/skills/hotl
 Then restart Codex. Full instructions: [`.codex/INSTALL.md`](.codex/INSTALL.md)
 
 Codex uses the HOTL skill files from `~/.agents/skills/hotl`. Claude slash commands such as `/hotl:pr-review` do not exist in Codex.
+`~/.codex/hotl` is the HOTL stable channel and should track `origin/main`. If you want to develop HOTL itself, use a separate clone or worktree elsewhere.
+Codex discovers every entry under `~/.agents/skills/`, so the Installed skills screen mixes HOTL with any other installed skill packs. HOTL skills are the ones coming from `~/.agents/skills/hotl`.
 There is no `/hotl:*` command syntax in Codex. Ask Codex to use `hotl:brainstorming`, `hotl:writing-plans`, `hotl:pr-review`, or another HOTL skill in plain English.
 
 ### Cline

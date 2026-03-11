@@ -21,12 +21,22 @@ ln -s ~/.codex/hotl/skills ~/.agents/skills/hotl
 
 3. Restart Codex.
 
+## Stable Channel
+
+`~/.codex/hotl` is the HOTL stable channel and should track `origin/main`.
+Do not do feature work inside that directory. If you want to develop HOTL itself,
+use a separate clone or worktree somewhere else and keep `~/.codex/hotl` for the
+version Codex discovers.
+
 ## How It Works
 
 Codex discovers skills in `~/.agents/skills/` at startup. The `using-hotl` skill
 provides the HOTL skill index and routing guidance for the rest of the skill set.
 Codex uses the skill files directly. Claude-style slash commands such as
 `/hotl:pr-review` are not part of the Codex integration.
+Codex discovers every entry under `~/.agents/skills/`, so the Installed skills
+screen mixes HOTL with any other installed skill packs. HOTL skills are the ones
+coming from `~/.agents/skills/hotl`.
 There is no `/hotl:brainstorm` or `/hotl:pr-review` command syntax in Codex. Ask Codex to use `hotl:brainstorming`, `hotl:writing-plans`, `hotl:pr-review`, or another HOTL skill in plain English.
 
 ## How To Invoke HOTL Skills In Codex
@@ -77,6 +87,9 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 ```bash
 bash ~/.codex/hotl/update.sh
 ```
+
+If the install drifted onto another branch, the updater switches it back to the
+stable `main` branch before pulling the latest HOTL skills.
 
 Restart Codex after updating so it re-discovers the latest skill files.
 
