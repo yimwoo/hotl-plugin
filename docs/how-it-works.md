@@ -1,0 +1,105 @@
+# How HOTL Works — In Detail
+
+This page expands on each phase of the HOTL workflow. For a quick overview, see the [main README](../README.md#the-hotl-workflow).
+
+---
+
+## 1. Brainstorm
+
+HOTL asks clarifying questions, proposes options, and writes a design around three contracts:
+
+- **Intent contract** — what you are building, constraints, success criteria, risk level
+- **Verification contract** — what commands or checks prove the work is correct
+- **Governance contract** — where human review is required and how to roll back
+
+The brainstorming phase prevents the most common AI coding failure: jumping straight into code before requirements are clear.
+
+## 2. Plan
+
+HOTL creates a workflow file in the project root named `hotl-workflow-<slug>.md`:
+
+```yaml
+---
+intent: Add Redis-backed sliding window rate limiter to FastAPI service
+success_criteria: 429 after threshold, configurable per-endpoint, all tests pass
+risk_level: medium
+auto_approve: true
+branch: feat/add-rate-limiter   # optional — defaults to hotl/<slug>
+worktree: false                 # optional — use git worktree for isolation
+---
+
+## Steps
+
+- [ ] **Step 1: Write failing tests**
+  action: Write tests for rate limit behavior
+  loop: false
+  verify: pytest tests/test_rate_limit.py -v
+
+- [ ] **Step 2: Implement rate limiting**
+  action: Add rate limiting middleware
+  loop: until tests pass
+  max_iterations: 5
+  verify: pytest tests/test_rate_limit.py -v
+```
+
+Each step has an action, an optional loop condition, a verify command, and an optional gate (`human` or `auto`). See [workflow-format.md](workflow-format.md) for the full specification.
+
+## 3. Review Before Execution
+
+HOTL reviews both design docs and workflow plans before execution starts:
+
+- **Structural lint** — `scripts/document-lint.sh` checks formatting and required fields
+- **AI review** — `hotl:document-review` evaluates plan quality
+
+Lint failures are hard blockers. AI review produces one of:
+
+| Verdict | Meaning |
+| --- | --- |
+| `PASS` | Plan is ready for execution |
+| `REVISE` | Issues found — fix before proceeding |
+| `HUMAN_OVERRIDE_REQUIRED` | Requires explicit human approval |
+
+Execution does not start from a structurally broken or obviously weak plan.
+
+## 4. Git Branch Isolation
+
+Before executing any steps, HOTL creates a dedicated git branch so work never lands directly on `main` or `master`.
+
+**Branch naming:**
+- Default: derived from the workflow filename — `hotl-workflow-add-auth.md` becomes `hotl/add-auth`
+- Override: set `branch: feat/add-auth` in the workflow frontmatter
+- Full isolation: set `worktree: true` to create a git worktree
+
+**Safety checks:**
+- Uncommitted changes block execution (no auto-stash — you decide what to do)
+- Existing branches always prompt: reuse, recreate, or abort
+- Repos without git or with no commits skip branching and execute in place
+
+Every workflow execution starts clean, on its own branch, with no risk to the main branch.
+
+## 5. Execute
+
+After review, HOTL offers three execution modes:
+
+### Loop Execution
+
+Best for maximum automation. HOTL runs the workflow step by step, retries steps that are allowed to loop, auto-approves low-risk gates, and pauses on high-risk or human-gated steps.
+
+### Manual Execution
+
+Best for tighter oversight. HOTL executes the workflow in order and stops for explicit human checkpoints. You review progress before the next batch continues.
+
+### Subagent Execution
+
+Best for same-session delegation. HOTL stays in the current session as the controller. Implementation-friendly steps are delegated to fresh subagents. Verification, stop conditions, and approval gates stay with the controller. Risky or human-gated steps are controlled directly.
+
+## 6. Verify Before Completion
+
+HOTL does not treat "should work" as done. It requires real evidence:
+
+- Test commands pass
+- Lint output is clean
+- Verification commands from the workflow succeed
+- Success criteria are checked against actual results
+
+No green checkmark without proof.
