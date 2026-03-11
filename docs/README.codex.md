@@ -37,7 +37,7 @@ Codex uses the skill files directly. Claude-style slash commands such as
 Codex discovers every entry under `~/.agents/skills/`, so the Installed skills
 screen mixes HOTL with any other installed skill packs. HOTL skills are the ones
 coming from `~/.agents/skills/hotl`.
-There is no `/hotl:brainstorm` or `/hotl:pr-review` command syntax in Codex. Ask Codex to use `hotl:brainstorming`, `hotl:writing-plans`, `hotl:pr-review`, or another HOTL skill in plain English.
+There is no `/hotl:brainstorm` or `/hotl:pr-review` command syntax in Codex. Ask Codex to use `hotl:brainstorming`, `hotl:writing-plans`, `hotl:pr-reviewing`, or another HOTL skill in plain English.
 
 ## How To Invoke HOTL Skills In Codex
 
@@ -56,7 +56,7 @@ Use `hotl:document-review` on `hotl-workflow-add-rate-limiting.md` and tell me i
 
 Use `hotl:subagent-execution` to execute `hotl-workflow-add-rate-limiting.md` in this session.
 
-Use `hotl:pr-review` to review https://github.com/org/repo/pull/123.
+Use `hotl:pr-reviewing` to review https://github.com/org/repo/pull/123.
 
 Use `hotl:verification-before-completion` before you say this task is done.
 
@@ -78,7 +78,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `hotl:loop-execution` — autonomous execution with retries
 - `hotl:executing-plans` — manual checkpointed execution
 - `hotl:subagent-execution` — same-session delegated execution with controller-owned verification
-- `hotl:pr-review` — review a PR across description, code, scan, and tests
+- `hotl:pr-reviewing` — review a PR across description, code, scan, and tests
 - `hotl:code-review` — review branch changes against the workflow and HOTL contracts
 - `hotl:verification-before-completion` — require test and command output before claiming success
 

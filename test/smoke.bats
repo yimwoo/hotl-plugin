@@ -108,8 +108,8 @@ assert_codex_prompt_resolves() {
         echo "using-hotl index missing writing-plans entry"
         return 1
     }
-    grep -q 'hotl:pr-review' "$REPO_ROOT/skills/using-hotl/SKILL.md" || {
-        echo "using-hotl index missing pr-review entry"
+    grep -q 'hotl:pr-reviewing' "$REPO_ROOT/skills/using-hotl/SKILL.md" || {
+        echo "using-hotl index missing pr-reviewing entry"
         return 1
     }
 }
@@ -252,7 +252,7 @@ print(match.group(1) if match else '')
 @test "Codex prompt examples resolve to installed HOTL skills locally" {
     assert_codex_prompt_resolves 'Use hotl:brainstorming to design this feature before writing code.'
     assert_codex_prompt_resolves 'Use hotl:writing-plans to create a hotl-workflow file for adding OAuth login.'
-    assert_codex_prompt_resolves 'Use hotl:pr-review to review https://github.com/org/repo/pull/123.'
+    assert_codex_prompt_resolves 'Use hotl:pr-reviewing to review https://github.com/org/repo/pull/123.'
     assert_codex_prompt_resolves 'Use HOTL for this task and choose the correct skill automatically.'
 }
 

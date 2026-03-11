@@ -1,5 +1,5 @@
 ---
-name: pr-review
+name: pr-reviewing
 description: Review a PR across multiple dimensions — description, code changes, code scan, unit tests — using parallel subagents. Supports GitHub, GitLab, and enterprise platforms.
 ---
 

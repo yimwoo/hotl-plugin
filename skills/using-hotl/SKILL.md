@@ -24,7 +24,7 @@ Use the `Skill` tool to invoke any of these before responding:
 | `hotl:systematic-debugging` | When encountering any bug or unexpected behavior |
 | `hotl:document-review` | Review design specs and workflow plans before execution |
 | `hotl:code-review` | After completing implementation, before merging |
-| `hotl:pr-review` | Review a PR across multiple dimensions — description, code, scan, tests |
+| `hotl:pr-reviewing` | Review a PR across multiple dimensions — description, code, scan, tests |
 | `hotl:verification-before-completion` | Before claiming work is done |
 | `hotl:setup-project` | To generate adapter files for Codex, Cline, Cursor, Copilot |
 

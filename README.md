@@ -27,7 +27,7 @@ Then restart Codex. Full instructions: [`.codex/INSTALL.md`](.codex/INSTALL.md)
 Codex uses the HOTL skill files from `~/.agents/skills/hotl`. Claude slash commands such as `/hotl:pr-review` do not exist in Codex.
 `~/.codex/hotl` is the HOTL stable channel and should track `origin/main`. If you want to develop HOTL itself, use a separate clone or worktree elsewhere.
 Codex discovers every entry under `~/.agents/skills/`, so the Installed skills screen mixes HOTL with any other installed skill packs. HOTL skills are the ones coming from `~/.agents/skills/hotl`.
-There is no `/hotl:*` command syntax in Codex. Ask Codex to use `hotl:brainstorming`, `hotl:writing-plans`, `hotl:pr-review`, or another HOTL skill in plain English.
+There is no `/hotl:*` command syntax in Codex. Ask Codex to use `hotl:brainstorming`, `hotl:writing-plans`, `hotl:pr-reviewing`, or another HOTL skill in plain English.
 
 ### Cline
 
@@ -101,7 +101,7 @@ Use hotl:writing-plans to create a hotl-workflow file for adding OAuth login.
 
 Use hotl:document-review on hotl-workflow-add-oauth.md before implementation.
 
-Use hotl:pr-review to review https://github.com/org/repo/pull/123.
+Use hotl:pr-reviewing to review https://github.com/org/repo/pull/123.
 
 Use hotl:code-review on the changes in this branch before merge.
 
@@ -144,7 +144,7 @@ All skills work with **Claude Code** and **Codex**. Cline users get equivalent r
 
 | Skill | Description | Phase |
 | --- | --- | --- |
-| `hotl:pr-review` | Review a PR across multiple dimensions — description/ticket, code changes, code scan, unit tests — using parallel subagents. Supports GitHub, GitLab, and enterprise platforms. | Review |
+| `hotl:pr-reviewing` | Review a PR across multiple dimensions — description/ticket, code changes, code scan, unit tests — using parallel subagents. Supports GitHub, GitLab, and enterprise platforms. | Review |
 | `hotl:code-review` | Post-implementation review against the workflow plan and HOTL contracts. Checks plan alignment, code quality, and governance compliance. | Verify |
 | `hotl:verification-before-completion` | Run verification commands and confirm output before claiming work is complete. Evidence before assertions. | Verify |
 

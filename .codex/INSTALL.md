@@ -51,7 +51,7 @@ ones coming from `~/.agents/skills/hotl`.
 - `hotl:loop-execution` — Execute workflow files with auto-approve
 - `hotl:executing-plans` — Linear execution with checkpoints
 - `hotl:subagent-execution` — Execute reviewed workflows in-session with delegated subagent steps
-- `hotl:pr-review` — Review a PR across description, code, scan, and tests
+- `hotl:pr-reviewing` — Review a PR across description, code, scan, and tests
 - `hotl:code-review` — Review branch changes against the workflow and HOTL contracts
 - `hotl:verification-before-completion` — Require test and command output before claiming success
 - `hotl:tdd` — RED-GREEN-REFACTOR cycle

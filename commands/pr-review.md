@@ -1,5 +1,6 @@
 ---
 description: "Review a PR across multiple dimensions (description, code, scan, tests)"
+disable-model-invocation: true
 ---
 
-Invoke the hotl:pr-review skill and follow it exactly as presented to you. If the user provided a PR URL as an argument, use that URL. Otherwise, auto-detect from the current branch.
+Invoke the hotl:pr-reviewing skill and follow it exactly as presented to you. If the user provided a PR URL as an argument, use that URL. Otherwise, auto-detect from the current branch.
