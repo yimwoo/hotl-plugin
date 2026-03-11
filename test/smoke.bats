@@ -2,6 +2,71 @@
 
 REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
 
+make_fake_git() {
+    local bin_dir="$1"
+    local log_file="$2"
+
+    mkdir -p "$bin_dir"
+    cat > "$bin_dir/git" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+LOG_FILE="${FAKE_GIT_LOG:?}"
+repo=""
+if [ "${1:-}" = "-C" ]; then
+    repo="$2"
+    shift 2
+fi
+
+cmd="${1:-}"
+shift || true
+
+branch_file="${repo}/.fake_branch"
+dirty_file="${repo}/.fake_dirty"
+
+case "$cmd" in
+    rev-parse)
+        if [ "${1:-}" = "--is-inside-work-tree" ]; then
+            [ -d "$repo" ] || exit 1
+            echo "true"
+            exit 0
+        fi
+        ;;
+    branch)
+        if [ "${1:-}" = "--show-current" ]; then
+            cat "$branch_file"
+            exit 0
+        fi
+        ;;
+    diff)
+        if [ "${1:-}" = "--quiet" ] || { [ "${1:-}" = "--cached" ] && [ "${2:-}" = "--quiet" ]; }; then
+            [ ! -f "$dirty_file" ]
+            exit $?
+        fi
+        ;;
+    pull)
+        echo "pull $repo" >> "$LOG_FILE"
+        exit 0
+        ;;
+esac
+
+echo "Unexpected fake git invocation: $repo $cmd $*" >&2
+exit 1
+EOF
+    chmod +x "$bin_dir/git"
+}
+
+make_fake_codex_install() {
+    local home_dir="$1"
+    local target_dir="$2"
+    local branch_name="$3"
+
+    mkdir -p "$target_dir/skills" "$home_dir/.codex" "$home_dir/.agents/skills"
+    printf '%s\n' "$branch_name" > "$target_dir/.fake_branch"
+    ln -s "$target_dir" "$home_dir/.codex/hotl"
+    ln -s "$home_dir/.codex/hotl/skills" "$home_dir/.agents/skills/hotl"
+}
+
 # ── JSON validity ─────────────────────────────────────────────────────────────
 
 @test "plugin.json is valid JSON" {
@@ -105,4 +170,57 @@ print(match.group(1) if match else '')
 @test "writing-plans SKILL.md mentions branch and worktree as optional" {
     grep -q 'branch:' "$REPO_ROOT/skills/writing-plans/SKILL.md"
     grep -q 'worktree:' "$REPO_ROOT/skills/writing-plans/SKILL.md"
+}
+
+@test "update.sh updates Codex when ~/.codex/hotl is a symlink to a clean main worktree" {
+    tmp_home="$(mktemp -d)"
+    fake_bin="$tmp_home/bin"
+    fake_log="$tmp_home/git.log"
+    codex_target="$tmp_home/codex-worktree"
+
+    : > "$fake_log"
+    make_fake_git "$fake_bin" "$fake_log"
+    make_fake_codex_install "$tmp_home" "$codex_target" "main"
+
+    run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
+    [[ "$output" == *"Codex plugin updated."* ]]
+    grep -q "pull ${tmp_home}/.codex/hotl" "$fake_log"
+}
+
+@test "update.sh skips Codex on non-main branch unless forced" {
+    tmp_home="$(mktemp -d)"
+    fake_bin="$tmp_home/bin"
+    fake_log="$tmp_home/git.log"
+    codex_target="$tmp_home/codex-worktree"
+
+    : > "$fake_log"
+    make_fake_git "$fake_bin" "$fake_log"
+    make_fake_codex_install "$tmp_home" "$codex_target" "feature/hotl-test"
+
+    run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Codex install is on branch feature/hotl-test; skipping to avoid mutating a feature branch."* ]]
+    [[ "$output" == *"--force-codex"* ]]
+    [ ! -f "$fake_log" ] || ! grep -q "pull ${tmp_home}/.codex/hotl" "$fake_log"
+}
+
+@test "update.sh force-updates Codex on non-main branch with --force-codex" {
+    tmp_home="$(mktemp -d)"
+    fake_bin="$tmp_home/bin"
+    fake_log="$tmp_home/git.log"
+    codex_target="$tmp_home/codex-worktree"
+
+    : > "$fake_log"
+    make_fake_git "$fake_bin" "$fake_log"
+    make_fake_codex_install "$tmp_home" "$codex_target" "feature/hotl-test"
+
+    run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh" --force-codex
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
+    grep -q "pull ${tmp_home}/.codex/hotl" "$fake_log"
 }
