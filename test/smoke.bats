@@ -164,6 +164,26 @@ assert len(data['additional_context']) > 0, 'additional_context is empty'
     [ "$found" -gt 0 ] || { echo "No .md files found under $commands_dir"; exit 1; }
 }
 
+# ── output contracts ──────────────────────────────────────────────────────────
+
+@test "pr-review output contract contains all 9 required sections" {
+    contract="$REPO_ROOT/docs/contracts/pr-review-output.md"
+    [ -f "$contract" ] || { echo "Contract file missing: $contract"; return 1; }
+    grep -q "PR Metadata" "$contract"
+    grep -q "Description Verdict" "$contract"
+    grep -q "Ticket Alignment Verdict" "$contract"
+    grep -q "Code Changes Verdict" "$contract"
+    grep -q "Code Scan Verdict" "$contract"
+    grep -q "Unit Tests Verdict" "$contract"
+    grep -q "Overall Verdict" "$contract"
+    grep -q "Consolidated Findings" "$contract"
+    grep -q "Verification Notes" "$contract"
+}
+
+@test "pr-reviewing skill references the output contract" {
+    grep -q "docs/contracts/pr-review-output.md" "$REPO_ROOT/skills/pr-reviewing/SKILL.md"
+}
+
 # ── command/skill name collision guard ────────────────────────────────────────
 
 @test "no command shares a name with a skill directory (prevents Skill tool loop)" {

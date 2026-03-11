@@ -11,6 +11,19 @@ Review a pull request end-to-end across 4 dimensions (description/ticket, code c
 
 **Announce:** "Starting PR review. Detecting platform and fetching PR data..."
 
+## Output Contract
+
+This skill produces a structured review report. The canonical schema is defined in
+`docs/contracts/pr-review-output.md`. All platforms must emit every section in that
+contract. Platform-specific rendering (tables, inline comments, etc.) is handled by
+platform docs, not this skill.
+
+Key rules from the contract:
+- All 9 sections always present, even on BLOCK
+- Dimension verdicts summarize sections; individual findings may have mixed severities
+- Overall verdict derived from dimension verdicts, not individual findings
+- The contract is mandatory even when platform-native findings are emitted before it
+
 ## Step 1: Platform Detection & PR Fetching
 
 ### Resolve the PR
@@ -100,13 +113,13 @@ Return EXACTLY this format (two separate blocks — one for description, one for
 DIMENSION: Description
 VERDICT: PASS | WARN | BLOCK
 FINDINGS:
-- [PASS|WARN|BLOCK]: [finding description]
+- [BLOCK|WARN|NOTE]: [finding description]
 SUMMARY: [one sentence]
 
 DIMENSION: Ticket Alignment
-VERDICT: PASS | WARN | N/A
+VERDICT: PASS | WARN | BLOCK | N/A
 FINDINGS:
-- [PASS|WARN|BLOCK]: [finding description] (or "No ticket linked" if none found)
+- [BLOCK|WARN|NOTE]: [finding description] (or "No ticket linked" if none found)
 SUMMARY: [one sentence]
 ```
 ---
@@ -236,7 +249,7 @@ TEST_RESULTS:
 COVERAGE:
 - [covered | not covered]: {file}:{lines} (or "Coverage tooling not available")
 TEST_QUALITY:
-- [PASS|WARN|NOTE]: [finding description]
+- [BLOCK|WARN|NOTE]: [finding description]
 SUMMARY: [one sentence]
 ```
 ---
@@ -244,52 +257,14 @@ SUMMARY: [one sentence]
 
 ## Step 3: Assemble Summary
 
-After all subagents return, the orchestrator assembles the final report.
+After all subagents return, the orchestrator assembles the final review artifact.
 
-### Verdict Logic
+Assemble the final review artifact following `docs/contracts/pr-review-output.md`, and emit any platform-native inline review findings separately where supported.
 
-Count **dimension-level verdicts** (not individual findings) to determine the overall verdict:
-
-| Condition | Overall Verdict |
-|---|---|
-| Any dimension has BLOCK verdict | **REQUEST_CHANGES** |
-| No BLOCKs, >2 dimensions have WARN verdict | **COMMENT** |
-| No BLOCKs, ≤2 dimensions have WARN verdict | **APPROVE** |
-
-Subagent A produces 2 dimension verdicts (Description + Ticket Alignment). Subagents B, C, D each produce 1. Total: 5 dimension verdicts.
-
-### Report Template
-
-```markdown
-## PR Review: {repo}#{number} — "{title}"
-Platform: {platform} ({mode})
-Branch: {head} → {base}
-Reviewed: {date}
-
-| Dimension        | Verdict | Findings              |
-|------------------|---------|-----------------------|
-| Description      | {v}     | {summary}             |
-| Ticket Alignment | {v}     | {summary}             |
-| Code Changes     | {v}     | {summary}             |
-| Code Scan        | {v}     | {summary}             |
-| Unit Tests       | {v}     | {summary}             |
-
-### Overall: {APPROVE | REQUEST_CHANGES | COMMENT}
-
-### Details
-
-#### Description & Ticket
-{detailed findings from Subagent A}
-
-#### Code Changes
-{detailed findings from Subagent B with file:line references}
-
-#### Code Scan
-{linter results + AI scan findings from Subagent C}
-
-#### Unit Tests
-{test results + coverage + quality findings from Subagent D}
-```
+Specifically:
+1. Collect all subagent results (Subagent A produces 2 dimension verdicts: Description + Ticket Alignment; Subagents B, C, D each produce 1; total: 5)
+2. Produce the canonical 9-section summary following the contract
+3. Emit platform-native inline findings where the runtime supports them (e.g., `::code-comment` in Codex, line-level GitHub review comments in Claude Code full mode)
 
 ## Step 4: Post to GitHub (Full Mode Only)
 
