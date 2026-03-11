@@ -142,7 +142,7 @@ Or from a local clone:
 bash update.sh
 ```
 
-For Codex: `cd ~/.codex/hotl && git pull`
+Covers Claude Code, Codex, and Cline — skips any tool that isn't installed.
 
 ---
 

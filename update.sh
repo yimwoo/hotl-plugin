@@ -2,10 +2,11 @@
 set -euo pipefail
 
 # HOTL Plugin Update Script
-# Updates both Claude Code and Cline installations if present.
+# Updates Claude Code, Codex, and Cline installations if present.
 
 CLAUDE_PLUGIN_DIR="${HOME}/.claude/plugins/hotl"
 CLAUDE_CACHE_DIR="${HOME}/.claude/plugins/cache/hotl-plugin/hotl"
+CODEX_HOTL_DIR="${HOME}/.codex/hotl"
 CLINE_HOTL_DIR="${HOME}/.cline/hotl"
 CLINE_RULES_DIR="${HOME}/Documents/Cline/Rules"
 
@@ -53,6 +54,22 @@ if [ -d "${CLAUDE_PLUGIN_DIR}/.git" ]; then
     echo ""
 fi
 
+# ── Codex ─────────────────────────────────────────────────────────────────────
+
+if [ -d "${CODEX_HOTL_DIR}/.git" ]; then
+    echo "Updating Codex plugin at ${CODEX_HOTL_DIR}..."
+    git -C "${CODEX_HOTL_DIR}" pull
+
+    # Refresh skills symlink target if using ~/.agents/skills/hotl
+    if [ -L "${HOME}/.agents/skills/hotl" ]; then
+        echo "  Skills symlink intact at ~/.agents/skills/hotl"
+    fi
+
+    UPDATED=$((UPDATED + 1))
+    echo "  Codex plugin updated."
+    echo ""
+fi
+
 # ── Cline ─────────────────────────────────────────────────────────────────────
 
 if [ -d "${CLINE_HOTL_DIR}/.git" ]; then
@@ -81,6 +98,7 @@ if [ "$UPDATED" -eq 0 ]; then
     echo "No HOTL installations found."
     echo ""
     echo "Install for Claude Code:  bash install.sh"
+    echo "Install for Codex:        see .codex/INSTALL.md"
     echo "Install for Cline:        bash install-cline.sh"
     exit 1
 fi
