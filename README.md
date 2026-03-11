@@ -24,6 +24,9 @@ mkdir -p ~/.agents/skills && ln -s ~/.codex/hotl/skills ~/.agents/skills/hotl
 
 Then restart Codex. Full instructions: [`.codex/INSTALL.md`](.codex/INSTALL.md)
 
+Codex uses the HOTL skill files from `~/.agents/skills/hotl`. Claude slash commands such as `/hotl:pr-review` do not exist in Codex.
+There is no `/hotl:*` command syntax in Codex. Ask Codex to use `hotl:brainstorming`, `hotl:writing-plans`, `hotl:pr-review`, or another HOTL skill in plain English.
+
 ### Cline
 
 ```bash
@@ -78,6 +81,39 @@ For a deep dive into each phase, see [How HOTL Works](docs/how-it-works.md).
 | `/hotl:subagent-execute` | Run the workflow with delegated subagent execution |
 | `/hotl:pr-review` | Review a PR across multiple dimensions (description, code, scan, tests) |
 | `/hotl:setup` | Generate adapter files for other tools |
+
+---
+
+## How To Use HOTL In Codex
+
+If you are using OpenAI Codex, invoke HOTL with normal prompts, not slash commands.
+
+There is no `/hotl:brainstorm` or `/hotl:pr-review` syntax in Codex. Instead, ask Codex to use a HOTL skill by name, or describe the task and let Codex pick the right HOTL skill from the installed set.
+
+### Codex Prompt Examples
+
+```text
+Use hotl:brainstorming to design this feature before writing code.
+
+Use hotl:writing-plans to create a hotl-workflow file for adding OAuth login.
+
+Use hotl:document-review on hotl-workflow-add-oauth.md before implementation.
+
+Use hotl:pr-review to review https://github.com/org/repo/pull/123.
+
+Use hotl:code-review on the changes in this branch before merge.
+
+Use HOTL for this task and choose the correct skill automatically.
+```
+
+### Claude Code vs Codex
+
+| Tool | How you invoke HOTL |
+| --- | --- |
+| Claude Code | Slash commands such as `/hotl:brainstorm` or `/hotl:pr-review` |
+| Codex | Natural-language prompts that name the skill, such as `Use hotl:brainstorming...` |
+
+For a Codex-specific setup and usage guide, see [`.codex/INSTALL.md`](.codex/INSTALL.md) and [`docs/README.codex.md`](docs/README.codex.md).
 
 ---
 
@@ -181,6 +217,7 @@ bash update.sh
 ```
 
 Covers Claude Code, Codex, and Cline — skips any tool that isn't installed.
+Restart Codex after updating so it re-discovers the latest skills.
 
 ---
 

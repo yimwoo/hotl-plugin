@@ -154,4 +154,5 @@ echo "Done. ${UPDATED} installation(s) updated."
 if [ "$SKIPPED" -gt 0 ]; then
     echo "${SKIPPED} installation(s) skipped."
 fi
+echo "Restart Codex to re-discover updated HOTL skills."
 echo "Restart your Claude Code session or start a new Cline task to use the latest version."

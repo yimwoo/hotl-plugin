@@ -67,6 +67,43 @@ make_fake_codex_install() {
     ln -s "$home_dir/.codex/hotl/skills" "$home_dir/.agents/skills/hotl"
 }
 
+assert_codex_prompt_resolves() {
+    local prompt="$1"
+    local skill_name
+    local skill_path
+
+    if [[ "$prompt" =~ hotl:[a-z-]+ ]]; then
+        skill_name="${BASH_REMATCH[0]#hotl:}"
+        skill_path="$REPO_ROOT/skills/$skill_name/SKILL.md"
+        [ -f "$skill_path" ] || {
+            echo "Missing skill for prompt: $prompt ($skill_path)"
+            return 1
+        }
+        grep -q "name: $skill_name" "$skill_path" || {
+            echo "Skill frontmatter mismatch for prompt: $prompt"
+            return 1
+        }
+        return 0
+    fi
+
+    grep -q 'name: using-hotl' "$REPO_ROOT/skills/using-hotl/SKILL.md" || {
+        echo "using-hotl dispatcher skill missing"
+        return 1
+    }
+    grep -q 'hotl:brainstorming' "$REPO_ROOT/skills/using-hotl/SKILL.md" || {
+        echo "using-hotl index missing brainstorming entry"
+        return 1
+    }
+    grep -q 'hotl:writing-plans' "$REPO_ROOT/skills/using-hotl/SKILL.md" || {
+        echo "using-hotl index missing writing-plans entry"
+        return 1
+    }
+    grep -q 'hotl:pr-review' "$REPO_ROOT/skills/using-hotl/SKILL.md" || {
+        echo "using-hotl index missing pr-review entry"
+        return 1
+    }
+}
+
 # ── JSON validity ─────────────────────────────────────────────────────────────
 
 @test "plugin.json is valid JSON" {
@@ -172,6 +209,34 @@ print(match.group(1) if match else '')
     grep -q 'worktree:' "$REPO_ROOT/skills/writing-plans/SKILL.md"
 }
 
+@test "Codex install docs consistently use ~/.codex/hotl" {
+    grep -q '~/.codex/hotl' "$REPO_ROOT/README.md"
+    grep -q '~/.codex/hotl' "$REPO_ROOT/.codex/INSTALL.md"
+    grep -q '~/.codex/hotl' "$REPO_ROOT/docs/README.codex.md"
+    ! grep -q '~/.codex/hotl-plugin' "$REPO_ROOT/README.md"
+    ! grep -q '~/.codex/hotl-plugin' "$REPO_ROOT/.codex/INSTALL.md"
+    ! grep -q '~/.codex/hotl-plugin' "$REPO_ROOT/docs/README.codex.md"
+}
+
+@test "Codex docs explain restart after updating skills" {
+    grep -q 'Restart Codex' "$REPO_ROOT/docs/README.codex.md"
+    grep -q 'Restart Codex' "$REPO_ROOT/README.md"
+}
+
+@test "Codex docs explain skill invocation without slash commands" {
+    grep -q 'There is no `/hotl:' "$REPO_ROOT/README.md"
+    grep -q 'There is no `/hotl:' "$REPO_ROOT/docs/README.codex.md"
+    grep -q 'Ask Codex to use `hotl:brainstorming`' "$REPO_ROOT/README.md"
+    grep -q 'Ask Codex to use `hotl:brainstorming`' "$REPO_ROOT/docs/README.codex.md"
+}
+
+@test "Codex prompt examples resolve to installed HOTL skills locally" {
+    assert_codex_prompt_resolves 'Use hotl:brainstorming to design this feature before writing code.'
+    assert_codex_prompt_resolves 'Use hotl:writing-plans to create a hotl-workflow file for adding OAuth login.'
+    assert_codex_prompt_resolves 'Use hotl:pr-review to review https://github.com/org/repo/pull/123.'
+    assert_codex_prompt_resolves 'Use HOTL for this task and choose the correct skill automatically.'
+}
+
 @test "update.sh updates Codex when ~/.codex/hotl is a symlink to a clean main worktree" {
     tmp_home="$(mktemp -d)"
     fake_bin="$tmp_home/bin"
@@ -223,4 +288,20 @@ print(match.group(1) if match else '')
     [ "$status" -eq 0 ]
     [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
     grep -q "pull ${tmp_home}/.codex/hotl" "$fake_log"
+}
+
+@test "update.sh reminds Codex users to restart after an update" {
+    tmp_home="$(mktemp -d)"
+    fake_bin="$tmp_home/bin"
+    fake_log="$tmp_home/git.log"
+    codex_target="$tmp_home/codex-worktree"
+
+    : > "$fake_log"
+    make_fake_git "$fake_bin" "$fake_log"
+    make_fake_codex_install "$tmp_home" "$codex_target" "main"
+
+    run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Restart Codex"* ]]
 }
