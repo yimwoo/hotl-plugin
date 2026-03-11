@@ -65,9 +65,9 @@ For a deep dive into each phase, see [How HOTL Works](docs/how-it-works.md).
 
 ---
 
-## Commands and Skills
+## Commands
 
-### Claude Code Commands
+### Claude Code Slash Commands
 
 | Command | What it does |
 | --- | --- |
@@ -76,15 +76,53 @@ For a deep dive into each phase, see [How HOTL Works](docs/how-it-works.md).
 | `/hotl:loop` | Run the workflow with autonomous loop execution |
 | `/hotl:execute-plan` | Run the workflow with manual checkpoints |
 | `/hotl:subagent-execute` | Run the workflow with delegated subagent execution |
+| `/hotl:pr-review` | Review a PR across multiple dimensions (description, code, scan, tests) |
 | `/hotl:setup` | Generate adapter files for other tools |
 
-### Codex Skills
+---
 
-`hotl:brainstorming` · `hotl:writing-plans` · `hotl:document-review` · `hotl:loop-execution` · `hotl:executing-plans` · `hotl:subagent-execution` · `hotl:tdd` · `hotl:systematic-debugging`
+## Skills
 
-### Cline Rules
+All skills work with **Claude Code** and **Codex**. Cline users get equivalent rules automatically.
 
-Brainstorming · Planning · Execution · Subagent execution · TDD · Debugging · Code review
+### Design & Planning
+
+| Skill | Description | Phase |
+| --- | --- | --- |
+| `hotl:brainstorming` | Explore intent, requirements, and design. Produces HOTL contracts (intent, verification, governance) before implementation. | Brainstorm |
+| `hotl:writing-plans` | Create a `hotl-workflow-<slug>.md` implementation plan with bite-sized tasks, exact file paths, and loop/gate definitions. | Plan |
+| `hotl:document-review` | Review design specs and workflow plans before execution. Runs deterministic lint first, then AI-driven qualitative review. | Review |
+
+### Execution
+
+| Skill | Description | Phase |
+| --- | --- | --- |
+| `hotl:loop-execution` | Execute a `hotl-workflow-*.md` autonomously — loops until success criteria met, auto-approves low-risk gates, pauses at high-risk gates. | Execute |
+| `hotl:executing-plans` | Execute an implementation plan linearly with explicit human checkpoints between batches of tasks. | Execute |
+| `hotl:subagent-execution` | Execute a reviewed `hotl-workflow-*.md` by delegating steps to fresh subagents while the controller keeps governance and verification. | Execute |
+| `hotl:dispatch-agents` | Run 2+ independent tasks in parallel with no shared state — dispatches parallel subagents for each task. | Execute |
+
+### Quality & Review
+
+| Skill | Description | Phase |
+| --- | --- | --- |
+| `hotl:pr-review` | Review a PR across multiple dimensions — description/ticket, code changes, code scan, unit tests — using parallel subagents. Supports GitHub, GitLab, and enterprise platforms. | Review |
+| `hotl:code-review` | Post-implementation review against the workflow plan and HOTL contracts. Checks plan alignment, code quality, and governance compliance. | Verify |
+| `hotl:verification-before-completion` | Run verification commands and confirm output before claiming work is complete. Evidence before assertions. | Verify |
+
+### Development Practices
+
+| Skill | Description | Phase |
+| --- | --- | --- |
+| `hotl:tdd` | Enforce RED-GREEN-REFACTOR cycle before writing any implementation code. | Execute |
+| `hotl:systematic-debugging` | Structured debugging workflow — reproduce, isolate, fix, verify. Use before proposing fixes for any bug or test failure. | Execute |
+
+### Setup & Configuration
+
+| Skill | Description | Phase |
+| --- | --- | --- |
+| `hotl:setup-project` | Generate adapter files for the current project — creates AGENTS.md, .clinerules, cursor rules, or copilot instructions depending on tools the team uses. | Setup |
+| `hotl:using-hotl` | Auto-loaded on session start. Establishes the skill index and HOTL operating principles. | Setup |
 
 ---
 
