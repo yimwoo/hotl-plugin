@@ -43,14 +43,19 @@ You should see a symlink pointing to your HOTL skills directory.
 - `hotl:loop-execution` — Execute workflow files with auto-approve
 - `hotl:executing-plans` — Linear execution with checkpoints
 - `hotl:subagent-execution` — Execute reviewed workflows in-session with delegated subagent steps
+- `hotl:pr-review` — Review a PR across description, code, scan, and tests
+- `hotl:code-review` — Review branch changes against the workflow and HOTL contracts
+- `hotl:verification-before-completion` — Require test and command output before claiming success
 - `hotl:tdd` — RED-GREEN-REFACTOR cycle
 - `hotl:systematic-debugging` — 4-phase root cause process
 
 ## Updating
 
 ```bash
-cd ~/.codex/hotl && git pull
+bash ~/.codex/hotl/update.sh
 ```
+
+Restart Codex after updating so it re-discovers the latest skill files.
 
 ## Uninstalling
 

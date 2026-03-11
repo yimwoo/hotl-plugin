@@ -36,17 +36,19 @@ Tell Cline what you need in natural language. HOTL rules teach Cline to follow s
 | "subagent execute the plan" | Delegates implementation-friendly workflow steps to fresh subagents while keeping verification and gates in the controller |
 | "use TDD" | Follows RED-GREEN-REFACTOR — writes a failing test before any implementation code |
 | "debug this" | Systematic 4-phase process: reproduce, understand, hypothesize, fix and verify |
+| "review the workflow" | Runs document lint plus qualitative workflow review before execution |
 | "review the code" | Checklist review: plan alignment, code quality, governance — reports BLOCK/WARN/NOTE issues |
 
 ## How It Works
 
-Cline reads `~/Documents/Cline/Rules/` for global rules. HOTL installs 8 rule files that teach Cline structured workflows:
+Cline reads `~/Documents/Cline/Rules/` for global rules. HOTL installs 9 rule files that teach Cline structured workflows:
 
 | Rule file | What it enforces |
 | --- | --- |
 | `hotl-operating-model.md` | Core HOTL principles — never code without a design, three contracts required, risk levels |
 | `hotl-brainstorming.md` | Full brainstorming process — questions, approaches, contracts, design doc |
 | `hotl-planning.md` | Create workflow files with atomic steps, verify commands, gates |
+| `hotl-document-review.md` | Lint and review design docs and workflow files before execution |
 | `hotl-execution.md` | Execute plans with checkpoints, never skip failed steps, show evidence |
 | `hotl-subagent-execution.md` | Execute reviewed plans in-session with delegated subagent steps and controller-owned gates |
 | `hotl-tdd.md` | RED-GREEN-REFACTOR — never write code before a failing test |
@@ -65,8 +67,9 @@ This hybrid approach works with any API provider and any model.
 ```text
 brainstorm  →  design doc with intent/verification/governance contracts
 plan        →  hotl-workflow-<slug>.md with atomic steps and gates
+review      →  lint and qualitative review before execution
 execute     →  step-by-step execution with verification at each step
-review      →  checklist review before claiming done
+verify      →  review code and confirm evidence before claiming done
 ```
 
 ### Three Contracts
@@ -125,7 +128,7 @@ Or if already cloned:
 bash ~/.cline/hotl/update.sh
 ```
 
-This pulls the latest code and syncs global rules automatically. Also updates Claude Code if installed.
+This pulls the latest code and syncs global rules automatically. Also updates Claude Code and Codex if installed.
 
 ## FAQ
 

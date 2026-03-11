@@ -237,6 +237,32 @@ print(match.group(1) if match else '')
     assert_codex_prompt_resolves 'Use HOTL for this task and choose the correct skill automatically.'
 }
 
+@test "install.sh succeeds on a fresh HOME without pre-existing plugin directories" {
+    tmp_home="$(mktemp -d)"
+
+    run env HOME="$tmp_home" bash "$REPO_ROOT/install.sh"
+
+    [ "$status" -eq 0 ]
+    [ -d "$tmp_home/.claude/plugins/hotl" ]
+    [ -f "$tmp_home/.claude/plugins/hotl/update.sh" ]
+    [ -d "$tmp_home/.claude/plugins/hotl/skills" ]
+}
+
+@test "docs/README.codex.md prompt examples resolve to installed HOTL skills locally" {
+    assert_codex_prompt_resolves 'Use hotl:brainstorming to compare OAuth and API-key auth before writing code.'
+    assert_codex_prompt_resolves 'Use hotl:writing-plans to create hotl-workflow-add-rate-limiting.md.'
+    assert_codex_prompt_resolves 'Use hotl:document-review on hotl-workflow-add-rate-limiting.md and tell me if it is ready to execute.'
+    assert_codex_prompt_resolves 'Use hotl:subagent-execution to execute hotl-workflow-add-rate-limiting.md in this session.'
+    assert_codex_prompt_resolves 'Use hotl:verification-before-completion before you say this task is done.'
+    assert_codex_prompt_resolves 'Use HOTL for this task and choose the most appropriate skill automatically.'
+}
+
+@test "docs/README.cline.md documents the current global rule set" {
+    rule_count=$(find "$REPO_ROOT/cline/rules" -maxdepth 1 -name 'hotl-*.md' | wc -l | tr -d ' ')
+    grep -q "HOTL installs ${rule_count} rule files" "$REPO_ROOT/docs/README.cline.md"
+    grep -q 'hotl-document-review.md' "$REPO_ROOT/docs/README.cline.md"
+}
+
 @test "update.sh updates Codex when ~/.codex/hotl is a symlink to a clean main worktree" {
     tmp_home="$(mktemp -d)"
     fake_bin="$tmp_home/bin"

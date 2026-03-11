@@ -24,7 +24,7 @@ ln -s ~/.codex/hotl/skills ~/.agents/skills/hotl
 ## How It Works
 
 Codex discovers skills in `~/.agents/skills/` at startup. The `using-hotl` skill
-is loaded automatically and guides Codex to use the right skill for each task.
+provides the HOTL skill index and routing guidance for the rest of the skill set.
 Codex uses the skill files directly. Claude-style slash commands such as
 `/hotl:pr-review` are not part of the Codex integration.
 There is no `/hotl:brainstorm` or `/hotl:pr-review` command syntax in Codex. Ask Codex to use `hotl:brainstorming`, `hotl:writing-plans`, `hotl:pr-review`, or another HOTL skill in plain English.
@@ -38,15 +38,17 @@ being explicit is better when you want a specific workflow.
 Examples:
 
 ```text
-Ask Codex to use `hotl:brainstorming` before writing code for this feature.
+Use `hotl:brainstorming` to compare OAuth and API-key auth before writing code.
 
-Use `hotl:writing-plans` to create a hotl-workflow file for adding rate limiting.
+Use `hotl:writing-plans` to create `hotl-workflow-add-rate-limiting.md`.
 
-Use `hotl:document-review` on hotl-workflow-add-rate-limiting.md.
+Use `hotl:document-review` on `hotl-workflow-add-rate-limiting.md` and tell me if it is ready to execute.
+
+Use `hotl:subagent-execution` to execute `hotl-workflow-add-rate-limiting.md` in this session.
 
 Use `hotl:pr-review` to review https://github.com/org/repo/pull/123.
 
-Use `hotl:code-review` on this branch before merge.
+Use `hotl:verification-before-completion` before you say this task is done.
 
 Use HOTL for this task and choose the most appropriate skill automatically.
 ```
@@ -58,7 +60,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 | Codex | Natural-language prompts that name a skill, for example `Use hotl:brainstorming ...` |
 | Claude Code | Slash commands such as `/hotl:brainstorm` and `/hotl:pr-review` |
 
-## Key Skills
+## Common Skills
 
 - `hotl:brainstorming` — design with HOTL contracts before implementation
 - `hotl:writing-plans` — create `hotl-workflow-<slug>.md` files
@@ -66,11 +68,14 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `hotl:loop-execution` — autonomous execution with retries
 - `hotl:executing-plans` — manual checkpointed execution
 - `hotl:subagent-execution` — same-session delegated execution with controller-owned verification
+- `hotl:pr-review` — review a PR across description, code, scan, and tests
+- `hotl:code-review` — review branch changes against the workflow and HOTL contracts
+- `hotl:verification-before-completion` — require test and command output before claiming success
 
 ## Updating
 
 ```bash
-cd ~/.codex/hotl && git pull
+bash ~/.codex/hotl/update.sh
 ```
 
 Restart Codex after updating so it re-discovers the latest skill files.

@@ -7,10 +7,11 @@ INSTALL_DIR="${HOME}/.claude/plugins/${PLUGIN_NAME}"
 echo "Installing HOTL plugin to ${INSTALL_DIR}..."
 
 if [ -d "${INSTALL_DIR}" ]; then
-    echo "Updating existing installation..."
-    cd "${INSTALL_DIR}" && git pull
+    echo "Existing installation found. Running unified updater..."
+    bash "${INSTALL_DIR}/update.sh"
 else
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    mkdir -p "$(dirname "${INSTALL_DIR}")"
     cp -r "${SCRIPT_DIR}" "${INSTALL_DIR}"
 fi
 
