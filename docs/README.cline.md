@@ -41,7 +41,7 @@ Tell Cline what you need in natural language. HOTL rules teach Cline to follow s
 
 ## How It Works
 
-Cline reads `~/Documents/Cline/Rules/` for global rules. HOTL installs 9 rule files that teach Cline structured workflows:
+Cline reads `~/Documents/Cline/Rules/` for global rules. HOTL installs 10 rule files that teach Cline structured workflows:
 
 | Rule file | What it enforces |
 | --- | --- |
@@ -54,6 +54,7 @@ Cline reads `~/Documents/Cline/Rules/` for global rules. HOTL installs 9 rule fi
 | `hotl-tdd.md` | RED-GREEN-REFACTOR — never write code before a failing test |
 | `hotl-debugging.md` | 4-phase debugging — reproduce, understand, hypothesize, fix |
 | `hotl-code-review.md` | Review against plan with BLOCK/WARN/NOTE severity |
+| `hotl-pr-review.md` | PR review rendering — follow `docs/contracts/pr-review-output.md` for the 9-section output schema |
 
 Each rule file contains:
 

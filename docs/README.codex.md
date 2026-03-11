@@ -79,6 +79,8 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `hotl:executing-plans` — manual checkpointed execution
 - `hotl:subagent-execution` — same-session delegated execution with controller-owned verification
 - `hotl:pr-reviewing` — review a PR across description, code, scan, and tests
+  - **Output contract:** `docs/contracts/pr-review-output.md` defines the canonical 9-section review schema
+  - **Codex rendering (advisory):** emit platform-native inline findings first (e.g., `::code-comment` directives for BLOCK and WARN findings with file:line), then render the full 9-section structured summary. Use plain markdown for the summary.
 - `hotl:code-review` — review branch changes against the workflow and HOTL contracts
 - `hotl:verification-before-completion` — require test and command output before claiming success
 
