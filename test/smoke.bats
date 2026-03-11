@@ -164,6 +164,28 @@ assert len(data['additional_context']) > 0, 'additional_context is empty'
     [ "$found" -gt 0 ] || { echo "No .md files found under $commands_dir"; exit 1; }
 }
 
+# ── command/skill name collision guard ────────────────────────────────────────
+
+@test "no command shares a name with a skill directory (prevents Skill tool loop)" {
+    # Commands and skills must use different names. If a command and skill share
+    # a name, the Skill tool either loops (without disable-model-invocation) or
+    # blocks (with it). Convention: command=short name, skill=longer variant
+    # (e.g. command brainstorm → skill brainstorming).
+    collisions=()
+    for cmd_file in "$REPO_ROOT"/commands/*.md; do
+        cmd_name="$(basename "$cmd_file" .md)"
+        if [ -d "$REPO_ROOT/skills/$cmd_name" ]; then
+            collisions+=("$cmd_name")
+        fi
+    done
+    if [ "${#collisions[@]}" -gt 0 ]; then
+        echo "Command/skill name collision(s) found: ${collisions[*]}"
+        echo "Rename the skill directory so it differs from the command name."
+        echo "Convention: command=short (e.g. pr-review), skill=longer (e.g. pr-reviewing)"
+        return 1
+    fi
+}
+
 # ── run-hook.cmd ──────────────────────────────────────────────────────────────
 
 @test "hooks/run-hook.cmd is executable" {
