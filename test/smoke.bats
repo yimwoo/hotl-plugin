@@ -62,3 +62,47 @@ assert len(data['additional_context']) > 0, 'additional_context is empty'
     run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/hotl-workflow-checkbox-sample.md"
     [ "$status" -eq 0 ]
 }
+
+# ── branch/worktree preflight ────────────────────────────────────────────────
+
+@test "document-lint accepts workflow with branch and worktree fields" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/hotl-workflow-branch-sample.md"
+    [ "$status" -eq 0 ]
+}
+
+@test "workflow-format.md documents branch and worktree fields" {
+    grep -q '| `branch`' "$REPO_ROOT/docs/workflow-format.md"
+    grep -q '| `worktree`' "$REPO_ROOT/docs/workflow-format.md"
+}
+
+@test "all three execution skills contain identical Branch/Worktree Preflight section" {
+    extract() {
+        python3 -c "
+import re, sys
+with open(sys.argv[1]) as f:
+    content = f.read()
+match = re.search(r'(## Branch/Worktree Preflight\n.*?)(?=\n## )', content, re.DOTALL)
+print(match.group(1) if match else '')
+" "$1"
+    }
+    loop=$(extract "$REPO_ROOT/skills/loop-execution/SKILL.md")
+    exec_plans=$(extract "$REPO_ROOT/skills/executing-plans/SKILL.md")
+    subagent=$(extract "$REPO_ROOT/skills/subagent-execution/SKILL.md")
+    [ -n "$loop" ] || { echo "loop-execution missing preflight section"; return 1; }
+    [ "$loop" = "$exec_plans" ] || { echo "loop-execution and executing-plans preflight sections differ"; return 1; }
+    [ "$loop" = "$subagent" ] || { echo "loop-execution and subagent-execution preflight sections differ"; return 1; }
+}
+
+@test "workflow templates do not contain branch or worktree fields" {
+    ! grep -q 'branch:' "$REPO_ROOT/workflows/feature.md"
+    ! grep -q 'branch:' "$REPO_ROOT/workflows/bugfix.md"
+    ! grep -q 'branch:' "$REPO_ROOT/workflows/refactor.md"
+    ! grep -q 'worktree:' "$REPO_ROOT/workflows/feature.md"
+    ! grep -q 'worktree:' "$REPO_ROOT/workflows/bugfix.md"
+    ! grep -q 'worktree:' "$REPO_ROOT/workflows/refactor.md"
+}
+
+@test "writing-plans SKILL.md mentions branch and worktree as optional" {
+    grep -q 'branch:' "$REPO_ROOT/skills/writing-plans/SKILL.md"
+    grep -q 'worktree:' "$REPO_ROOT/skills/writing-plans/SKILL.md"
+}

@@ -24,8 +24,9 @@ HOTL fixes that with one enforced workflow:
 1. **Brainstorm** the change before coding
 2. **Write a plan** as a `hotl-workflow-<slug>.md`
 3. **Review the document** before execution
-4. **Execute** with the right level of autonomy
-5. **Verify** before claiming the work is done
+4. **Branch** into an isolated git branch automatically
+5. **Execute** with the right level of autonomy
+6. **Verify** before claiming the work is done
 
 ## How HOTL Works
 
@@ -47,6 +48,8 @@ intent: Add Redis-backed sliding window rate limiter to FastAPI service
 success_criteria: 429 after threshold, configurable per-endpoint, all tests pass
 risk_level: medium
 auto_approve: true
+branch: feat/add-rate-limiter   # optional — defaults to hotl/<slug>
+worktree: false                 # optional — use git worktree for isolation
 ---
 
 ## Steps
@@ -77,7 +80,23 @@ Lint failures are hard blockers. AI review can:
 
 That means execution does not start from a structurally broken or obviously weak plan.
 
-### 4. Execute
+### 4. Git Branch Isolation
+
+Before executing any steps, HOTL creates a dedicated git branch so work never lands directly on main or master. This prevents merge conflicts in team environments and keeps AI-generated changes isolated until reviewed.
+
+**How it works:**
+- HOTL derives the branch name from the workflow filename: `hotl-workflow-add-auth.md` becomes `hotl/add-auth`
+- Teams can override the branch name with `branch: feat/add-auth` in the workflow frontmatter
+- Set `worktree: true` to create a git worktree for full filesystem isolation
+
+**Safety checks before branching:**
+- Uncommitted changes block execution (no auto-stash — you decide what to do)
+- Existing branches always prompt: reuse, recreate, or abort
+- Repos without git or with no commits skip branching and execute in place
+
+This means every workflow execution starts clean, on its own branch, with no risk to the main branch.
+
+### 5. Execute
 
 After review, HOTL gives the user three execution options.
 
@@ -116,7 +135,7 @@ What it means to the user:
 
 Use this when you want cleaner task-level delegation but still want HOTL to own governance.
 
-### 5. Verify Before Completion
+### 6. Verify Before Completion
 
 HOTL does not treat “should work” as completion. It requires real evidence:
 
@@ -222,6 +241,10 @@ Plan
 Document Review
   → lint structure
   → review plan quality
+
+Branch
+  → create hotl/add-rate-limiter branch
+  → verify clean workspace
 
 Execute
   → choose loop, manual, or subagent execution

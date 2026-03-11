@@ -37,6 +37,43 @@ Use this when you have a reviewed `hotl-workflow-*.md` and want same-session exe
    - `PASS` → continue
    - `REVISE` → stop; the workflow must be fixed first
    - `HUMAN_OVERRIDE_REQUIRED` → stop until the human explicitly says to proceed
+5. Run Branch/Worktree Preflight (see below) — after document review passes, before any steps execute
+
+## Branch/Worktree Preflight
+
+After resolving the workflow file (and after document review if applicable), run this preflight **before executing any steps**:
+
+```
+1. Is this a git repo with at least one commit?
+   - No  → log "Skipping branch setup (no git history)" → proceed to step execution
+   - Yes → continue
+
+2. Check for uncommitted changes
+   - Dirty → HARD-FAIL. Tell the user why execution is blocked. Offer choices:
+     a. Clean up manually, then re-run
+     b. Stash manually, then re-run
+     c. Explicitly approve HOTL to stash and continue
+   - Clean → continue
+
+3. Determine branch name
+   - If branch: field exists in workflow frontmatter → use it
+   - Otherwise → derive hotl/<slug> from hotl-workflow-<slug>.md
+
+4. Check if branch already exists locally
+   - Exists, same HEAD    → ask: reuse, delete+recreate, or abort
+   - Exists, different HEAD → ask: delete+recreate, or abort
+   - Does not exist        → create (no prompt)
+
+5. Create branch/worktree
+   - If worktree: true in frontmatter → create git worktree with the branch
+   - Otherwise → create branch and checkout in current directory
+```
+
+**Rules:**
+- No auto-stash. Hidden state mutation weakens governance.
+- Existing branch always prompts, even at the same HEAD.
+- Non-git repos skip entirely — HOTL works without git ceremony.
+- Document review runs before any git mutation.
 
 ## Execution Model
 

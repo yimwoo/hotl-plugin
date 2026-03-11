@@ -2,6 +2,22 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [1.6.0] - 2026-03-10
+
+### Added
+- **Git branch isolation** — execution skills now create a dedicated branch before running any workflow steps, preventing direct changes to main/master
+  - Default branch name derived from workflow slug: `hotl-workflow-add-auth.md` → `hotl/add-auth`
+  - Optional `branch:` frontmatter field for teams that need custom naming conventions
+  - Optional `worktree: true` for full filesystem isolation via git worktrees
+- **Preflight safety checks** — dirty repo hard-fails, existing branches always prompt, non-git repos skip gracefully
+- 5 new E2E tests validating preflight consistency across all execution skills
+
+### Changed
+- All three execution skills (loop-execution, executing-plans, subagent-execution) share an identical Branch/Worktree Preflight contract
+- `workflow-format.md` documents `branch` and `worktree` frontmatter fields
+- `writing-plans` skill mentions optional branch/worktree fields in format example
+- README updated with Git Branch Isolation section and 6-step workflow overview
+
 ## [1.5.0] - 2026-03-10
 
 ### Added
