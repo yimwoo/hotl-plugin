@@ -7,7 +7,7 @@ description: Review a PR across multiple dimensions — description, code change
 
 ## Overview
 
-Review a pull request end-to-end across 5 dimensions using parallel subagents. Produces a structured verdict report and optionally posts line-level comments on GitHub.
+Review a pull request end-to-end across 4 dimensions (description/ticket, code changes, code scan, unit tests) using parallel subagents. Produces a structured verdict report and optionally posts line-level comments on GitHub.
 
 **Announce:** "Starting PR review. Detecting platform and fetching PR data..."
 
@@ -95,12 +95,18 @@ You are reviewing a PR's description and ticket alignment.
 
 ## Output Format
 
-Return EXACTLY this format:
+Return EXACTLY this format (two separate blocks — one for description, one for ticket):
 ```
-DIMENSION: Description & Ticket
+DIMENSION: Description
 VERDICT: PASS | WARN | BLOCK
 FINDINGS:
 - [PASS|WARN|BLOCK]: [finding description]
+SUMMARY: [one sentence]
+
+DIMENSION: Ticket Alignment
+VERDICT: PASS | WARN | N/A
+FINDINGS:
+- [PASS|WARN|BLOCK]: [finding description] (or "No ticket linked" if none found)
 SUMMARY: [one sentence]
 ```
 ---
@@ -242,11 +248,15 @@ After all subagents return, the orchestrator assembles the final report.
 
 ### Verdict Logic
 
+Count **dimension-level verdicts** (not individual findings) to determine the overall verdict:
+
 | Condition | Overall Verdict |
 |---|---|
-| Any BLOCK in any dimension | **REQUEST_CHANGES** |
-| No BLOCKs, >2 WARNs total | **COMMENT** |
-| No BLOCKs, ≤2 WARNs total | **APPROVE** |
+| Any dimension has BLOCK verdict | **REQUEST_CHANGES** |
+| No BLOCKs, >2 dimensions have WARN verdict | **COMMENT** |
+| No BLOCKs, ≤2 dimensions have WARN verdict | **APPROVE** |
+
+Subagent A produces 2 dimension verdicts (Description + Ticket Alignment). Subagents B, C, D each produce 1. Total: 5 dimension verdicts.
 
 ### Report Template
 
@@ -288,9 +298,16 @@ Reviewed: {date}
 1. Post line-level review comments for BLOCK and WARN findings that have file:line references:
    ```bash
    gh api repos/{owner}/{repo}/pulls/{number}/reviews --method POST \
-     --field body="{summary}" \
-     --field event="{APPROVE|REQUEST_CHANGES|COMMENT}" \
-     --field comments="[{path, line, body}...]"
+     --field body="PR Review Summary: ..." \
+     --field event="REQUEST_CHANGES" \
+     --input - <<'EOF'
+   {
+     "comments": [
+       {"path": "src/auth.ts", "line": 42, "body": "BLOCK: SQL concatenation — use parameterized query"},
+       {"path": "src/auth.ts", "line": 78, "body": "WARN: Magic number 3600 — extract to named constant"}
+     ]
+   }
+   EOF
    ```
 2. If posting fails (auth, permissions) → fall back to local-only, log the error
 
