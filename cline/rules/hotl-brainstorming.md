@@ -75,6 +75,15 @@ Save the complete design to `docs/plans/YYYY-MM-DD-<topic>-design.md`. This file
 
 Ask the user: "Design approved. Ready to create the implementation plan?" Then create a `hotl-workflow-<slug>.md` following the planning rules.
 
+After the workflow file is created, present these execution options:
+
+"Workflow file created. How would you like to execute?"
+1. **Loop execution** — autonomous execution with auto-approve for low-risk steps
+2. **Checkpoint execution** — linear execution with human review every 3 steps
+3. **Subagent execution** — delegated execution with parallel subagents
+
+Do NOT auto-execute. Wait for the user to choose.
+
 **ONLY NOW is the brainstorming task complete.**
 
 ### Rules
