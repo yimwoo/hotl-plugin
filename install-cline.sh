@@ -3,7 +3,9 @@ set -euo pipefail
 
 HOTL_DIR="${HOME}/.cline/hotl"
 RULES_SRC="${HOTL_DIR}/cline/rules"
+SCRIPTS_SRC="${HOTL_DIR}/scripts"
 GLOBAL_RULES_DIR="${HOME}/Documents/Cline/Rules"
+GLOBAL_SCRIPTS_DIR="${HOME}/Documents/Cline/Scripts"
 
 # ── Step 1: Install HOTL globally ─────────────────────────────────────────────
 
@@ -40,6 +42,18 @@ if [ "${COPIED}" -eq 0 ]; then
     exit 1
 fi
 
+# ── Step 3: Install scripts globally to ~/Documents/Cline/Scripts/ ───────────
+
+mkdir -p "${GLOBAL_SCRIPTS_DIR}"
+
+if [ -d "${SCRIPTS_SRC}" ]; then
+    for script_file in "${SCRIPTS_SRC}"/*.sh; do
+        [ -f "${script_file}" ] || continue
+        cp "${script_file}" "${GLOBAL_SCRIPTS_DIR}/"
+        chmod +x "${GLOBAL_SCRIPTS_DIR}/$(basename "${script_file}")"
+    done
+fi
+
 # ── Done ──────────────────────────────────────────────────────────────────────
 
 echo ""
@@ -47,6 +61,7 @@ echo "HOTL for Cline installed successfully!"
 echo ""
 echo "  Global skills:  ${HOTL_DIR}/skills/"
 echo "  Global rules:   ${GLOBAL_RULES_DIR}/ (${COPIED} rule files)"
+echo "  Global scripts: ${GLOBAL_SCRIPTS_DIR}/"
 echo ""
 echo "  Rules apply to ALL projects in Cline — no per-project setup needed."
 echo ""

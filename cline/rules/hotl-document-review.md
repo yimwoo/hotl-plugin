@@ -13,7 +13,7 @@ You MUST run both phases in order. Do NOT skip Phase 1. Do NOT start execution u
 Run the lint script:
 
 ```bash
-bash ~/.cline/hotl/scripts/document-lint.sh <file>
+bash ~/Documents/Cline/Scripts/document-lint.sh <file>
 ```
 
 **If lint FAILS:** STOP. Show all errors. Author MUST fix structural issues. Do NOT proceed to Phase 2.

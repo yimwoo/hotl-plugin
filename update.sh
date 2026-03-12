@@ -25,6 +25,7 @@ CLAUDE_CACHE_DIR="${HOME}/.claude/plugins/cache/hotl-plugin/hotl"
 CODEX_HOTL_DIR="${HOME}/.codex/hotl"
 CLINE_HOTL_DIR="${HOME}/.cline/hotl"
 CLINE_RULES_DIR="${HOME}/Documents/Cline/Rules"
+CLINE_SCRIPTS_DIR="${HOME}/Documents/Cline/Scripts"
 
 FOUND=0
 UPDATED=0
@@ -142,6 +143,17 @@ if is_git_work_tree "${CLINE_HOTL_DIR}"; then
         done
         RULE_COUNT=$(ls "${CLINE_RULES_DIR}"/hotl-*.md 2>/dev/null | wc -l | tr -d ' ')
         echo "  ${RULE_COUNT} rule files updated."
+    fi
+
+    # Refresh global scripts
+    if [ -d "${CLINE_HOTL_DIR}/scripts" ]; then
+        mkdir -p "${CLINE_SCRIPTS_DIR}"
+        for script_file in "${CLINE_HOTL_DIR}"/scripts/*.sh; do
+            [ -f "${script_file}" ] || continue
+            cp "${script_file}" "${CLINE_SCRIPTS_DIR}/"
+            chmod +x "${CLINE_SCRIPTS_DIR}/$(basename "${script_file}")"
+        done
+        echo "  Scripts refreshed at ${CLINE_SCRIPTS_DIR}."
     fi
 
     UPDATED=$((UPDATED + 1))
