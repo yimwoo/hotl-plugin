@@ -10,9 +10,19 @@ You MUST complete ALL 7 steps below in order. Do NOT mark the task as complete a
 
 **NEVER claim "Task Completed" until a design doc is saved AND all three contracts are defined.**
 
-### Step 1: Explore context
+### Step 1: Explore context (cheap preflight first)
 
-Read existing design docs in `docs/plans/`, recent commits, and relevant code. Summarize what you found.
+**Phase 1 — Cheap preflight** (Glob/ls only, current project directory):
+- If user's message references a doc path, read it
+- Check for `docs/plans/*.md`
+- Check for source code, config manifests, or project-specific config files
+- **"Relevant context" means:** design docs, source code, configuration manifests, or project-specific config. `README.md`, `.gitignore`, `LICENSE`, and scaffolding boilerplate do **not** count.
+
+**Phase 2 — Branch on result:**
+- **Relevant local context found:** Read the most recent 1-2 design docs, inspect only relevant in-project files, and optionally review recent commits (only if the directory is a git repo).
+- **No relevant local context found:** State: "This appears to be a greenfield or effectively empty project, so I'm skipping deep context scanning and moving to clarifying questions." Proceed directly to step 2.
+
+**Hard rule:** Never scan parent directories, sibling folders, or workspace-wide paths unless the user explicitly provides a path.
 
 ### Step 2: Ask clarifying questions — ONE AT A TIME
 

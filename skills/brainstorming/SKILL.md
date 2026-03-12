@@ -15,11 +15,19 @@ Do NOT write any code or create any files until design is approved and a `hotl-w
 
 ## Process
 
-1. **Explore context**
+1. **Explore context (cheap preflight first)**
+
+   **Phase 1 — Cheap preflight** (Glob only, current project directory):
    - If user's message references a doc path → read it
-   - Scan `docs/plans/` for existing design docs → if found, read the most recent 1-2 and summarize prior decisions
-   - If neither exists, proceed normally
-   - Also read relevant files, recent commits, existing patterns
+   - Check for `docs/plans/*.md`
+   - Check for source code, config manifests, or project-specific config files
+   - **"Relevant context" means:** design docs, source code, configuration manifests, or project-specific config. Files like `README.md`, `.gitignore`, `LICENSE`, and scaffolding boilerplate do **not** count.
+
+   **Phase 2 — Branch on result:**
+   - **Relevant local context found:** Read the most recent 1-2 design docs, inspect only relevant in-project files, and optionally review recent commits (only if the directory is a git repo).
+   - **No relevant local context found:** State: "This appears to be a greenfield or effectively empty project, so I'm skipping deep context scanning and moving to clarifying questions." Proceed directly to step 2.
+
+   **Hard rule:** Never scan parent directories, sibling folders, or workspace-wide paths unless the user explicitly provides a path.
 2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 3. **Propose 2-3 approaches** — with trade-offs and recommendation
 4. **Present design in sections** — get approval after each section
