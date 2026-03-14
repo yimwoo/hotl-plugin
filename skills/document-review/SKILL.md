@@ -1,24 +1,34 @@
 ---
 name: document-review
-description: Review design specs and workflow plans before execution — runs deterministic lint first, then AI-driven qualitative review. Use after brainstorming produces a design doc or after writing-plans produces a workflow file.
+description: Review any document — HOTL design docs and workflow plans get structural lint + AI review; other documents (markdown, text, PDF) get AI-only review with a generic rubric.
 ---
 
 # HOTL Document Review
 
 ## Overview
 
-Two-phase review of HOTL documents before execution. Phase 1 is a hard structural gate (lint). Phase 2 is an AI-driven qualitative review. Execution is blocked unless both phases pass or the human explicitly overrides.
+Review any document before execution or decision-making. HOTL documents get structural lint (hard gate) followed by AI review. Non-HOTL documents skip lint and go straight to AI review with a generic rubric.
 
-**Announce:** "Running document review. Phase 1: structural lint..."
+**Announce:** "Running document review. Classifying input..."
 
-## Document Scope
+## Step 0 — Classify the Input
 
-- Design specs: `docs/plans/*-design.md`
-- Workflow plans: `hotl-workflow-*.md`
+Before doing anything else, classify the input into one of four categories:
 
-## Phase 1: Structural Lint (Hard Gate)
+| Category | Detection | Review Path |
+|---|---|---|
+| **HOTL markdown** | Filename matches `docs/plans/*-design.md` or `hotl-workflow-*.md` | Phase 1 (HOTL lint) → Phase 2 (HOTL AI review) |
+| **Generic text/markdown** | Any other `.md`, `.txt`, or pasted text | Skip Phase 1 → Phase 2 (generic AI review) |
+| **PDF** | `.pdf` extension | If the current runtime can read/extract the content, treat as generic text and review. Otherwise, ask the user for a text, markdown, or PDF-text export. |
+| **DOCX / PPTX / binary** | `.docx`, `.pptx`, or other binary formats | **STOP.** Ask the user for a markdown, plain text, or PDF export. Do not attempt conversion. |
 
-Run the deterministic lint script:
+**Announce the classification:** e.g., "Classified as HOTL design doc — running lint + HOTL review." or "Classified as generic markdown — skipping lint, running generic review."
+
+## Phase 1: Structural Lint (HOTL Documents Only)
+
+**Skip this phase entirely for non-HOTL documents.** If the input was classified as generic text/markdown or PDF, go directly to Phase 2 (generic AI review).
+
+For HOTL documents only, run the deterministic lint script:
 
 ```bash
 bash scripts/document-lint.sh <file>
@@ -28,7 +38,7 @@ If the script is not found at `scripts/document-lint.sh`, check `~/.cline/hotl/s
 
 **If lint FAILS:** STOP. Show all errors. The author MUST fix structural issues before AI review runs. Do not proceed.
 
-**If lint PASSES:** Continue to Phase 2.
+**If lint PASSES:** Continue to Phase 2 (HOTL AI review).
 
 ### What Lint Checks
 
@@ -47,7 +57,7 @@ If the script is not found at `scripts/document-lint.sh`, check `~/.cline/hotl/s
 
 ## Phase 2: AI-Driven Review (Soft Gate)
 
-Read the full document and evaluate these judgment questions:
+Read the full document and evaluate using the rubric that matches the classification:
 
 ### For Design Docs
 
@@ -65,28 +75,36 @@ Read the full document and evaluate these judgment questions:
 4. **Loop safety** — Are max_iterations reasonable? Any infinite-loop risks?
 5. **Ordering** — Do steps build on each other logically? Any missing dependencies?
 
+### For Generic Documents
+
+1. **Clarity** — Is the writing clear, specific, and unambiguous?
+2. **Completeness** — Are important details, assumptions, or decisions missing?
+3. **Internal consistency** — Does the document contradict itself anywhere?
+4. **Actionability** — Are decisions, next steps, owners, or open questions clearly stated?
+5. **Risk / Ambiguity** — Are there risky assumptions, vague areas, or likely points of confusion?
+
 ## Review Outcomes
 
-After completing both phases, output exactly one of:
+After completing the review, output exactly one of the following. Use `Lint: PASSED` for HOTL documents or `Lint: SKIPPED (non-HOTL document)` for all other inputs.
 
 ### PASS
-All structural and qualitative checks satisfied. Document is ready for execution.
+All checks satisfied. Document is ready.
 
 ```
 REVIEW: PASS
 Document: <filename>
-Lint: PASSED
+Lint: PASSED | SKIPPED (non-HOTL document)
 AI Review: No issues found.
 Ready for execution.
 ```
 
 ### REVISE
-Issues found that should be fixed before execution. List each issue with a specific suggestion.
+Issues found that should be fixed. List each with a specific suggestion.
 
 ```
 REVIEW: REVISE
 Document: <filename>
-Lint: PASSED
+Lint: PASSED | SKIPPED (non-HOTL document)
 AI Review: <N> issue(s) found.
 
 Issues:
@@ -104,7 +122,7 @@ Serious concerns that the AI cannot resolve. Human must decide whether to procee
 ```
 REVIEW: HUMAN_OVERRIDE_REQUIRED
 Document: <filename>
-Lint: PASSED
+Lint: PASSED | SKIPPED (non-HOTL document)
 AI Review: Serious concern(s) requiring human judgment.
 
 Concerns:
@@ -118,7 +136,9 @@ Do not continue until a human explicitly says to override these concerns.
 
 ## Rules
 
-- Never skip lint.
-- Never continue to execution when lint fails.
+- Always classify the input before choosing a review path.
+- For HOTL documents: never skip lint; never continue to execution when lint fails.
+- For non-HOTL documents: skip lint entirely (no structural validation).
+- For DOCX/PPTX/binary: do not attempt conversion; ask for an export.
 - If review outcome is `REVISE`, the author fixes the document first.
 - If review outcome is `HUMAN_OVERRIDE_REQUIRED`, only an explicit human decision allows execution to proceed.
