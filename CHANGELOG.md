@@ -2,6 +2,46 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [1.9.1] - 2026-03-13
+
+### Fixed
+- **Version correction** — v1.9.0 was published on the wrong commit (pointed at 7a326a8, which was the v1.8.0 codebase). This release is the corrective release that restores monotonic versioning.
+
+### Added
+- Non-HOTL document review with generic AI rubric
+- Greenfield project detection in brainstorming to avoid wasting tokens in empty projects
+- Execution options to Cline brainstorming step 7
+- Canonical PR review output contract for cross-platform consistency
+
+### Fixed
+- Copy scripts to `~/Documents/Cline/Scripts/` so `document-lint` is reachable
+
+## [1.8.0] - 2026-03-11
+
+### Fixed
+- Renamed `pr-review` skill to `pr-reviewing` to avoid command/skill name collision
+- Removed `disable-model-invocation` from `pr-review` command
+
+### Added
+- Command/skill name collision guard smoke test
+- Naming convention documentation
+
+### Changed
+- Stabilized Codex HOTL installs
+- Clarified Codex HOTL usage docs
+
+## [1.7.0] - 2026-03-11
+
+### Added
+- **PR review skill** — multi-dimension parallel subagent PR reviews
+- Codex support in `update.sh`
+
+### Fixed
+- PR review dimension mismatch, verdict clarity, API example
+
+### Changed
+- README restructured for readability and SEO
+
 ## [1.6.0] - 2026-03-10
 
 ### Added
