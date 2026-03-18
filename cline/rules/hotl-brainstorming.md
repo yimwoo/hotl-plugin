@@ -6,7 +6,7 @@
 
 ### MANDATORY — DO NOT SKIP ANY STEP
 
-You MUST complete ALL 7 steps below in order. Do NOT mark the task as complete after answering questions. Do NOT skip straight to a solution. The brainstorming process has multiple phases and ALL of them are required.
+You MUST complete ALL 8 steps below in order. Do NOT mark the task as complete after answering questions. Do NOT skip straight to a solution. The brainstorming process has multiple phases and ALL of them are required.
 
 **NEVER claim "Task Completed" until a design doc is saved AND all three contracts are defined.**
 
@@ -27,6 +27,8 @@ You MUST complete ALL 7 steps below in order. Do NOT mark the task as complete a
 ### Step 2: Ask clarifying questions — ONE AT A TIME
 
 Ask the user questions to understand purpose, constraints, and success criteria. Ask ONE question, wait for the answer, then ask the next. Keep going until you fully understand the problem. Minimum 2-3 questions.
+
+**Prefer multiple-choice** when the likely answer space is known (e.g., "Which constraints apply? (a) Must not break existing API (b) Backward-compatible (c) Performance-sensitive (d) Other"). Fall back to open-ended only when the problem is unusual or exploratory.
 
 **DO NOT propose solutions yet. You are only gathering information.**
 
@@ -71,7 +73,11 @@ ownership: [who is accountable]
 
 Save the complete design to `docs/plans/YYYY-MM-DD-<topic>-design.md`. This file MUST exist before moving on.
 
-### Step 7: Transition to planning
+### Step 7: Self-check the design doc
+
+Before presenting for human approval, review the saved design doc for: missing constraints, vague success criteria, contract mismatches (do verification steps actually test the intent?), risk_level appropriateness, and scope creep. Fix any issues found. Lightweight: 1-2 passes by default, max 3 only if real issues are found. Do not ask the user to review — this is an internal quality pass.
+
+### Step 8: Transition to planning
 
 Ask the user: "Design approved. Ready to create the implementation plan?" Then create a `hotl-workflow-<slug>.md` following the planning rules.
 
@@ -92,6 +98,6 @@ Do NOT auto-execute. Wait for the user to choose.
 - NEVER mark task complete after just answering questions
 - NEVER skip the contracts — all three are required
 - NEVER skip the design doc — it must be saved to disk
-- One question at a time — do not ask multiple questions in one message
+- One question at a time — prefer multiple-choice when practical
 - YAGNI ruthlessly — remove unnecessary features
 - Always propose alternatives before settling on an approach

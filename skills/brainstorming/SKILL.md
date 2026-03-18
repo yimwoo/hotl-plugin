@@ -28,7 +28,7 @@ Do NOT write any code or create any files until design is approved and a `hotl-w
    - **No relevant local context found:** State: "This appears to be a greenfield or effectively empty project, so I'm skipping deep context scanning and moving to clarifying questions." Proceed directly to step 2.
 
    **Hard rule:** Never scan parent directories, sibling folders, or workspace-wide paths unless the user explicitly provides a path.
-2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
+2. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria. Prefer multiple-choice when the likely answer space is known (e.g., "Which constraints apply? (a) Must not break existing API (b) Backward-compatible (c) Performance-sensitive (d) Other"). Fall back to open-ended only when the problem is unusual or exploratory.
 3. **Propose 2-3 approaches** — with trade-offs and recommendation
 4. **Present design in sections** — get approval after each section
 5. **Define HOTL contracts** — always include all three:
@@ -57,11 +57,12 @@ ownership: [who is accountable]
 ```
 
 6. **Write design doc** — save to `docs/plans/YYYY-MM-DD-<topic>-design.md`
-7. **Invoke writing-plans** — transition to implementation planning
+7. **Self-check the design doc** — before presenting for human approval, review the saved design doc for: missing constraints, vague success criteria, contract mismatches (do verification steps actually test the intent?), risk_level appropriateness, and scope creep. Fix any issues found. Lightweight: 1-2 passes by default, max 3 only if real issues are found. Do not ask the user to review — this is an internal quality pass.
+8. **Invoke writing-plans** — transition to implementation planning
 
 ## Key Principles
 
-- One question at a time
+- One question at a time — prefer multiple-choice when practical
 - YAGNI ruthlessly — remove unnecessary features
 - Always propose alternatives before settling
 - `risk_level: high` = security, auth, privacy, billing (always human-gated)
