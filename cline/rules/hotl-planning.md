@@ -28,7 +28,7 @@ auto_approve: true | false
 action: [what to do]
 loop: false | until [condition]
 max_iterations: [number, default 3]
-verify: [command to run]
+verify: [scalar command OR typed block]
 gate: human | auto
 ```
 
@@ -36,13 +36,18 @@ gate: human | auto
 
 Break work into atomic steps (2-5 minutes each). Each step MUST have:
 - A clear action
-- A verify command that confirms success
+- A verify that confirms success — choose the right verification type:
+  - **shell** (default) — test suites, linters, build commands. Scalar shorthand accepted.
+  - **browser** — UI work requiring visual inspection
+  - **human-review** — subjective quality checks with no automated signal
+  - **artifact** — verify files/outputs exist with structured assert (kind: exists | contains | matches-glob)
 - A loop condition (false for one-shot, or "until [condition]" for retry)
 
 Examples:
 - "Write failing test for X" (loop: false, verify: test runner shows 1 failure)
 - "Implement X" (loop: until tests pass, verify: pytest, max_iterations: 3)
 - "Fix lint errors" (loop: until clean, verify: linter command)
+- "Verify UI renders correctly" (loop: false, verify: type: browser)
 - "Human review of security logic" (loop: false, gate: human)
 
 ### Risk Level Rules

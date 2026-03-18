@@ -61,7 +61,7 @@ Every task follows six phases. No shortcuts, no skipping.
 | --- | --- |
 | **Brainstorm** | Clarify requirements. Compare approaches. Define intent, verification, and governance contracts. |
 | **Plan** | Generate a `hotl-workflow-<slug>.md` with steps, verify commands, loop conditions, and gates. |
-| **Review** | Lint the plan structure. AI-review the plan quality. Hard-block on failures. |
+| **Review** | Self-check built into planning. Structural lint runs automatically in execution preflight. `document-review` available as optional utility. |
 | **Branch** | Create an isolated git branch (`hotl/<slug>` by default). Dirty repos hard-fail. |
 | **Execute** | Run the plan — choose loop (autonomous), manual (checkpoints), or subagent (delegated) mode. |
 | **Verify** | Run tests, lint, and verify commands. Check success criteria against actual output. No green light without proof. |
@@ -127,9 +127,9 @@ All skills work with **Claude Code** and **Codex**. Cline users get equivalent r
 
 | Skill | Description | Phase |
 | --- | --- | --- |
-| `hotl:brainstorming` | Explore intent, requirements, and design. Produces HOTL contracts (intent, verification, governance) before implementation. | Brainstorm |
-| `hotl:writing-plans` | Create a `hotl-workflow-<slug>.md` implementation plan with bite-sized tasks, exact file paths, and loop/gate definitions. | Plan |
-| `hotl:document-review` | Review design specs and workflow plans before execution. Runs deterministic lint first, then AI-driven qualitative review. | Review |
+| `hotl:brainstorming` | Explore intent, requirements, and design. Produces HOTL contracts (intent, verification, governance) before implementation. Prefers multiple-choice questions and includes a design-doc self-check. | Brainstorm |
+| `hotl:writing-plans` | Create a `hotl-workflow-<slug>.md` implementation plan with typed verification (shell, browser, human-review, artifact), loop/gate definitions, and a built-in self-check loop. | Plan |
+| `hotl:document-review` | Optional utility for reviewing existing docs, external specs, or hand-authored plans. Runs deterministic lint then AI-driven qualitative review. | Review |
 
 ### Execution
 
@@ -137,7 +137,7 @@ All skills work with **Claude Code** and **Codex**. Cline users get equivalent r
 | --- | --- | --- |
 | `hotl:loop-execution` | Execute a `hotl-workflow-*.md` autonomously — loops until success criteria met, auto-approves low-risk gates, pauses at high-risk gates. | Execute |
 | `hotl:executing-plans` | Execute an implementation plan linearly with explicit human checkpoints between batches of tasks. | Execute |
-| `hotl:subagent-execution` | Execute a reviewed `hotl-workflow-*.md` by delegating steps to fresh subagents while the controller keeps governance and verification. | Execute |
+| `hotl:subagent-execution` | Execute a `hotl-workflow-*.md` by delegating steps to fresh subagents while the controller keeps governance and verification. | Execute |
 | `hotl:dispatch-agents` | Run 2+ independent tasks in parallel with no shared state — dispatches parallel subagents for each task. | Execute |
 
 ### Quality & Review
@@ -176,6 +176,38 @@ HOTL:  Brainstorm  → clarify requirements, compare approaches, write contracts
        Execute     → choose loop, manual, or subagent mode
        Verify      → run tests and success checks before marking done
 ```
+
+---
+
+## Typed Verification
+
+Workflow steps support 4 verification types. Scalar strings remain valid as shorthand for `type: shell`.
+
+```yaml
+# Shell (default — scalar shorthand accepted)
+verify: pytest tests/ -v
+
+# Browser (capability-gated — falls back to human-review if unavailable)
+verify:
+  type: browser
+  url: http://localhost:3000/dashboard
+  check: priority badge renders with correct color
+
+# Human review (always pauses, never auto-approved)
+verify:
+  type: human-review
+  prompt: Check that priority colors match the approved design spec
+
+# Artifact (structured assertions)
+verify:
+  type: artifact
+  path: migrations
+  assert:
+    kind: matches-glob
+    value: "*.sql"
+```
+
+Multiple checks per step are supported — all must pass. See [`docs/workflow-format.md`](docs/workflow-format.md) for the full schema.
 
 ---
 

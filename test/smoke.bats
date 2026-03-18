@@ -217,6 +217,20 @@ assert len(data['additional_context']) > 0, 'additional_context is empty'
     [ "$status" -eq 0 ]
 }
 
+# ── typed verification ───────────────────────────────────────────────────────
+
+@test "document-lint accepts typed verification workflow" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/hotl-workflow-typed-verify-sample.md"
+    [ "$status" -eq 0 ]
+}
+
+@test "workflow-format.md documents all 4 verification types" {
+    grep -q 'type: shell' "$REPO_ROOT/docs/workflow-format.md"
+    grep -q 'type: browser' "$REPO_ROOT/docs/workflow-format.md"
+    grep -q 'type: human-review' "$REPO_ROOT/docs/workflow-format.md"
+    grep -q 'type: artifact' "$REPO_ROOT/docs/workflow-format.md"
+}
+
 # ── branch/worktree preflight ────────────────────────────────────────────────
 
 @test "document-lint accepts workflow with branch and worktree fields" {

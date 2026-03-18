@@ -20,8 +20,88 @@ The workflow file (`hotl-workflow-<slug>.md`) defines work to be executed by the
 | `action` | string | yes | What to do in this step |
 | `loop` | false\|"until [condition]" | yes | Whether to retry |
 | `max_iterations` | integer | no (default: 3) | Safety stop for loops |
-| `verify` | string | no | Command to run to check success |
+| `verify` | string \| object \| list | no | How to check success (see Verification Types) |
 | `gate` | human\|auto | no | Approval behavior |
+
+## Verification Types
+
+The `verify` field supports 4 types. A scalar string is shorthand for `type: shell`.
+
+### Scalar Shorthand (backward-compatible)
+
+```yaml
+verify: pytest tests/
+# equivalent to:
+verify:
+  type: shell
+  command: pytest tests/
+```
+
+### shell
+
+Run a command and check exit code. Stdout/stderr captured for reporting.
+
+```yaml
+verify:
+  type: shell
+  command: pytest tests/test_rate_limit.py -v
+```
+
+### browser
+
+Verify UI behavior via browser tooling. **Capability-gated:** if browser tooling is unavailable, execution downgrades to `human-review` with the `check` text as prompt. Never silently skipped.
+
+```yaml
+verify:
+  type: browser
+  url: http://localhost:3000/dashboard
+  check: priority badge is visible with correct color
+```
+
+### human-review
+
+Mandatory pause for human inspection. Always pauses regardless of `auto_approve`.
+
+```yaml
+verify:
+  type: human-review
+  prompt: Check that priority colors match the approved design spec
+```
+
+### artifact
+
+Verify a file or output exists and meets an assertion.
+
+```yaml
+verify:
+  type: artifact
+  path: migrations
+  assert:
+    kind: matches-glob
+    value: "*.sql"
+```
+
+Supported assert kinds:
+- `exists` — file or directory at `path` exists (no `value` needed)
+- `contains` — file at `path` contains the text in `value`
+- `matches-glob` — directory at `path` contains at least one file matching `value` glob
+
+### Multiple Checks Per Step
+
+`verify` can be a list. All checks must pass for the step to pass.
+
+```yaml
+verify:
+  - type: shell
+    command: npm test
+  - type: browser
+    url: http://localhost:3000
+    check: login page renders correctly
+  - type: artifact
+    path: coverage/lcov.info
+    assert:
+      kind: exists
+```
 
 ## Auto-Approve Logic
 
@@ -79,7 +159,7 @@ Execution skills (loop-execution, executing-plans, subagent-execution) run a bra
 - **No auto-stash.** Hidden state mutation weakens governance.
 - **Existing branch always prompts.** Even at the same HEAD — a branch at the same commit may have different intent.
 - **Non-git repos skip entirely.** HOTL works for POCs and new projects without git ceremony.
-- **Document review runs before any git mutation.** Why create a branch for a plan that might be rejected?
+- **Structural lint runs before any git mutation.** Catches format issues before execution begins.
 
 ## Step Syntax
 

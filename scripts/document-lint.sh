@@ -52,6 +52,84 @@ step_name_from_line() {
     fi
 }
 
+validate_verify_block() {
+    local step_name="$1"
+    local step_block="$2"
+
+    # Check if verify: exists
+    if ! printf '%s\n' "$step_block" | grep -qi '^verify:'; then
+        return 0
+    fi
+
+    # Get verify line and check if scalar (value on same line)
+    local verify_line
+    verify_line=$(printf '%s\n' "$step_block" | grep -i '^verify:' | head -1)
+    local verify_value
+    verify_value=$(echo "$verify_line" | sed 's/^[Vv]erify:[[:space:]]*//')
+
+    if [ -n "$verify_value" ]; then
+        # Scalar form — valid as type:shell shorthand
+        return 0
+    fi
+
+    # Structured form — extract indented block after verify:
+    local in_verify=0
+    local verify_block=""
+    while IFS= read -r line; do
+        if [ "$in_verify" -eq 0 ] && echo "$line" | grep -qi '^verify:$'; then
+            in_verify=1
+            continue
+        fi
+        if [ "$in_verify" -eq 1 ]; then
+            if echo "$line" | grep -Eq '^[[:space:]]'; then
+                verify_block="${verify_block}${line}
+"
+            elif [ -z "$line" ]; then
+                continue
+            else
+                in_verify=0
+            fi
+        fi
+    done <<< "$step_block"
+
+    if [ -z "$verify_block" ]; then
+        error "Step '$step_name' has empty verify block"
+        return 0
+    fi
+
+    # Validate type field(s) exist
+    if ! printf '%s\n' "$verify_block" | grep -qi 'type:'; then
+        error "Step '$step_name' has structured verify block but missing 'type:' field"
+        return 0
+    fi
+
+    # Validate each type value is valid
+    local types
+    types=$(printf '%s\n' "$verify_block" | grep -i 'type:' | sed 's/.*type:[[:space:]]*//' | tr -d ' ')
+    while IFS= read -r vtype; do
+        [ -z "$vtype" ] && continue
+        case "$vtype" in
+            shell)
+                printf '%s\n' "$verify_block" | grep -qi 'command:' || error "Step '$step_name' verify type:shell missing 'command:' field"
+                ;;
+            browser)
+                printf '%s\n' "$verify_block" | grep -qi 'url:' || error "Step '$step_name' verify type:browser missing 'url:' field"
+                printf '%s\n' "$verify_block" | grep -qi 'check:' || error "Step '$step_name' verify type:browser missing 'check:' field"
+                ;;
+            human-review)
+                printf '%s\n' "$verify_block" | grep -qi 'prompt:' || error "Step '$step_name' verify type:human-review missing 'prompt:' field"
+                ;;
+            artifact)
+                printf '%s\n' "$verify_block" | grep -qi 'path:' || error "Step '$step_name' verify type:artifact missing 'path:' field"
+                printf '%s\n' "$verify_block" | grep -qi 'kind:' || error "Step '$step_name' verify type:artifact missing 'assert.kind' field"
+                ;;
+            *)
+                error "Step '$step_name' has invalid verify type '$vtype' (expected: shell, browser, human-review, artifact)"
+                ;;
+        esac
+    done <<< "$types"
+}
+
 check_step_block() {
     local step_name="$1"
     local step_block="$2"
@@ -63,6 +141,9 @@ check_step_block() {
         printf '%s\n' "$step_block" | grep -qi '^verify:' || error "Step '$step_name' has loop:until but missing 'verify:' field"
         printf '%s\n' "$step_block" | grep -qi '^max_iterations:' || error "Step '$step_name' has loop:until but missing 'max_iterations:' field"
     fi
+
+    # Validate typed verify blocks if present
+    validate_verify_block "$step_name" "$step_block"
 
     if [ -n "${RISK:-}" ] && [ "$RISK" = "high" ]; then
         SECURITY_KEYWORDS="auth\|encrypt\|secret\|password\|token\|billing\|permission"

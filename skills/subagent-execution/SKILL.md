@@ -77,7 +77,14 @@ For each workflow step in order:
    - dispatch a fresh subagent with the full step text, the relevant files, and the success condition
    - do not make the subagent infer the plan from scratch if you can provide the step directly
    - answer clarifying questions before letting the subagent continue
-4. Run the step's `verify` command in the controller session
+4. Run the step's `verify` in the controller session (typed verification):
+   - Scalar string → type: shell
+   - List → run all checks, ALL must pass
+   - type: shell → run command, check exit code
+   - type: browser → if browser tooling available, use it; otherwise downgrade to type: human-review
+   - type: human-review → ALWAYS pause, show prompt (never auto-approve)
+   - type: artifact → check path exists, evaluate assert (kind: exists | contains | matches-glob)
+   - **Verification always runs in the controller session, never in the subagent**
 5. Apply loop rules:
    - `loop: false` and verify fails → stop and report
    - `loop: until ...` and verify fails → retry up to `max_iterations`
