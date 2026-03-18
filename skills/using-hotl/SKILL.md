@@ -1,16 +1,26 @@
 ---
 name: using-hotl
-description: Use when starting any conversation - establishes how to find and use HOTL skills, requiring Skill tool invocation before ANY response
+description: Use when starting any conversation - establishes how to find and use HOTL skills for implementation tasks
 ---
 
-<EXTREMELY-IMPORTANT>
-If you think there is even a 1% chance a HOTL skill might apply, you MUST invoke the skill.
-This is not negotiable. This is not optional.
-</EXTREMELY-IMPORTANT>
+## When to Use HOTL Skills
+
+HOTL skills are for **code-changing tasks that require planning** — new features, refactors, and significant changes. Not every task needs a skill.
+
+**Answer directly without invoking a skill:**
+- Code understanding questions — "how does this work?", "where is this defined?", "explain this error"
+- Quick fixes — typos, config values, import paths, obvious one-line corrections
+- Error tracing — "what does this error mean?", "which file throws this?"
+
+**Use `hotl:systematic-debugging` (no brainstorm/plan needed):**
+- Bug investigations, test failures, unexpected behavior
+
+**Use the full HOTL workflow (brainstorm → plan → execute):**
+- New features, significant refactors, architectural changes
 
 ## Available HOTL Skills
 
-Use the `Skill` tool to invoke any of these before responding:
+Use the `Skill` tool to invoke any of these when appropriate:
 
 | Skill | When to Use |
 |---|---|
@@ -28,17 +38,18 @@ Use the `Skill` tool to invoke any of these before responding:
 | `hotl:verification-before-completion` | Before claiming work is done |
 | `hotl:setup-project` | To generate adapter files for Codex, Cline, Cursor, Copilot |
 
-## Red Flags (You Are Rationalizing)
+## Red Flags (You Are Over-Routing)
 
-- "This is a simple task" → Check for skills anyway
-- "I need context first" → Skill check comes BEFORE anything
-- "I remember this skill" → Skills evolve. Invoke it fresh.
+- Routing a code question through brainstorming → just answer it
+- Creating a plan for a typo fix → just fix it and verify
+- Brainstorming before debugging → use systematic-debugging directly
+- Skipping brainstorming for a real feature → invoke the skill
 
 ## HOTL Operating Principles
 
 **Human-on-the-Loop:** Set intent + constraints upfront. AI executes autonomously within guardrails. Human reviews final output.
 
-**Three contracts every workflow should define:**
+**Three contracts every implementation workflow should define:**
 1. **Intent contract:** objective, constraints, success criteria
 2. **Verification contract:** how to confirm each step worked
 3. **Governance contract:** approval gates, risk level, rollback strategy

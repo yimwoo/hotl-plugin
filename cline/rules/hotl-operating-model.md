@@ -1,23 +1,32 @@
 ## HOTL Operating Model
 
-Follow the Human-on-the-Loop (HOTL) operating model for ALL development work.
+The Human-on-the-Loop (HOTL) model applies to **implementation tasks** — new features, refactors, and significant changes. Not every task needs the full workflow. Route tasks by type.
 
-### CRITICAL RULE
+### Task-Type Routing
 
-**NEVER start coding without a design.** When the user asks to build something, your FIRST action is brainstorming — not coding. You MUST follow the brainstorming process in `hotl-brainstorming.md` before writing any implementation code.
+**Determine the task type FIRST, before doing anything else.**
 
-### The HOTL Workflow (follow this order)
+| Task type | Examples | What to do |
+|---|---|---|
+| **Code understanding** | "where does this error come from?", "how does this function work?", "walk me through this flow", "what does this error mean?" | Just answer. Read the code, trace the logic, explain. No HOTL workflow needed. |
+| **Quick fix** | Typo, config value, import path, one-line correction — the fix is obvious and low-risk | Just fix it, verify the change works, report back. No brainstorm or plan. |
+| **Debugging** | "debug this", "investigate", "why is this failing?", error message pasted | Use systematic debugging (`hotl-debugging.md`). No brainstorm or plan needed. |
+| **Implementation** | "build", "add", "implement", "design", "refactor", new feature, significant change | Full HOTL workflow: Brainstorm → Plan → Execute → Verify |
+
+**Quick fix boundary:** A quick fix is an obvious low-risk edit where the change is self-evident. If the cause is ambiguous or the fix could have side effects, route to debugging instead.
+
+### The HOTL Workflow (implementation tasks only)
 
 1. **Brainstorm** — explore intent, ask questions, propose approaches, define contracts
 2. **Plan** — create a `hotl-workflow-<slug>.md` with atomic steps
 3. **Execute** — run the plan step by step with verification
 4. **Review** — verify all success criteria are met before claiming done
 
-**Do NOT skip steps.** Do NOT jump from brainstorming to coding. Do NOT mark tasks complete without verification.
+**Do NOT skip steps for implementation tasks.** Do NOT jump from brainstorming to coding. Do NOT mark tasks complete without verification.
 
-### Three Contracts (ALL REQUIRED)
+### Three Contracts (for implementation tasks)
 
-Every workflow MUST define all three:
+Every implementation workflow MUST define all three:
 
 1. **Intent contract** — objective, constraints, success criteria, risk level (low/medium/high)
 2. **Verification contract** — how to confirm each step worked (test commands, checks, success signals)
@@ -35,22 +44,22 @@ When the user triggers a workflow, read the full skill file from disk for detail
 
 | Trigger phrase | Read this file |
 |---|---|
+| "explain", "where is", "how does", "walk me through", "what does this error mean" | No skill needed — just answer the question directly |
+| "fix this typo", "update the config", obvious one-line correction | No skill needed — fix, verify, report back |
+| "debug", "investigate", "why is this failing" | `~/.cline/hotl/skills/systematic-debugging/SKILL.md` |
 | "brainstorm", "design this", "let's think about" | `~/.cline/hotl/skills/brainstorming/SKILL.md` |
 | "plan", "write a plan", "create workflow" | `~/.cline/hotl/skills/writing-plans/SKILL.md` |
 | "execute", "run the plan", "implement" | `~/.cline/hotl/skills/executing-plans/SKILL.md` |
 | "loop", "run autonomously" | `~/.cline/hotl/skills/loop-execution/SKILL.md` |
 | "tdd", "test first", "red green refactor" | `~/.cline/hotl/skills/tdd/SKILL.md` |
-| "debug", "investigate", "why is this failing" | `~/.cline/hotl/skills/systematic-debugging/SKILL.md` |
 | "review", "code review" | `~/.cline/hotl/skills/code-review/SKILL.md` |
-
-**How to use:** When a trigger phrase matches, read the referenced file and follow the process described in it. If the file is not found, follow the condensed version in the corresponding `.clinerules/hotl-*.md` rule file.
 
 ### Workflow Files
 
 Plans are saved as `hotl-workflow-<slug>.md` in the project root. Each step includes:
 - `action` — what to do
 - `loop` — false or "until [condition]"
-- `verify` — command to confirm success
+- `verify` — command or typed verification block to confirm success
 - `gate` — human or auto approval
 
 ### Task Completion Rules
