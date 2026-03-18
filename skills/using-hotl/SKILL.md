@@ -18,11 +18,11 @@ Use the `Skill` tool to invoke any of these before responding:
 | `hotl:writing-plans` | After design approval — produces `hotl-workflow-<slug>.md` |
 | `hotl:executing-plans` | Linear execution with human checkpoints |
 | `hotl:loop-execution` | Execute a `hotl-workflow-*.md` with loops + auto-approve |
-| `hotl:subagent-execution` | Execute a reviewed `hotl-workflow-*.md` in this session with delegated subagent steps |
+| `hotl:subagent-execution` | Execute a `hotl-workflow-*.md` in this session with delegated subagent steps |
 | `hotl:dispatch-agents` | 2+ independent tasks that can run in parallel |
 | `hotl:tdd` | Before writing any implementation code |
 | `hotl:systematic-debugging` | When encountering any bug or unexpected behavior |
-| `hotl:document-review` | Review design specs and workflow plans before execution |
+| `hotl:document-review` | Optional — review existing docs, external specs, or hand-authored plans |
 | `hotl:code-review` | After completing implementation, before merging |
 | `hotl:pr-reviewing` | Review a PR across multiple dimensions — description, code, scan, tests |
 | `hotl:verification-before-completion` | Before claiming work is done |

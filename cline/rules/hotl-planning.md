@@ -51,6 +51,17 @@ Examples:
 - **medium:** Schema changes, refactors → proceed with caution
 - **high:** Auth, encryption, privacy, billing → ALWAYS add `gate: human` on sensitive steps
 
+### Self-Check Loop
+
+After saving the workflow file, run a self-check before offering execution options. Review the plan for:
+- **Step sizing** — each step should be 2-5 minutes of atomic work
+- **Verify coverage** — every looped step has a verify command
+- **Gate placement** — risky steps have `gate: human`
+- **Loop safety** — `max_iterations` is reasonable
+- **Ordering** — logical dependencies respected
+
+If issues are found, fix them and re-check until clean. This is an internal quality pass — do not ask the user to review.
+
 ### After Saving the Plan
 
-Ask the user to run document review on the workflow, then offer loop, manual, or subagent execution. Do NOT auto-execute. Wait for explicit approval.
+Offer loop, manual, or subagent execution. Do NOT auto-execute. Wait for explicit approval.

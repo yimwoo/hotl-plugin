@@ -1,27 +1,24 @@
 ---
 name: subagent-execution
-description: Execute a reviewed hotl-workflow-*.md in the current session by delegating implementation-friendly steps to fresh subagents while the controller keeps governance, verification, and stop conditions.
+description: Execute a hotl-workflow-*.md in the current session by delegating implementation-friendly steps to fresh subagents while the controller keeps governance, verification, and stop conditions.
 ---
 
 # HOTL Subagent Execution
 
 ## Overview
 
-Use this when you have a reviewed `hotl-workflow-*.md` and want same-session execution with fresh subagents per delegated step. This is a governed execution mode, not generic parallel dispatch.
+Use this when you have a `hotl-workflow-*.md` and want same-session execution with fresh subagents per delegated step. This is a governed execution mode, not generic parallel dispatch.
 
 **Core principle:** delegation is allowed; governance is not delegated.
 
 ## When to Use
 
 - The workflow file already exists
-- `hotl:document-review` has passed, or the human has explicitly overridden review concerns
 - Steps are independent enough to hand to one worker at a time
 - You want the controller to stay in this session and keep ownership of gates and verification
 
 ## Do Not Use When
 
-- The plan has not been reviewed
-- The workflow is structurally broken
 - The work requires parallel edits to shared files
 - The risky parts need direct controller execution throughout
 
@@ -32,16 +29,11 @@ Use this when you have a reviewed `hotl-workflow-*.md` and want same-session exe
    - Else glob for `hotl-workflow-*.md` in the project root
    - If multiple exist, ask the user which one to execute
 2. Read the full workflow
-3. Run `hotl:document-review` on the workflow file before executing anything
-4. Interpret the outcome:
-   - `PASS` → continue
-   - `REVISE` → stop; the workflow must be fixed first
-   - `HUMAN_OVERRIDE_REQUIRED` → stop until the human explicitly says to proceed
-5. Run Branch/Worktree Preflight (see below) — after document review passes, before any steps execute
+3. Run Branch/Worktree Preflight (see below) — before any steps execute
 
 ## Branch/Worktree Preflight
 
-After resolving the workflow file (and after document review if applicable), run this preflight **before executing any steps**:
+After resolving the workflow file, run this preflight **before executing any steps**:
 
 ```
 1. Is this a git repo with at least one commit?
@@ -73,7 +65,7 @@ After resolving the workflow file (and after document review if applicable), run
 - No auto-stash. Hidden state mutation weakens governance.
 - Existing branch always prompts, even at the same HEAD.
 - Non-git repos skip entirely — HOTL works without git ceremony.
-- Document review runs before any git mutation.
+- Run HOTL structural lint (`scripts/document-lint.sh`) automatically on the workflow file before any git mutation or step execution. If lint fails, STOP and show all errors. If lint passes, continue silently.
 
 ## Execution Model
 
@@ -112,7 +104,6 @@ Keep controller-owned by default:
 
 ## Safety Rules
 
-- Never skip document review
 - Never run multiple implementation subagents in parallel against the same workflow
 - Never let a subagent decide to bypass a human gate
 - Never mark a step complete before the controller verifies it
@@ -128,6 +119,6 @@ After all steps pass:
 
 ## Related Skills
 
-- `hotl:document-review` — required before subagent execution
+- `hotl:document-review` — optional, for reviewing external or hand-authored docs
 - `hotl:verification-before-completion` — required before claiming done
 - `hotl:dispatch-agents` — use for generic parallel independent tasks, not governed workflow execution

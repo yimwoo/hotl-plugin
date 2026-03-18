@@ -1,6 +1,6 @@
 ## HOTL Document Review
 
-**When to use:** After creating a design doc or workflow plan, before execution.
+**When to use:** Optional — for ad hoc review of existing docs, external specs, hand-authored plans, or non-HOTL documents. Not required in the standard HOTL plan-then-execute flow (writing-plans has a built-in self-check, and execution preflight runs structural lint automatically).
 
 **Full skill:** Read `~/.cline/hotl/skills/document-review/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 

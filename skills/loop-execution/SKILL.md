@@ -23,7 +23,7 @@ Resolve which workflow file to execute:
 
 ## Branch/Worktree Preflight
 
-After resolving the workflow file (and after document review if applicable), run this preflight **before executing any steps**:
+After resolving the workflow file, run this preflight **before executing any steps**:
 
 ```
 1. Is this a git repo with at least one commit?
@@ -55,7 +55,7 @@ After resolving the workflow file (and after document review if applicable), run
 - No auto-stash. Hidden state mutation weakens governance.
 - Existing branch always prompts, even at the same HEAD.
 - Non-git repos skip entirely — HOTL works without git ceremony.
-- Document review runs before any git mutation.
+- Run HOTL structural lint (`scripts/document-lint.sh`) automatically on the workflow file before any git mutation or step execution. If lint fails, STOP and show all errors. If lint passes, continue silently.
 
 ## Execution Algorithm
 
