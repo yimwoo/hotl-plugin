@@ -19,6 +19,17 @@
    - Multiple → list and ask user to pick
    - None → ask if they want to create one
 
+### Structural Lint Preflight
+
+After resolving the workflow file, run HOTL structural lint automatically before any git mutation or step execution:
+
+```bash
+bash ~/Documents/Cline/Scripts/document-lint.sh <workflow-file>
+```
+
+If lint **fails:** STOP. Show all errors. The workflow must be fixed before execution can proceed.
+If lint **passes:** Continue silently to execution.
+
 ### Execution Process
 
 For each step in the workflow:

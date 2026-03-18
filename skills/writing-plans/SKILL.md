@@ -53,15 +53,25 @@ Break work into atomic steps:
 
 `risk_level: high` **always** generates `gate: human` on security-sensitive steps, regardless of `auto_approve`.
 
+## Self-Check Loop
+
+After saving the workflow file, run a self-check before offering execution options. Review the plan for:
+
+- **Step sizing** — each step should be 2-5 minutes of atomic work
+- **Verify coverage** — every looped step has a verify command that tests what the step claims
+- **Gate placement** — risky steps (auth, encryption, billing, secrets) have `gate: human`
+- **Loop safety** — `max_iterations` is reasonable (typically 3-5)
+- **Ordering** — logical dependencies between steps are respected
+
+If issues are found, fix them in the workflow file and re-check until clean. Do not ask the user to review — this is an internal quality pass.
+
 ## After Saving
 
-Offer execution options:
+Once the self-check passes, offer execution options:
 
-**"Plan saved to `hotl-workflow-<slug>.md`. Before execution, run `hotl:document-review` on the workflow file. Then choose one of three options:**
+**"Plan saved to `hotl-workflow-<slug>.md`. How would you like to execute?"**
 1. **Loop execution (this session)** — `/hotl:loop` runs steps autonomously with auto-approve
 2. **Manual execution** — `/hotl:execute-plan` for linear execution with explicit checkpoints
 3. **Subagent execution (this session)** — `/hotl:subagent-execute` delegates implementation-friendly steps to fresh subagents while the controller keeps gates and verification
-
-Which approach?"
 
 *(Always tell the user the exact filename so they can pass it to the execution command if multiple workflow files exist.)*

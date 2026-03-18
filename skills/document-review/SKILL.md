@@ -1,13 +1,15 @@
 ---
 name: document-review
-description: Review any document — HOTL design docs and workflow plans get structural lint + AI review; other documents (markdown, text, PDF) get AI-only review with a generic rubric.
+description: Optional utility for reviewing existing docs, external specs, hand-authored plans, or non-HOTL documents. HOTL design docs and workflow plans get structural lint + AI review; other documents get AI-only review with a generic rubric.
 ---
 
 # HOTL Document Review
 
 ## Overview
 
-Review any document before execution or decision-making. HOTL documents get structural lint (hard gate) followed by AI review. Non-HOTL documents skip lint and go straight to AI review with a generic rubric.
+Optional utility for ad hoc document review. Use this to review existing docs, external specs, hand-authored plans, or any non-HOTL document. HOTL documents get structural lint (hard gate) followed by AI review. Non-HOTL documents skip lint and go straight to AI review with a generic rubric.
+
+**Note:** This skill is not required in the standard HOTL flow. Writing-plans includes a built-in self-check, and execution preflight runs structural lint automatically. Use this skill when you want to review a document outside of the normal plan-then-execute cycle.
 
 **Announce:** "Running document review. Classifying input..."
 
