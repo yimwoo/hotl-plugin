@@ -49,13 +49,13 @@ git clone https://github.com/yimwoo/hotl-plugin && cd hotl-plugin && bash instal
 
 Most AI coding sessions fail in predictable ways: code starts before requirements are clear, plans skip verification, risky changes execute without review, and the agent claims success without evidence.
 
-HOTL prevents all four by enforcing one workflow for every change.
+HOTL prevents all four by enforcing structured workflows for implementation tasks — while staying out of the way for code questions, quick fixes, and debugging.
 
 ---
 
 ## The HOTL Workflow
 
-Every task follows six phases. No shortcuts, no skipping.
+Implementation tasks (new features, refactors, significant changes) follow six phases. Code understanding questions, quick fixes, and debugging are handled directly without the full workflow.
 
 | Phase | What happens |
 | --- | --- |
