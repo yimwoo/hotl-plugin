@@ -53,13 +53,23 @@ After resolving the workflow file, run this preflight **before executing any ste
 - Non-git repos skip entirely — HOTL works without git ceremony.
 - Run HOTL structural lint (`scripts/document-lint.sh`) automatically on the workflow file before any git mutation or step execution. If lint fails, STOP and show all errors. If lint passes, continue silently.
 
+## Typed Verification
+
+The `verify` field supports 4 types. A scalar string is shorthand for `type: shell`. If `verify` is a list, ALL checks must pass.
+
+- **type: shell** — run command, check exit code, capture stdout/stderr
+- **type: browser** — use browser tooling with url+check; if unavailable, downgrade to type: human-review with check text as prompt
+- **type: human-review** — ALWAYS pause for human, show prompt, wait for approval (never auto-approve)
+- **type: artifact** — check path exists, evaluate assert (kind: exists | contains | matches-glob)
+
 ## Process
 
 1. Resolve and read the plan (see above)
 2. Run Branch/Worktree Preflight (see above)
 3. Execute tasks in order, 3 at a time
-4. After each batch: show what was done, ask "Continue to next batch?"
-5. On failure: stop and report — never silently skip a failed step
-6. When complete: invoke `hotl:verification-before-completion`
+4. Run typed verification for each step (see above)
+5. After each batch: show what was done, ask "Continue to next batch?"
+6. On failure: stop and report — never silently skip a failed step
+7. When complete: invoke `hotl:verification-before-completion`
 
 Use this over `loop-execution` when you want explicit human checkpoints at every stage rather than auto-approve.

@@ -30,13 +30,22 @@ bash ~/Documents/Cline/Scripts/document-lint.sh <workflow-file>
 If lint **fails:** STOP. Show all errors. The workflow must be fixed before execution can proceed.
 If lint **passes:** Continue silently to execution.
 
+### Typed Verification
+
+The `verify` field supports 4 types. Scalar string = type: shell. List = all must pass.
+
+- **type: shell** — run command, check exit code
+- **type: browser** — use browser tooling; if unavailable, downgrade to human-review with check text as prompt
+- **type: human-review** — ALWAYS pause, show prompt (never auto-approve)
+- **type: artifact** — check path exists, evaluate assert (kind: exists | contains | matches-glob)
+
 ### Execution Process
 
 For each step in the workflow:
 
 1. **Announce:** "Step N: [name]"
 2. **Execute** the action
-3. **Run verify command** — show the actual output
+3. **Run typed verification** — show the actual output
 4. **If verify passes:** Log "Done — Step N: [name]" and continue
 5. **If verify fails AND loop is set:** Retry up to max_iterations. Show each attempt.
 6. **If verify fails AND max_iterations reached:** STOP. Show the output. Ask the user what to do.

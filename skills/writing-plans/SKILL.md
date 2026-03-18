@@ -33,16 +33,54 @@ auto_approve: true | false
 action: [what to do]
 loop: false | until [condition]
 max_iterations: [number, default 3]
-verify: [command to run]
+verify: [scalar command OR typed block]
 gate: human | auto   # optional
+```
+
+## Typed Verification
+
+Choose the appropriate verify type for each step:
+
+- **shell** — for test suites, linters, build commands (default; scalar shorthand accepted)
+- **browser** — for UI work requiring visual inspection (capability-gated; falls back to human-review)
+- **human-review** — for subjective quality checks with no automated signal
+- **artifact** — for verifying files/outputs exist and meet criteria
+
+```yaml
+# Scalar shorthand (type: shell)
+verify: pytest tests/ -v
+
+# Structured
+verify:
+  type: browser
+  url: http://localhost:3000/dashboard
+  check: priority badge renders with correct color
+
+# Artifact with structured assert
+verify:
+  type: artifact
+  path: migrations
+  assert:
+    kind: matches-glob
+    value: "*.sql"
+
+# Multiple checks per step
+verify:
+  - type: shell
+    command: npm test
+  - type: artifact
+    path: coverage/lcov.info
+    assert:
+      kind: exists
 ```
 
 ## Step Granularity
 
 Break work into atomic steps:
-- "Write failing test for X" (loop: false)
+- "Write failing test for X" (loop: false, verify: pytest)
 - "Implement X" (loop: until tests pass, verify: pytest)
 - "Fix lint errors" (loop: until clean, verify: ruff check .)
+- "Verify UI renders correctly" (loop: false, verify: type: browser)
 - "Human review of security logic" (loop: false, gate: human — REQUIRED for risk_level: high)
 
 ## risk_level Guidelines

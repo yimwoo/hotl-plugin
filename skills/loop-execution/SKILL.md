@@ -69,20 +69,33 @@ After resolving the workflow file, run this preflight **before executing any ste
 
    b. Execute the action
 
-   c. If loop: false
-      → run verify command if present
+   c. Run verify (typed verification):
+      → If verify is a scalar string: treat as type: shell
+      → If verify is a list: run all checks, ALL must pass
+      → type: shell — run command, check exit code, capture stdout/stderr
+      → type: browser — if browser tooling available, use it with url+check;
+          if unavailable, downgrade to type: human-review with check text as prompt
+      → type: human-review — ALWAYS pause for human, show prompt, wait for approval
+          (never auto-approve, even if auto_approve: true)
+      → type: artifact — check path exists, then evaluate assert:
+          kind: exists → file/dir at path exists
+          kind: contains → file at path contains value text
+          kind: matches-glob → directory at path has file matching value glob
+
+   d. If loop: false
+      → run verify if present
       → if verify fails: STOP, report to human
       → continue to next step
 
-   d. If loop: until [condition]
-      → run verify command
+   e. If loop: until [condition]
+      → run verify
       → if pass: log "✓ [condition] met", continue to next step
       → if fail AND iterations < max_iterations: log "↻ Retrying ([n]/[max])...", retry
       → if fail AND iterations = max_iterations: STOP
           Report: "Step N reached max iterations ([max]). [condition] not met."
           Show last verify output. Wait for human guidance.
 
-   e. If gate: human
+   f. If gate: human
       → if auto_approve: true AND risk_level != high:
           log "⚡ Auto-approved: Step N gate (risk: [risk_level])"
           continue
@@ -91,7 +104,7 @@ After resolving the workflow file, run this preflight **before executing any ste
           Ask: "Gate reached at Step N. Continue? (yes/no/show-details)"
           Wait for human response before proceeding.
 
-   f. If gate: auto
+   g. If gate: auto
       → always continue, log "⚡ Auto-approved: Step N gate"
 
 5. All steps complete:
