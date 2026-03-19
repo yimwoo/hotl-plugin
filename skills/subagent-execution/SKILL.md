@@ -56,6 +56,10 @@ These rules apply regardless of delegation decisions:
 - Final verification and summaries
 - Any step whose failure would require architectural judgment
 
+## Reporting
+
+Inherits the canonical Execution Reporting Contract from `skills/loop-execution/SKILL.md` — same final summary table column rules, same verbose progress format, same precedence for verbose mode.
+
 ## Related Skills
 
 - `hotl:loop-execution` — the canonical execution state machine (this skill builds on it)

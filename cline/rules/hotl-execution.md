@@ -74,9 +74,20 @@ If the session is interrupted, use `/hotl:resume` to continue. Executors also au
 
 Execution supports an optional delegation mode where eligible steps run in fresh subagents while the controller keeps verification and gates. See `hotl-subagent-execution.md` for delegation rules and critical invariants.
 
+### Reporting
+
+**Final summary table** — strict column rules:
+- **Step** — number only
+- **Name** — step name
+- **Status** — outcome + details: `✓ Done`, `✓ Done (N tests)`, `⚡ Auto-approved`, `✓ Approved`, `✗ Failed`, `✗ Blocked`
+- **Iterations** — attempt count only (`1`, `2`, `3`). Gates: `-`. Never put test counts here.
+
+**Verbose progress** (opt-in via `progress: verbose` in frontmatter or invocation override):
+Print compact step list at each transition: `✓` completed, `→` current, `·` pending, `⚡` auto-approved, `✗` failed/blocked.
+
 ### When All Steps Complete
 
-Show a summary table of all steps with status. Then run a final verification:
+Show the final summary table. Then run a final verification:
 - Run the test suite
 - Run the linter
 - Confirm the success criteria from the intent contract are met

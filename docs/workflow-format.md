@@ -12,6 +12,7 @@ The workflow file (`hotl-workflow-<slug>.md`) defines work to be executed by the
 | `auto_approve` | boolean | no (default: false) | Skip `gate: human` for non-high-risk steps |
 | `branch` | string | no | Override branch name (default: derived as `hotl/<slug>` from workflow filename) |
 | `worktree` | boolean | no (default: false) | Create a git worktree instead of switching the current directory |
+| `progress` | verbose | no | Enable verbose progress view — prints full step list at each step transition |
 
 ## Step Fields
 

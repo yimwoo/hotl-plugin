@@ -265,6 +265,19 @@ assert len(data['additional_context']) > 0, 'additional_context is empty'
     [ "$status" -eq 0 ]
 }
 
+# ── execution reporting ──────────────────────────────────────────────────────
+
+@test "workflow-format.md documents progress field" {
+    grep -q '| `progress`' "$REPO_ROOT/docs/workflow-format.md"
+    grep -q 'verbose' "$REPO_ROOT/docs/workflow-format.md"
+}
+
+@test "loop-execution defines canonical Execution Reporting Contract" {
+    grep -q "Execution Reporting Contract" "$REPO_ROOT/skills/loop-execution/SKILL.md"
+    grep -q "Iterations" "$REPO_ROOT/skills/loop-execution/SKILL.md"
+    grep -q "verbose" "$REPO_ROOT/skills/loop-execution/SKILL.md"
+}
+
 # ── typed verification ───────────────────────────────────────────────────────
 
 @test "document-lint accepts typed verification workflow" {
