@@ -107,6 +107,11 @@ To check if an update is available without updating:
 bash ~/.codex/hotl/update.sh --check
 ```
 
+Codex currently discovers HOTL through `~/.agents/skills/hotl`. It does not
+have a guaranteed HOTL startup-notice path, so do not rely on a SessionStart
+update banner in the app. Use the manual check command above when you want to
+verify whether `~/.codex/hotl` is behind.
+
 Restart Codex after updating so it re-discovers the latest skill files.
 
 ## Uninstalling

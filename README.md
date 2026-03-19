@@ -89,7 +89,13 @@ Restart Codex after updating so it re-discovers the latest skills.
 
 ### Update Notifications
 
-HOTL checks for new versions automatically on Claude Code session start (best-effort). For all platforms, you can check manually:
+HOTL can check for new versions automatically on session start where hook delivery is available.
+
+- Claude Code: best-effort session-start notice
+- Codex: treat update checks as manual for now; the current Codex integration is skills-based and does not guarantee a startup notice
+- All platforms: manual explicit check is always available
+
+Use the manual check when you want to verify the installed version:
 
 ```bash
 bash update.sh --check
