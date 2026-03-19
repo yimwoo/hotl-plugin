@@ -34,4 +34,4 @@ This is a **delegation profile** over the HOTL execution state machine. Follow t
 
 ### Reporting
 
-Follows the same Execution Reporting Contract as `hotl-execution.md` — same final summary table column rules, same verbose progress format.
+Follows the same Execution Reporting Contract as `hotl-execution.md` — same final summary table column rules, same verbose progress format, same durable `.hotl/reports/<run-id>.md` artifact.

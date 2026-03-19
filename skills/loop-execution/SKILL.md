@@ -138,7 +138,83 @@ HOTL persists execution state in `.hotl/state/<run-id>.json` (sidecar file). Thi
 
 Run ID format: `<slug>-<unix-timestamp>` (e.g., `add-auth-1710700000`).
 
+The sidecar also stores `report_path` — the path to the durable Markdown report for this run. This makes resume and stop/block messaging deterministic.
+
 See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection, and verify-first resume flow.
+
+## Execution Report
+
+HOTL writes a durable Markdown report to `.hotl/reports/<run-id>.md` incrementally during execution. This is the canonical report spec — other executors inherit it.
+
+The report survives app rendering quirks (e.g., Codex suppressing intermediate output) and provides a reliable post-run artifact for debugging, trust, and resume.
+
+### Report Format
+
+**Metadata header:**
+```markdown
+# Execution Report: <run-id>
+
+**Workflow:** hotl-workflow-<slug>.md
+**Intent:** <intent from frontmatter>
+**Branch:** <branch name>
+**Executor:** loop | executing-plans | subagent
+**Started:** <ISO 8601>
+**Updated:** <ISO 8601>
+**Status:** running | completed | paused | blocked
+```
+
+**Summary table** (updated in-place at each step transition):
+```markdown
+| Step | Name              | Status      | Iterations |
+|------|-------------------|-------------|------------|
+|  1   | Write tests       | ✓ Done      | 1          |
+|  2   | Implement feature | → Running   | -          |
+|  3   | Human review      | · Pending   | -          |
+```
+
+Table status values: `· Pending`, `→ Running`, `↻ Retrying`, `⚡ Auto-approved`, `✓ Done`, `✓ Approved`, `✗ Failed`, `✗ Blocked`
+
+**Timestamped event log** (appended after each step transition):
+```markdown
+## Event Log
+
+**[10:00:05]** → Step 1: Write tests
+**[10:01:12]** ✓ Step 1: Done (1 attempt)
+**[10:01:15]** → Step 2: Implement feature
+**[10:02:30]** ↻ Step 2: Retrying (2/3)
+  verify output:
+  FAILED: test_auth - AssertionError: expected 401, got 200
+```
+
+### Report Lifecycle
+
+1. **On execution start:** Create report with metadata (including `Updated:`) and full table (all `· Pending`). Store `report_path` in sidecar JSON.
+2. **On step start:** Update table to `→ Running`, update `Updated:`, append event
+3. **On verify fail:** Append captured stdout/stderr to event log
+4. **On retry:** Update table to `↻ Retrying`, append retry event
+5. **On step complete:** Update table to `✓ Done`, append completion event
+6. **On gate:** Update table to `⚡ Auto-approved` or `✓ Approved`
+7. **On completion:** Set status to `completed`, update `Updated:`, finalize report
+8. **On stop/block:** Set status to `blocked`, include report path in response
+
+### Verify Output Policy
+
+- **Default:** failed verifies include captured stdout/stderr in the event log. Successful verifies get a one-line result only.
+- **`report_detail: full`** (frontmatter opt-in): all verify output included for every step, successful or not.
+
+### Report Path Reference
+
+The executor must reference the report path in its response:
+- At successful completion
+- On gate pause / human review pause
+- On blocked / failed / max iterations stop
+- During resume detection for interrupted runs
+
+### Relationship to Other Artifacts
+
+- **Chat output** = primary live UX (per-step logs, verbose progress, final summary table)
+- **Markdown report** = durable human-readable record (survives app rendering quirks)
+- **JSON sidecar** = authoritative machine state (resume, tooling, structured queries)
 
 ## Safety Rules
 

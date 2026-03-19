@@ -120,3 +120,27 @@ setup() {
 @test "subagent-execution references canonical reporting contract from loop-execution" {
     grep -qi "Reporting.*loop-execution\|canonical.*Reporting\|loop-execution.*reporting" "$SUBAGENT_SKILL"
 }
+
+# ── Durable execution report ────────────────────────────────────────────────
+
+@test "loop-execution defines Execution Report section" {
+    grep -q "## Execution Report" "$LOOP_SKILL"
+}
+
+@test "loop-execution describes report lifecycle and .hotl/reports/ path" {
+    grep -q ".hotl/reports/" "$LOOP_SKILL"
+    grep -q "report_path" "$LOOP_SKILL"
+}
+
+@test "loop-execution describes report format (table + event log)" {
+    grep -qi "Summary table\|summary table" "$LOOP_SKILL"
+    grep -qi "Event Log\|event log" "$LOOP_SKILL"
+}
+
+@test "loop-execution describes verify output policy (failures vs full)" {
+    grep -qi "report_detail.*full\|report_detail: full" "$LOOP_SKILL"
+}
+
+@test "resuming references report_path from sidecar" {
+    grep -q "report_path" "$REPO_ROOT/skills/resuming/SKILL.md"
+}

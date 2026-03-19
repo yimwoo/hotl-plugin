@@ -13,6 +13,7 @@ The workflow file (`hotl-workflow-<slug>.md`) defines work to be executed by the
 | `branch` | string | no | Override branch name (default: derived as `hotl/<slug>` from workflow filename) |
 | `worktree` | boolean | no (default: false) | Create a git worktree instead of switching the current directory |
 | `progress` | verbose | no | Enable verbose progress view — prints full step list at each step transition |
+| `report_detail` | full | no | Include all verify output in the execution report, not just failures |
 
 ## Step Fields
 

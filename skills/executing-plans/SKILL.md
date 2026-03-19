@@ -82,4 +82,4 @@ Use this over `loop-execution` when you want explicit human checkpoints at every
 
 ## Reporting
 
-Inherits the canonical Execution Reporting Contract from `skills/loop-execution/SKILL.md` — same final summary table column rules, same verbose progress format, same precedence for verbose mode.
+Inherits the canonical Execution Reporting Contract and Execution Report spec from `skills/loop-execution/SKILL.md` — same final summary table column rules, same verbose progress format, same precedence for verbose mode, same durable `.hotl/reports/<run-id>.md` artifact.
