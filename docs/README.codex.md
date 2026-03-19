@@ -84,6 +84,8 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `writing-plans` — create `hotl-workflow-<slug>.md` files
 - `document-review` — run structural lint and qualitative review before execution
 - `loop-execution` — autonomous execution with retries
+  - **Codex native progress:** when available, HOTL can mirror top-level execution steps into Codex's built-in progress card; chat logs and durable reports still remain the source of detailed history
+  - **Codex rendering (advisory):** prefer compact step lists in chat output over wide markdown tables; keep durable report tables in artifacts
 - `executing-plans` — manual checkpointed execution
 - `subagent-execution` — same-session delegated execution with controller-owned verification
 - `pr-reviewing` — review a PR across description, code, scan, and tests

@@ -226,6 +226,16 @@ The executor must reference the report path in its response:
 
 This is the canonical reporting spec. Other executors (executing-plans, subagent-execution) inherit this contract.
 
+### Codex Native Progress (advisory)
+
+When running in the Codex app, use the native plan/progress UI for top-level execution visibility when available. Mirror the active workflow as a short step list with `pending`, `in_progress`, and `completed` states so the user gets the built-in progress card during execution.
+
+Rules:
+- Treat the native plan/progress UI as additive. Do not remove or weaken the existing chat logs, compact summaries, or durable `.hotl/reports/...` artifact.
+- Keep the native plan list high-level and short. Use major execution phases or top-level workflow steps, not every retry, verify substep, or low-level log line.
+- Only one native plan step should be `in_progress` at a time.
+- On platforms without a native progress UI, including Claude Code and Cline, keep the existing HOTL chat/report layout unchanged.
+
 ### Per-Step Log (default, always shown)
 
 After each step, log one line:
@@ -237,6 +247,21 @@ After each step, log one line:
 ```
 
 ### Final Summary Table
+
+**Codex rendering advisory:** in chat output, prefer the compact list form below instead of a wide markdown table. Keep the same status and iteration semantics. Reserve the full table form for the durable execution report or platforms where tabular markdown renders cleanly.
+
+Compact list example:
+```
+Execution Summary
+
+✓ Step 1: Write failing tests
+✓ Step 2: Implement auth logic (3 attempts)
+⚡ Step 3: Security review gate (auto-approved)
+✓ Step 4: Run full test suite (65 tests, 1 attempt)
+✓ Step 5: Human review approved
+```
+
+If a table is rendered, use these strict column rules:
 
 Print at the end of execution. Strict column rules:
 

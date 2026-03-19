@@ -82,6 +82,15 @@ setup() {
     grep -qi "Never.*test counts.*Iterations\|test counts.*Status\|Never put test counts" "$LOOP_SKILL"
 }
 
+@test "scenario 04: loop-execution prefers compact list chat output for Codex" {
+    grep -qi "Codex.*compact list\|compact list.*Codex\|wide markdown table" "$LOOP_SKILL"
+}
+
+@test "scenario 04: loop-execution describes Codex native progress as additive only" {
+    grep -qi "Codex app.*native plan\|native plan/progress UI\|built-in progress card" "$LOOP_SKILL"
+    grep -qi "additive\|do not remove.*chat logs\|platforms without a native progress UI" "$LOOP_SKILL"
+}
+
 @test "scenario 04: behavioral spec exists" {
     [ -f "$SCENARIOS/04-summary-columns.md" ]
 }

@@ -145,12 +145,70 @@ assert_codex_prompt_resolves() {
 # ── session-start hook output ─────────────────────────────────────────────────
 
 @test "session-start outputs valid JSON with additional_context field" {
-    output=$("$REPO_ROOT/hooks/session-start" 2>&1)
+    output=$("$REPO_ROOT/hooks/session-start")
     python3 -c "
 import json, sys
 data = json.loads(sys.stdin.read())
 assert 'additional_context' in data, 'missing additional_context field'
 assert len(data['additional_context']) > 0, 'additional_context is empty'
+" <<< "$output"
+}
+
+@test "check-update refreshes a fresh cache entry when cached latest is older than installed" {
+    tmp_home="$(mktemp -d)"
+    fake_bin="$tmp_home/bin"
+    installed_version="$(tr -d '[:space:]' < "$REPO_ROOT/VERSION")"
+
+    mkdir -p "$fake_bin" "$tmp_home/.cache/hotl"
+
+    cat > "$fake_bin/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+cat <<'JSON'
+{"tag_name":"v9.9.9","html_url":"https://example.com/releases/v9.9.9"}
+JSON
+EOF
+    chmod +x "$fake_bin/curl"
+
+    cat > "$tmp_home/.cache/hotl/update-check.json" <<'EOF'
+{
+  "latest_version": "2.0.0",
+  "checked_at": "2099-01-01T00:00:00Z",
+  "source": "github-api",
+  "release_url": "https://example.com/releases/v2.0.0"
+}
+EOF
+
+    run env HOME="$tmp_home" PATH="$fake_bin:$PATH" bash "$REPO_ROOT/scripts/check-update.sh"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"HOTL update available: ${installed_version} → 9.9.9"* ]]
+    grep -q '"latest_version": "9.9.9"' "$tmp_home/.cache/hotl/update-check.json"
+}
+
+@test "session-start does not expose unsupported sessionStartNotice metadata" {
+    tmp_home="$(mktemp -d)"
+    fake_bin="$tmp_home/bin"
+
+    mkdir -p "$fake_bin" "$tmp_home/.cache/hotl"
+
+    cat > "$fake_bin/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+cat <<'JSON'
+{"tag_name":"v9.9.9","html_url":"https://example.com/releases/v9.9.9"}
+JSON
+EOF
+    chmod +x "$fake_bin/curl"
+
+    output=$(env HOME="$tmp_home" PATH="$fake_bin:$PATH" "$REPO_ROOT/hooks/session-start" 2>/dev/null)
+    python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+assert 'HOTL update available:' not in data['additional_context']
+assert 'sessionStartNotice' not in data.get('hookSpecificOutput', {})
 " <<< "$output"
 }
 

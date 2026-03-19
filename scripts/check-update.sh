@@ -9,6 +9,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 GITHUB_REPO="yimwoo/hotl-plugin"
 
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+now_iso() {
+    python3 -c "from datetime import datetime, timezone; print(datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))" 2>/dev/null \
+        || date -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
 # ── Read installed version ───────────────────────────────────────────────────
 
 VERSION_FILE="${REPO_DIR}/VERSION"
@@ -47,7 +54,7 @@ use_cache() {
 
     local checked_at
     checked_at=$(python3 -c "
-import json, sys
+import json
 try:
     data = json.load(open('$CACHE_FILE'))
     print(data.get('checked_at', ''))
@@ -109,7 +116,6 @@ except: pass
         return 1
     fi
 
-    # Normalize: strip leading v
     local version="${tag_name#v}"
     echo "${version}|github-api|${release_url}"
 }
@@ -137,19 +143,17 @@ write_cache() {
     local version="$1"
     local source="$2"
     local release_url="$3"
-    local now
-
-    now=$(python3 -c "from datetime import datetime, timezone; print(datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'))" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local checked_at="$4"
 
     mkdir -p "$CACHE_DIR"
-    cat > "$CACHE_FILE" <<CEOF
+    cat > "$CACHE_FILE" <<EOF
 {
   "latest_version": "${version}",
-  "checked_at": "${now}",
+  "checked_at": "${checked_at}",
   "source": "${source}",
   "release_url": "${release_url}"
 }
-CEOF
+EOF
 }
 
 # ── Compare versions ─────────────────────────────────────────────────────────
@@ -162,7 +166,6 @@ is_outdated() {
         return 1
     fi
 
-    # Try python3 tuple comparison
     local result
     result=$(python3 -c "
 i = tuple(int(x) for x in '$installed'.split('.'))
@@ -176,7 +179,6 @@ print('outdated' if i < l else 'current')
         return 1
     fi
 
-    # Fallback: string differs means potentially outdated
     [ "$installed" != "$latest" ]
 }
 
@@ -186,6 +188,13 @@ LATEST_VERSION=""
 
 if use_cache; then
     LATEST_VERSION="$(read_cached_version)"
+
+    # Ignore cache entries that claim "latest" is older than the installed
+    # version. This can happen when a user updates locally or when a release is
+    # published after a same-day cache write, and it suppresses valid notices.
+    if [ -n "$LATEST_VERSION" ] && is_outdated "$LATEST_VERSION" "$INSTALLED_VERSION"; then
+        LATEST_VERSION=""
+    fi
 fi
 
 if [ -z "$LATEST_VERSION" ]; then
@@ -200,7 +209,7 @@ if [ -z "$LATEST_VERSION" ]; then
     FETCH_SOURCE="$(echo "$FETCH_RESULT" | cut -d'|' -f2)"
     FETCH_URL="$(echo "$FETCH_RESULT" | cut -d'|' -f3)"
 
-    write_cache "$LATEST_VERSION" "$FETCH_SOURCE" "$FETCH_URL"
+    write_cache "$LATEST_VERSION" "$FETCH_SOURCE" "$FETCH_URL" "$(now_iso)"
 fi
 
 if is_outdated "$INSTALLED_VERSION" "$LATEST_VERSION"; then
