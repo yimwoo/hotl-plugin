@@ -243,7 +243,7 @@ assert len(data['additional_context']) > 0, 'additional_context is empty'
     grep -q '| `worktree`' "$REPO_ROOT/docs/workflow-format.md"
 }
 
-@test "all three execution skills contain identical Branch/Worktree Preflight section" {
+@test "loop-execution and executing-plans contain identical Branch/Worktree Preflight section" {
     extract() {
         python3 -c "
 import re, sys
@@ -255,10 +255,13 @@ print(match.group(1) if match else '')
     }
     loop=$(extract "$REPO_ROOT/skills/loop-execution/SKILL.md")
     exec_plans=$(extract "$REPO_ROOT/skills/executing-plans/SKILL.md")
-    subagent=$(extract "$REPO_ROOT/skills/subagent-execution/SKILL.md")
     [ -n "$loop" ] || { echo "loop-execution missing preflight section"; return 1; }
     [ "$loop" = "$exec_plans" ] || { echo "loop-execution and executing-plans preflight sections differ"; return 1; }
-    [ "$loop" = "$subagent" ] || { echo "loop-execution and subagent-execution preflight sections differ"; return 1; }
+}
+
+@test "subagent-execution references the canonical execution state machine" {
+    grep -q "Execution State Machine" "$REPO_ROOT/skills/subagent-execution/SKILL.md"
+    grep -q "Critical Invariants" "$REPO_ROOT/skills/subagent-execution/SKILL.md"
 }
 
 @test "workflow templates do not contain branch or worktree fields" {

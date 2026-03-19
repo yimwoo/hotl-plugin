@@ -1,13 +1,13 @@
 ---
 name: subagent-execution
-description: Execute a hotl-workflow-*.md in the current session by delegating implementation-friendly steps to fresh subagents while the controller keeps governance, verification, and stop conditions.
+description: Delegated step runner over the HOTL execution state machine — delegates eligible steps to fresh subagents while the controller keeps governance, verification, and stop conditions.
 ---
 
 # HOTL Subagent Execution
 
 ## Overview
 
-Use this when you have a `hotl-workflow-*.md` and want same-session execution with fresh subagents per delegated step. This is a governed execution mode, not generic parallel dispatch.
+This is a **delegation profile** over the HOTL execution state machine defined in `skills/loop-execution/SKILL.md`. It follows the same resolve → preflight → lint → execute → verify → loop → gate → summarize flow, but eligible steps are delegated to fresh subagents instead of running inline.
 
 **Core principle:** delegation is allowed; governance is not delegated.
 
@@ -17,115 +17,47 @@ Use this when you have a `hotl-workflow-*.md` and want same-session execution wi
 - Steps are independent enough to hand to one worker at a time
 - You want the controller to stay in this session and keep ownership of gates and verification
 
-## Do Not Use When
+## Execution
 
-- The work requires parallel edits to shared files
-- The risky parts need direct controller execution throughout
+Follow the **HOTL Execution State Machine** in `skills/loop-execution/SKILL.md` for the full execution flow (workflow resolution, branch/worktree preflight, structural lint, typed verification, loop rules, gate rules, completion).
 
-## Required Preflight
-
-1. Resolve the workflow file:
-   - If the user specified a filename, use it
-   - Else glob for `hotl-workflow-*.md` in the project root
-   - If multiple exist, ask the user which one to execute
-2. Read the full workflow
-3. Run Branch/Worktree Preflight (see below) — before any steps execute
-
-## Branch/Worktree Preflight
-
-After resolving the workflow file, run this preflight **before executing any steps**:
-
-```
-1. Is this a git repo with at least one commit?
-   - No  → log "Skipping branch setup (no git history)" → proceed to step execution
-   - Yes → continue
-
-2. Check for uncommitted changes
-   - Dirty → HARD-FAIL. Tell the user why execution is blocked. Offer choices:
-     a. Clean up manually, then re-run
-     b. Stash manually, then re-run
-     c. Explicitly approve HOTL to stash and continue
-   - Clean → continue
-
-3. Determine branch name
-   - If branch: field exists in workflow frontmatter → use it
-   - Otherwise → derive hotl/<slug> from hotl-workflow-<slug>.md
-
-4. Check if branch already exists locally
-   - Exists, same HEAD    → ask: reuse, delete+recreate, or abort
-   - Exists, different HEAD → ask: delete+recreate, or abort
-   - Does not exist        → create (no prompt)
-
-5. Create branch/worktree
-   - If worktree: true in frontmatter → create git worktree with the branch
-   - Otherwise → create branch and checkout in current directory
-```
-
-**Rules:**
-- No auto-stash. Hidden state mutation weakens governance.
-- Existing branch always prompts, even at the same HEAD.
-- Non-git repos skip entirely — HOTL works without git ceremony.
-- Run HOTL structural lint (`scripts/document-lint.sh`) automatically on the workflow file before any git mutation or step execution. If lint fails, STOP and show all errors. If lint passes, continue silently.
-
-## Execution Model
-
-For each workflow step in order:
+The only difference is **how each step body runs:**
 
 1. Announce the step
-2. Decide whether the controller or a subagent should execute it
+2. Decide whether to delegate or run inline (see Delegation Rules below)
 3. If delegated:
-   - dispatch a fresh subagent with the full step text, the relevant files, and the success condition
-   - do not make the subagent infer the plan from scratch if you can provide the step directly
-   - answer clarifying questions before letting the subagent continue
-4. Run the step's `verify` in the controller session (typed verification):
-   - Scalar string → type: shell
-   - List → run all checks, ALL must pass
-   - type: shell → run command, check exit code
-   - type: browser → if browser tooling available, use it; otherwise downgrade to type: human-review
-   - type: human-review → ALWAYS pause, show prompt (never auto-approve)
-   - type: artifact → check path exists, evaluate assert (kind: exists | contains | matches-glob)
-   - **Verification always runs in the controller session, never in the subagent**
-5. Apply loop rules:
-   - `loop: false` and verify fails → stop and report
-   - `loop: until ...` and verify fails → retry up to `max_iterations`
-6. Apply gate rules:
-   - `gate: human` → controller pauses for human approval
-   - `gate: auto` → continue
-7. Mark the workflow checkbox complete only after verify passes
+   - Dispatch a fresh subagent with the full step text, the relevant files, and the success condition
+   - Do not make the subagent infer the plan from scratch — provide the step directly
+   - Answer clarifying questions before letting the subagent continue
+4. If inline: execute the step directly in the controller session
+5. Run verification, loop rules, and gate rules as defined in the state machine
+
+## Critical Invariants
+
+These rules apply regardless of delegation decisions:
+
+1. **Verification always runs in the controller session** — never in the subagent
+2. **Gates always stay in the controller session** — `gate: human` pauses the controller, not the subagent
+3. **No nested delegation** — subagents cannot spawn other subagents
+4. **No parallel write-heavy steps** — do not run multiple implementation subagents in parallel against the same workflow
+5. **Controller owns stop conditions** — on repeated verify failure, the controller stops and reports; it does not let the subagent retry silently
 
 ## Delegation Rules
 
-Delegate by default:
+**Delegate by default:**
+- Test-writing steps
+- Implementation steps
+- Localized documentation changes
+- Contained refactors
 
-- test-writing steps
-- implementation steps
-- localized documentation changes
-- contained refactors
-
-Keep controller-owned by default:
-
-- human-gated steps
-- security-sensitive decisions
-- final verification and summaries
-- any step whose failure would require architectural judgment
-
-## Safety Rules
-
-- Never run multiple implementation subagents in parallel against the same workflow
-- Never let a subagent decide to bypass a human gate
-- Never mark a step complete before the controller verifies it
-- Never continue after repeated verify failure without surfacing the output
-
-## Completion
-
-After all steps pass:
-
-1. Summarize completed steps and any retries
-2. Invoke `hotl:verification-before-completion`
-3. Only then claim the workflow is complete
+**Keep controller-owned by default:**
+- Human-gated steps
+- Security-sensitive decisions
+- Final verification and summaries
+- Any step whose failure would require architectural judgment
 
 ## Related Skills
 
-- `hotl:document-review` — optional, for reviewing external or hand-authored docs
+- `hotl:loop-execution` — the canonical execution state machine (this skill builds on it)
 - `hotl:verification-before-completion` — required before claiming done
 - `hotl:dispatch-agents` — use for generic parallel independent tasks, not governed workflow execution

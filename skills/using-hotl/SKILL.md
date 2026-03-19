@@ -28,7 +28,7 @@ Use the `Skill` tool to invoke any of these when appropriate:
 | `hotl:writing-plans` | After design approval — produces `hotl-workflow-<slug>.md` |
 | `hotl:executing-plans` | Linear execution with human checkpoints |
 | `hotl:loop-execution` | Execute a `hotl-workflow-*.md` with loops + auto-approve |
-| `hotl:subagent-execution` | Execute a `hotl-workflow-*.md` in this session with delegated subagent steps |
+| `hotl:subagent-execution` | Delegated step runner over the loop execution engine — delegates eligible steps to fresh subagents |
 | `hotl:dispatch-agents` | 2+ independent tasks that can run in parallel |
 | `hotl:tdd` | Before writing any implementation code |
 | `hotl:systematic-debugging` | When encountering any bug or unexpected behavior |

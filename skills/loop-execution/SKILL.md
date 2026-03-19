@@ -57,7 +57,9 @@ After resolving the workflow file, run this preflight **before executing any ste
 - Non-git repos skip entirely — HOTL works without git ceremony.
 - Run HOTL structural lint (`scripts/document-lint.sh`) automatically on the workflow file before any git mutation or step execution. If lint fails, STOP and show all errors. If lint passes, continue silently.
 
-## Execution Algorithm
+## HOTL Execution State Machine
+
+This is the canonical HOTL execution state machine. Other execution modes (e.g., subagent-execution) reference this spec and define only their differences.
 
 ```
 1. Resolve workflow file (see above)
