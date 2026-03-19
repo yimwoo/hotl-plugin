@@ -4,6 +4,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
 PLUGIN_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# Best-effort update check — output to stderr so it doesn't contaminate JSON response
+# If check-update.sh is unavailable or fails, continue silently
+bash "${PLUGIN_ROOT}/scripts/check-update.sh" >&2 2>/dev/null || true
+
 using_hotl_content=$(cat "${PLUGIN_ROOT}/skills/using-hotl/SKILL.md" 2>&1 || echo "Error reading using-hotl skill")
 
 escape_for_json() {

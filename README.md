@@ -87,6 +87,16 @@ bash update.sh
 Covers Claude Code, Codex, and Cline — skips any tool that isn't installed.
 Restart Codex after updating so it re-discovers the latest skills.
 
+### Update Notifications
+
+HOTL checks for new versions automatically on Claude Code session start (best-effort). For all platforms, you can check manually:
+
+```bash
+bash update.sh --check
+```
+
+Or in Claude Code: `/hotl:check-update`
+
 ---
 
 ## Why HOTL
@@ -200,6 +210,7 @@ Multiple checks per step are supported — all must pass. See [`docs/workflow-fo
 | `/hotl:subagent-execute` | Run the workflow with delegated subagent execution |
 | `/hotl:resume` | Resume an interrupted workflow run |
 | `/hotl:pr-review` | Review a PR across multiple dimensions |
+| `/hotl:check-update` | Check if a newer HOTL version is available |
 | `/hotl:setup` | Generate adapter files for other tools |
 
 ---

@@ -5,20 +5,31 @@ set -euo pipefail
 # Updates Claude Code, Codex, and Cline installations if present.
 
 FORCE_CODEX=0
+CHECK_ONLY=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --force-codex)
             FORCE_CODEX=1
             ;;
+        --check)
+            CHECK_ONLY=1
+            ;;
         *)
             echo "Unknown option: $1" >&2
-            echo "Usage: bash update.sh [--force-codex]" >&2
+            echo "Usage: bash update.sh [--check] [--force-codex]" >&2
             exit 1
             ;;
     esac
     shift
 done
+
+# --check: just report whether an update is available, then exit
+if [ "$CHECK_ONLY" -eq 1 ]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    bash "${SCRIPT_DIR}/scripts/check-update.sh" || true
+    exit 0
+fi
 
 CLAUDE_PLUGIN_DIR="${HOME}/.claude/plugins/hotl"
 CLAUDE_CACHE_DIR="${HOME}/.claude/plugins/cache/hotl-plugin/hotl"
