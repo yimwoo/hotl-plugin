@@ -223,6 +223,15 @@ if [ "$FILE_TYPE" = "workflow" ]; then
                 *) error "progress must be 'verbose' if set (got: '$PROGRESS')" ;;
             esac
         fi
+
+        # report_detail validation (optional field)
+        if echo "$FRONTMATTER" | grep -qi 'report_detail:'; then
+            REPORT_DETAIL=$(echo "$FRONTMATTER" | grep -i 'report_detail:' | head -1 | sed 's/.*report_detail:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+            case "$REPORT_DETAIL" in
+                full) ;;
+                *) error "report_detail must be 'full' if set (got: '$REPORT_DETAIL')" ;;
+            esac
+        fi
     fi
 
     # Step structure checks

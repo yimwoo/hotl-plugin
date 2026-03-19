@@ -71,9 +71,12 @@ Execution state is persisted at `.hotl/state/<run-id>.json`. This is the **autho
 
 ```
 1. Load sidecar state for the resolved run
-2. Repair workflow checkboxes from sidecar if drift is detected
+2. Check for existing report at report_path from the sidecar
+   - If report exists: surface its path to the user and continue appending to it
+   - If report is missing: create a new report from sidecar state
+3. Repair workflow checkboxes from sidecar if drift is detected
    (crash may have interrupted between sidecar write and checkbox update)
-3. Find the current unfinished step (first step without status: completed)
+4. Find the current unfinished step (first step without status: completed)
 4. Check verify type for that step:
 
    a. Machine-runnable verify (type: shell or type: artifact):

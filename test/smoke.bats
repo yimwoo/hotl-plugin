@@ -272,6 +272,10 @@ assert len(data['additional_context']) > 0, 'additional_context is empty'
     grep -q 'verbose' "$REPO_ROOT/docs/workflow-format.md"
 }
 
+@test "workflow-format.md documents report_detail field" {
+    grep -q '| `report_detail`' "$REPO_ROOT/docs/workflow-format.md"
+}
+
 @test "loop-execution defines canonical Execution Reporting Contract" {
     grep -q "Execution Reporting Contract" "$REPO_ROOT/skills/loop-execution/SKILL.md"
     grep -q "Iterations" "$REPO_ROOT/skills/loop-execution/SKILL.md"
