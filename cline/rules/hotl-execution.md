@@ -19,6 +19,12 @@
    - Multiple → list and ask user to pick
    - None → ask if they want to create one
 
+### Dirty Worktree Handling
+
+Preflight automatically excludes HOTL-owned artifacts (`hotl-workflow-*.md`, `docs/plans/*-design.md`, `.hotl/`) from dirty worktree checks. If only those files are dirty, execution proceeds normally.
+
+For non-HOTL dirty files: if `dirty_worktree: allow` is set in the workflow frontmatter, proceed without prompting. Otherwise, pause and ask the user to clean up, stash, or approve.
+
 ### Structural Lint Preflight
 
 After resolving the workflow file, run HOTL structural lint automatically before any git mutation or step execution:

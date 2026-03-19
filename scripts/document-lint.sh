@@ -232,6 +232,15 @@ if [ "$FILE_TYPE" = "workflow" ]; then
                 *) error "report_detail must be 'full' if set (got: '$REPORT_DETAIL')" ;;
             esac
         fi
+
+        # dirty_worktree validation (optional field)
+        if echo "$FRONTMATTER" | grep -qi 'dirty_worktree:'; then
+            DIRTY_WT=$(echo "$FRONTMATTER" | grep -i 'dirty_worktree:' | head -1 | sed 's/.*dirty_worktree:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+            case "$DIRTY_WT" in
+                allow) ;;
+                *) error "dirty_worktree must be 'allow' if set (got: '$DIRTY_WT')" ;;
+            esac
+        fi
     fi
 
     # Step structure checks
