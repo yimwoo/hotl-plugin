@@ -39,10 +39,17 @@ After resolving the workflow file, run this preflight **before executing any ste
    - Yes → continue
 
 2. Check for uncommitted changes
-   - Dirty → HARD-FAIL. Tell the user why execution is blocked. Offer choices:
-     a. Clean up manually, then re-run
-     b. Stash manually, then re-run
-     c. Explicitly approve HOTL to stash and continue
+   - First, exclude HOTL-owned transient artifacts from the dirty check:
+     • hotl-workflow-*.md (workflow plan files)
+     • docs/plans/*-design.md (design docs from brainstorming)
+     • .hotl/ (runtime state, reports, cache)
+   - If only HOTL artifacts are dirty → treat as clean, continue
+   - If non-HOTL dirty files exist:
+     • If dirty_worktree: allow in workflow frontmatter → proceed without prompting
+     • Otherwise → HARD-FAIL. Tell the user which non-HOTL files are dirty. Offer choices:
+       a. Clean up manually, then re-run
+       b. Stash manually, then re-run
+       c. Explicitly approve HOTL to stash and continue
    - Clean → continue
 
 3. Determine branch name

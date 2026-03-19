@@ -334,6 +334,10 @@ assert 'sessionStartNotice' not in data.get('hookSpecificOutput', {})
     grep -q '| `report_detail`' "$REPO_ROOT/docs/workflow-format.md"
 }
 
+@test "workflow-format.md documents dirty_worktree field" {
+    grep -q '| `dirty_worktree`' "$REPO_ROOT/docs/workflow-format.md"
+}
+
 @test "loop-execution defines canonical Execution Reporting Contract" {
     grep -q "Execution Reporting Contract" "$REPO_ROOT/skills/loop-execution/SKILL.md"
     grep -q "Iterations" "$REPO_ROOT/skills/loop-execution/SKILL.md"

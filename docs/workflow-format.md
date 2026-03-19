@@ -14,6 +14,7 @@ The workflow file (`hotl-workflow-<slug>.md`) defines work to be executed by the
 | `worktree` | boolean | no (default: false) | Create a git worktree instead of switching the current directory |
 | `progress` | verbose | no | Enable verbose progress view — prints full step list at each step transition |
 | `report_detail` | full | no | Include all verify output in the execution report, not just failures |
+| `dirty_worktree` | allow | no | Proceed even if non-HOTL files are uncommitted (HOTL artifacts are always excluded automatically) |
 
 ## Step Fields
 

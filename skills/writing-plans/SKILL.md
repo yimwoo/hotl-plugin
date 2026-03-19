@@ -25,6 +25,7 @@ risk_level: low | medium | high
 auto_approve: true | false
 # branch: custom/branch-name   # optional — execution derives hotl/<slug> if absent
 # worktree: true                # optional — default false, creates git worktree instead of branch checkout
+# dirty_worktree: allow         # optional — proceed even if non-HOTL files are uncommitted
 ---
 
 ## Steps
