@@ -248,20 +248,26 @@ After each step, log one line:
 
 ### Final Summary Table
 
-**Codex rendering advisory:** in chat output, prefer the compact list form below instead of a wide markdown table. Keep the same status and iteration semantics. Reserve the full table form for the durable execution report or platforms where tabular markdown renders cleanly.
+**Codex rendering advisory:** in chat output, prefer the compact list form below instead of a wide markdown table. Keep the same status and iteration semantics by carrying both status and iteration count inline on each line. Reserve the full table form for the durable execution report or platforms where tabular markdown renders cleanly.
 
 Compact list example:
 ```
 Execution Summary
 
-✓ Step 1: Write failing tests
-✓ Step 2: Implement auth logic (3 attempts)
-⚡ Step 3: Security review gate (auto-approved)
-✓ Step 4: Run full test suite (65 tests, 1 attempt)
-✓ Step 5: Human review approved
+✓ Step 1: Write failing tests — Done (1 attempt)
+✓ Step 2: Implement auth logic — Done (3 attempts)
+⚡ Step 3: Security review gate — Auto-approved (-)
+✓ Step 4: Run full test suite — Done (65 tests, 1 attempt)
+✓ Step 5: Human review — Approved (1 attempt)
 ```
 
 If a table is rendered, use these strict column rules:
+
+**Compact list rules:**
+- Keep the step name first, then append inline status detail after an em dash.
+- Include the final status word on every line: `Done`, `Approved`, `Auto-approved`, `Failed`, or `Blocked`.
+- Include the iteration count on every line. Use `1 attempt` / `N attempts` for executed steps. For gates, use `(-)` if no retries/attempt count applies.
+- If there is useful result detail such as test counts, keep it inside the status detail before the attempt count: `Done (28/28, 2 attempts)`.
 
 Print at the end of execution. Strict column rules:
 

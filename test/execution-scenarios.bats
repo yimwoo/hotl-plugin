@@ -86,6 +86,13 @@ setup() {
     grep -qi "Codex.*compact list\|compact list.*Codex\|wide markdown table" "$LOOP_SKILL"
 }
 
+@test "scenario 04: compact Codex list keeps status and iterations inline" {
+    grep -qi "status and iteration semantics.*inline\|status and iteration count inline" "$LOOP_SKILL"
+    grep -Fq "Done (1 attempt)" "$LOOP_SKILL"
+    grep -Fq "Done (3 attempts)" "$LOOP_SKILL"
+    grep -Fq "Approved (1 attempt)" "$LOOP_SKILL"
+}
+
 @test "scenario 04: loop-execution describes Codex native progress as additive only" {
     grep -qi "Codex app.*native plan\|native plan/progress UI\|built-in progress card" "$LOOP_SKILL"
     grep -qi "additive\|do not remove.*chat logs\|platforms without a native progress UI" "$LOOP_SKILL"

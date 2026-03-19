@@ -2,6 +2,16 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.3.1] - 2026-03-19
+
+### Fixed
+- Removed the unsupported Codex `sessionStartNotice` update-notification path and kept Codex update checks manual-only.
+- Updated smoke coverage so session-start validates clean JSON output without assuming notification delivery.
+
+### Changed
+- Codex loop-execution guidance now uses the native progress card as an additive top-level progress surface when available.
+- Codex compact execution summaries now keep status and iteration counts inline on each step while preserving table-based summaries for other agents.
+
 ## [1.9.1] - 2026-03-13
 
 ### Fixed
