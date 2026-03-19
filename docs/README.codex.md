@@ -101,6 +101,12 @@ bash ~/.codex/hotl/update.sh
 If the install drifted onto another branch, the updater switches it back to the
 stable `main` branch before pulling the latest HOTL skills.
 
+To check if an update is available without updating:
+
+```bash
+bash ~/.codex/hotl/update.sh --check
+```
+
 Restart Codex after updating so it re-discovers the latest skill files.
 
 ## Uninstalling
