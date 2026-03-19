@@ -54,7 +54,7 @@ mkdir -p ~/.agents/skills && ln -s ~/.codex/hotl/skills ~/.agents/skills/hotl
 Then restart Codex. Full instructions: [`.codex/INSTALL.md`](.codex/INSTALL.md)
 
 `~/.codex/hotl` is the HOTL stable channel and should track `origin/main`.
-Codex discovers skills from `~/.agents/skills/hotl`. In Codex, you can either describe the task in natural language and let HOTL route it, or explicitly mention a skill such as `$hotl:brainstorming`.
+Codex discovers skills from `~/.agents/skills/hotl`. In Codex, you can either describe the task in natural language and let HOTL route it, or explicitly mention a skill such as `$brainstorming`. In the app UI, these may appear as title-cased names like `Brainstorming`.
 
 ### Cline
 
@@ -208,20 +208,20 @@ Multiple checks per step are supported — all must pass. See [`docs/workflow-fo
 
 If you are using OpenAI Codex, invoke HOTL with normal prompts, not slash commands.
 
-There is no `/hotl:brainstorm` or `/hotl:pr-review` syntax in Codex. Instead, either describe the task naturally and let Codex pick the right HOTL skill from the installed set, or explicitly mention the skill with a `$` prefix such as `$hotl:brainstorming`.
+There is no `/hotl:brainstorm` or `/hotl:pr-review` syntax in Codex. Instead, either describe the task naturally and let Codex pick the right HOTL skill from the installed set, or explicitly mention the installed skill with a `$` prefix such as `$brainstorming`.
 
 ### Codex Prompt Examples
 
 ```text
-Use $hotl:brainstorming to design this feature before writing code.
+Use $brainstorming to design this feature before writing code.
 
 Please use HOTL to design this feature before writing code.
 
-Use $hotl:writing-plans to create a hotl-workflow file for adding OAuth login.
+Use $writing-plans to create a hotl-workflow file for adding OAuth login.
 
 Review hotl-workflow-add-oauth.md with HOTL before implementation.
 
-Use $hotl:pr-reviewing to review https://github.com/org/repo/pull/123.
+Use $pr-reviewing to review https://github.com/org/repo/pull/123.
 
 Run a HOTL code review on the changes in this branch before merge.
 
@@ -233,7 +233,7 @@ Use HOTL for this task and choose the correct skill automatically.
 | Tool | How you invoke HOTL |
 | --- | --- |
 | Claude Code | Slash commands such as `/hotl:brainstorm` or `/hotl:pr-review` |
-| Codex | Natural-language prompts or explicit skill mentions such as `Use HOTL to plan this` or `$hotl:brainstorming` |
+| Codex | Natural-language prompts or explicit skill mentions such as `Use HOTL to plan this` or `$brainstorming` |
 
 For a Codex-specific setup and usage guide, see [`.codex/INSTALL.md`](.codex/INSTALL.md) and [`docs/README.codex.md`](docs/README.codex.md).
 
@@ -247,41 +247,41 @@ All skills work with **Claude Code** and **Codex**. Cline users get equivalent r
 
 | Skill | Description | Phase |
 | --- | --- | --- |
-| `hotl:brainstorming` | Explore intent, requirements, and design. Produces HOTL contracts (intent, verification, governance) before implementation. Prefers multiple-choice questions and includes a design-doc self-check. | Brainstorm |
-| `hotl:writing-plans` | Create a `hotl-workflow-<slug>.md` implementation plan with typed verification (shell, browser, human-review, artifact), loop/gate definitions, and a built-in self-check loop. | Plan |
-| `hotl:document-review` | Optional utility for reviewing existing docs, external specs, or hand-authored plans. Runs deterministic lint then AI-driven qualitative review. | Review |
+| `brainstorming` | Explore intent, requirements, and design. Produces HOTL contracts (intent, verification, governance) before implementation. Prefers multiple-choice questions and includes a design-doc self-check. | Brainstorm |
+| `writing-plans` | Create a `hotl-workflow-<slug>.md` implementation plan with typed verification (shell, browser, human-review, artifact), loop/gate definitions, and a built-in self-check loop. | Plan |
+| `document-review` | Optional utility for reviewing existing docs, external specs, or hand-authored plans. Runs deterministic lint then AI-driven qualitative review. | Review |
 
 ### Execution
 
 | Skill | Description | Phase |
 | --- | --- | --- |
-| `hotl:loop-execution` | The canonical HOTL execution engine — loops until success criteria met, auto-approves low-risk gates, pauses at high-risk gates. Persists state for resume. | Execute |
-| `hotl:executing-plans` | Loop execution with explicit human checkpoints between batches of tasks. | Execute |
-| `hotl:subagent-execution` | Delegated step runner over the loop execution engine — delegates eligible steps to fresh subagents while the controller keeps governance and verification. | Execute |
-| `hotl:resuming` | Resume an interrupted workflow run — verify-first strategy with sidecar state persistence. | Execute |
-| `hotl:dispatch-agents` | Run 2+ independent tasks in parallel with no shared state — dispatches parallel subagents for each task. | Execute |
+| `loop-execution` | The canonical HOTL execution engine — loops until success criteria met, auto-approves low-risk gates, pauses at high-risk gates. Persists state for resume. | Execute |
+| `executing-plans` | Loop execution with explicit human checkpoints between batches of tasks. | Execute |
+| `subagent-execution` | Delegated step runner over the loop execution engine — delegates eligible steps to fresh subagents while the controller keeps governance and verification. | Execute |
+| `resuming` | Resume an interrupted workflow run — verify-first strategy with sidecar state persistence. | Execute |
+| `dispatch-agents` | Run 2+ independent tasks in parallel with no shared state — dispatches parallel subagents for each task. | Execute |
 
 ### Quality & Review
 
 | Skill | Description | Phase |
 | --- | --- | --- |
-| `hotl:pr-reviewing` | Review a PR across multiple dimensions — description/ticket, code changes, code scan, unit tests — using parallel subagents. Supports GitHub, GitLab, and enterprise platforms. | Review |
-| `hotl:code-review` | Post-implementation review against the workflow plan and HOTL contracts. Checks plan alignment, code quality, and governance compliance. | Verify |
-| `hotl:verification-before-completion` | Run verification commands and confirm output before claiming work is complete. Evidence before assertions. | Verify |
+| `pr-reviewing` | Review a PR across multiple dimensions — description/ticket, code changes, code scan, unit tests — using parallel subagents. Supports GitHub, GitLab, and enterprise platforms. | Review |
+| `code-review` | Post-implementation review against the workflow plan and HOTL contracts. Checks plan alignment, code quality, and governance compliance. | Verify |
+| `verification-before-completion` | Run verification commands and confirm output before claiming work is complete. Evidence before assertions. | Verify |
 
 ### Development Practices
 
 | Skill | Description | Phase |
 | --- | --- | --- |
-| `hotl:tdd` | Enforce RED-GREEN-REFACTOR cycle before writing any implementation code. | Execute |
-| `hotl:systematic-debugging` | Structured debugging workflow — reproduce, isolate, fix, verify. Use before proposing fixes for any bug or test failure. | Execute |
+| `tdd` | Enforce RED-GREEN-REFACTOR cycle before writing any implementation code. | Execute |
+| `systematic-debugging` | Structured debugging workflow — reproduce, isolate, fix, verify. Use before proposing fixes for any bug or test failure. | Execute |
 
 ### Setup & Configuration
 
 | Skill | Description | Phase |
 | --- | --- | --- |
-| `hotl:setup-project` | Generate adapter files for the current project — creates AGENTS.md, .clinerules, cursor rules, or copilot instructions depending on tools the team uses. | Setup |
-| `hotl:using-hotl` | Auto-loaded on session start. Establishes the skill index and HOTL operating principles. | Setup |
+| `setup-project` | Generate adapter files for the current project — creates AGENTS.md, .clinerules, cursor rules, or copilot instructions depending on tools the team uses. | Setup |
+| `using-hotl` | Auto-loaded on session start. Establishes the skill index and HOTL operating principles. | Setup |
 
 ---
 

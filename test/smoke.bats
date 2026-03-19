@@ -82,6 +82,20 @@ assert_codex_prompt_resolves() {
     local skill_name
     local skill_path
 
+    if [[ "$prompt" =~ \$((hotl:)?[a-z-]+) ]]; then
+        skill_name="${BASH_REMATCH[1]#hotl:}"
+        skill_path="$REPO_ROOT/skills/$skill_name/SKILL.md"
+        [ -f "$skill_path" ] || {
+            echo "Missing skill for prompt: $prompt ($skill_path)"
+            return 1
+        }
+        grep -q "name: $skill_name" "$skill_path" || {
+            echo "Skill frontmatter mismatch for prompt: $prompt"
+            return 1
+        }
+        return 0
+    fi
+
     if [[ "$prompt" =~ hotl:[a-z-]+ ]]; then
         skill_name="${BASH_REMATCH[0]#hotl:}"
         skill_path="$REPO_ROOT/skills/$skill_name/SKILL.md"
@@ -312,8 +326,8 @@ print(match.group(1) if match else '')
 @test "Codex docs explain skill invocation without slash commands" {
     grep -q 'There is no `/hotl:' "$REPO_ROOT/README.md"
     grep -q 'There is no `/hotl:' "$REPO_ROOT/docs/README.codex.md"
-    grep -q '\$hotl:brainstorming' "$REPO_ROOT/README.md"
-    grep -q '\$hotl:brainstorming' "$REPO_ROOT/docs/README.codex.md"
+    grep -q '\$brainstorming' "$REPO_ROOT/README.md"
+    grep -q '\$brainstorming' "$REPO_ROOT/docs/README.codex.md"
     grep -q 'describe the task in natural language' "$REPO_ROOT/README.md"
     grep -q 'Describe the task in natural language' "$REPO_ROOT/docs/README.codex.md"
 }
@@ -328,9 +342,9 @@ print(match.group(1) if match else '')
 }
 
 @test "Codex prompt examples resolve to installed HOTL skills locally" {
-    assert_codex_prompt_resolves 'Use $hotl:brainstorming to design this feature before writing code.'
-    assert_codex_prompt_resolves 'Use $hotl:writing-plans to create a hotl-workflow file for adding OAuth login.'
-    assert_codex_prompt_resolves 'Use $hotl:pr-reviewing to review https://github.com/org/repo/pull/123.'
+    assert_codex_prompt_resolves 'Use $brainstorming to design this feature before writing code.'
+    assert_codex_prompt_resolves 'Use $writing-plans to create a hotl-workflow file for adding OAuth login.'
+    assert_codex_prompt_resolves 'Use $pr-reviewing to review https://github.com/org/repo/pull/123.'
     assert_codex_prompt_resolves 'Use HOTL for this task and choose the correct skill automatically.'
 }
 
@@ -346,11 +360,11 @@ print(match.group(1) if match else '')
 }
 
 @test "docs/README.codex.md prompt examples resolve to installed HOTL skills locally" {
-    assert_codex_prompt_resolves 'Use $hotl:brainstorming to compare OAuth and API-key auth before writing code.'
-    assert_codex_prompt_resolves 'Use $hotl:writing-plans to create hotl-workflow-add-rate-limiting.md.'
+    assert_codex_prompt_resolves 'Use $brainstorming to compare OAuth and API-key auth before writing code.'
+    assert_codex_prompt_resolves 'Use $writing-plans to create hotl-workflow-add-rate-limiting.md.'
     assert_codex_prompt_resolves 'Review hotl-workflow-add-rate-limiting.md with HOTL and tell me if it is ready to execute.'
-    assert_codex_prompt_resolves 'Use $hotl:subagent-execution to execute hotl-workflow-add-rate-limiting.md in this session.'
-    assert_codex_prompt_resolves 'Before you say this task is done, use $hotl:verification-before-completion.'
+    assert_codex_prompt_resolves 'Use $subagent-execution to execute hotl-workflow-add-rate-limiting.md in this session.'
+    assert_codex_prompt_resolves 'Before you say this task is done, use $verification-before-completion.'
     assert_codex_prompt_resolves 'Use HOTL for this task and choose the most appropriate skill automatically.'
 }
 
