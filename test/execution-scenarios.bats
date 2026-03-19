@@ -148,6 +148,12 @@ setup() {
     grep -q "report_path" "$LOOP_SKILL"
 }
 
+@test "loop-execution requires persistence before visible progress updates" {
+    grep -q "Persist step start before any user-facing progress update" "$LOOP_SKILL"
+    grep -q "persist completion before announcing" "$LOOP_SKILL"
+    grep -q "Native progress UI is advisory only" "$LOOP_SKILL"
+}
+
 @test "loop-execution describes report format (table + event log)" {
     grep -qi "Summary table\|summary table" "$LOOP_SKILL"
     grep -qi "Event Log\|event log" "$LOOP_SKILL"

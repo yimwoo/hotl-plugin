@@ -85,6 +85,8 @@ All execution modes share one engine: the **HOTL execution state machine** (reso
 
 The canonical execution mode. HOTL runs the workflow step by step, retries steps that are allowed to loop, auto-approves low-risk gates, and pauses on high-risk or human-gated steps. Works on all platforms.
 
+For every step transition, HOTL must persist `.hotl/state/<run-id>.json` and update `.hotl/reports/<run-id>.md` before showing the corresponding progress in chat or the Codex progress card. The UI is a mirror; the sidecar and report are the durable record.
+
 ### Manual Execution (checkpointed)
 
 Loop execution with explicit human checkpoints every 3 steps. You review progress before the next batch continues. Best for tighter oversight.

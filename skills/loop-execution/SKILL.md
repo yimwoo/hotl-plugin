@@ -80,13 +80,25 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
 1. Resolve workflow file (see above)
 2. Parse frontmatter: intent, risk_level, auto_approve, branch, worktree
 3. Run Branch/Worktree Preflight (see above)
-4. For each step in order:
+4. Initialize persistence before any visible progress:
+   - Derive run_id = <slug>-<unix-timestamp>
+   - Create .hotl/state/ and .hotl/reports/ if missing
+   - Create .hotl/state/<run-id>.json with status: running, current_step: 1, all steps pending
+   - Create .hotl/reports/<run-id>.md with metadata header, full summary table, and empty event log
+   - Store report_path in the sidecar
+5. For each step in order:
 
-   a. Announce: "→ Step N: [name]"
+   a. Persist step start before any user-facing progress update:
+      - Set current_step = N, status = running, last_update = now
+      - Mark step N as running and increment attempts for the current attempt
+      - Update the report table row to → Running, refresh Updated:, append the step-start event
+      - Only after the sidecar/report write succeeds should chat output or native plan/progress UI show "→ Step N"
 
-   b. Execute the action
+   b. Announce: "→ Step N: [name]"
 
-   c. Run verify (typed verification):
+   c. Execute the action
+
+   d. Run verify (typed verification):
       → If verify is a scalar string: treat as type: shell
       → If verify is a list: run all checks, ALL must pass
       → type: shell — run command, check exit code, capture stdout/stderr
@@ -99,32 +111,49 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
           kind: contains → file at path contains value text
           kind: matches-glob → directory at path has file matching value glob
 
-   d. If loop: false
+   e. If verify fails at any point:
+      - Persist last_verify_output to the sidecar before announcing the failure
+      - Append the captured verify output to the report event log before deciding retry/stop
+
+   f. If loop: false
       → run verify if present
       → if verify fails: STOP, report to human
+         Before stopping: set run status = blocked, keep current_step = N, mark the step failed in the report, update Updated:
       → continue to next step
 
-   e. If loop: until [condition]
+   g. If loop: until [condition]
       → run verify
       → if pass: log "✓ [condition] met", continue to next step
-      → if fail AND iterations < max_iterations: log "↻ Retrying ([n]/[max])...", retry
+      → if fail AND iterations < max_iterations:
+          persist retry state first (attempt count, last_verify_output, ↻ Retrying in report), then log "↻ Retrying ([n]/[max])...", retry
       → if fail AND iterations = max_iterations: STOP
           Report: "Step N reached max iterations ([max]). [condition] not met."
+          Before stopping: set run status = blocked, keep current_step = N, mark the step failed in the report, update Updated:
           Show last verify output. Wait for human guidance.
 
-   f. If gate: human
+   h. On step completion, persist completion before announcing it:
+      - Mark step N completed in the sidecar and set current_step = N + 1 (or leave at N if this was the final step until completion is finalized)
+      - Update the workflow checkbox to [x]
+      - Update the report table row to ✓ Done and append the completion event
+      - Only after the sidecar/report write succeeds should chat output or native plan/progress UI show "✓ Step N"
+
+   i. If gate: human
       → if auto_approve: true AND risk_level != high:
+          persist the gate result first (report row/event, last_update)
           log "⚡ Auto-approved: Step N gate (risk: [risk_level])"
           continue
       → else:
+          before pausing: set run status = paused, update Updated:, append gate event, flush sidecar/report
           PAUSE. Show summary of what was done in this step.
           Ask: "Gate reached at Step N. Continue? (yes/no/show-details)"
           Wait for human response before proceeding.
 
-   g. If gate: auto
+   j. If gate: auto
+      → persist the gate result first (report row/event, last_update)
       → always continue, log "⚡ Auto-approved: Step N gate"
 
-5. All steps complete:
+6. All steps complete:
+   → before the final summary: set run status = completed, set current_step = total_steps, update Updated:, finalize the report
    → Print summary table (step name | status | iterations used)
    → Invoke hotl:verification-before-completion skill
 ```
@@ -146,6 +175,8 @@ HOTL persists execution state in `.hotl/state/<run-id>.json` (sidecar file). Thi
 Run ID format: `<slug>-<unix-timestamp>` (e.g., `add-auth-1710700000`).
 
 The sidecar also stores `report_path` — the path to the durable Markdown report for this run. This makes resume and stop/block messaging deterministic.
+
+Operational rule: the sidecar/report write happens before the corresponding chat log or Codex native plan/progress update. Native progress UI is advisory only; it is never a substitute for `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md`.
 
 See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection, and verify-first resume flow.
 

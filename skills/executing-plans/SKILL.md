@@ -73,6 +73,8 @@ The `verify` field supports 4 types. A scalar string is shorthand for `type: she
 
 This executor writes execution state to `.hotl/state/<run-id>.json` using the same sidecar lifecycle as loop-execution (create on start, update on step transition, capture verify output). See `skills/loop-execution/SKILL.md` for the full persistence spec and `skills/resuming/SKILL.md` for the sidecar schema.
 
+Mirror those sidecar/report writes before any user-facing chat update or Codex native progress-card change. The progress UI is a mirror, not the source of truth.
+
 To resume an interrupted executing-plans run, use `/hotl:resume`.
 
 ## Process

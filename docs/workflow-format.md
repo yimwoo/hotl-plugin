@@ -170,6 +170,8 @@ HOTL executors persist execution state in `.hotl/state/<run-id>.json`. This side
 
 The sidecar tracks: run identity, workflow path, branch, executor mode, current step, per-step status and attempts, last verify output, and timestamps. See `skills/resuming/SKILL.md` for the full schema.
 
+If a chat transcript or native progress card disagrees with the sidecar, trust the sidecar/report artifacts. Executors should update `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md` before emitting the matching user-visible progress event.
+
 **Run ID format:** `<slug>-<unix-timestamp>` (e.g., `add-auth-1710700000`)
 
 **Gitignore:** Add `.hotl/` to your project's `.gitignore` — execution state should not be committed.

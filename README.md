@@ -166,6 +166,7 @@ HOTL:  Found interrupted run: add-auth-1710700000
 - **Auto-detect** — `/hotl:loop` detects interrupted runs and asks: "Resume from step 5, or start fresh?"
 - **Verify-first** — re-runs the last step's verification before deciding whether to redo or advance
 - **Crash-safe** — sidecar state file is the source of truth; workflow checkboxes are repaired on resume
+- **UI is advisory** — chat logs and Codex's native progress card should mirror execution, but `.hotl/state/*.json` and `.hotl/reports/*.md` are the canonical persisted record
 
 Add `.hotl/` to your project's `.gitignore` — execution state is local.
 
