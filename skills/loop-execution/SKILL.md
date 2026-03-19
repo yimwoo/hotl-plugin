@@ -21,6 +21,14 @@ Resolve which workflow file to execute:
    - **Multiple matches** → list them and ask the user to pick
    - **No matches** → see "What to Do If No Workflow Found" below
 
+### Interrupted Run Detection
+
+After resolving the workflow file, check `.hotl/state/*.json` for interrupted runs matching that workflow:
+
+- **One interrupted run found** → ask: "Found an interrupted run (step N/M). Resume from step N, or start fresh?"
+- **Multiple interrupted runs found** → list all with run_id, step progress, branch, age. Ask which to resume or start fresh. **Never silently choose.**
+- **No interrupted runs** → proceed normally (new run)
+
 ## Branch/Worktree Preflight
 
 After resolving the workflow file, run this preflight **before executing any steps**:
@@ -113,6 +121,24 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
    → Print summary table (step name | status | iterations used)
    → Invoke hotl:verification-before-completion skill
 ```
+
+## Execution State Persistence
+
+HOTL persists execution state in `.hotl/state/<run-id>.json` (sidecar file). This is the authoritative source of truth — workflow checkboxes are a human-visible mirror.
+
+### Lifecycle
+
+1. **On execution start:** Create `.hotl/state/<run-id>.json` with workflow metadata, step list, and `status: running`
+2. **On each step transition:** Update `current_step`, step status, `attempts`, and `last_update`
+3. **On verify:** Capture last verify output in `last_verify_output`
+4. **On step completion:** Set step status to `completed`, update workflow checkbox to `[x]`
+5. **On completion:** Set run status to `completed`
+6. **On gate pause:** Set run status to `paused`
+7. **On failure/stop:** Set run status to `blocked` with last verify output
+
+Run ID format: `<slug>-<unix-timestamp>` (e.g., `add-auth-1710700000`).
+
+See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection, and verify-first resume flow.
 
 ## Safety Rules
 

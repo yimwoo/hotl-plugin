@@ -161,6 +161,16 @@ Execution skills (loop-execution, executing-plans, subagent-execution) run a bra
 - **Non-git repos skip entirely.** HOTL works for POCs and new projects without git ceremony.
 - **Structural lint runs before any git mutation.** Catches format issues before execution begins.
 
+## Execution State (`.hotl/state/`)
+
+HOTL executors persist execution state in `.hotl/state/<run-id>.json`. This sidecar file is the authoritative source of truth for execution progress. Workflow checkboxes (`- [x]`) are a human-visible mirror updated on step completion.
+
+The sidecar tracks: run identity, workflow path, branch, executor mode, current step, per-step status and attempts, last verify output, and timestamps. See `skills/resuming/SKILL.md` for the full schema.
+
+**Run ID format:** `<slug>-<unix-timestamp>` (e.g., `add-auth-1710700000`)
+
+**Gitignore:** Add `.hotl/` to your project's `.gitignore` — execution state should not be committed.
+
 ## Step Syntax
 
 Preferred syntax uses checkboxes so progress is visible in the workflow file itself:

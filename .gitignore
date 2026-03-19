@@ -4,6 +4,7 @@
 # HOTL workspace artifacts
 hotl-workflow*.md
 docs/plans/
+.hotl/
 CLAUDE.md
 AGENTS.md
 

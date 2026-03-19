@@ -35,6 +35,7 @@ Use the `Skill` tool to invoke any of these when appropriate:
 | `hotl:document-review` | Optional — review existing docs, external specs, or hand-authored plans |
 | `hotl:code-review` | After completing implementation, before merging |
 | `hotl:pr-reviewing` | Review a PR across multiple dimensions — description, code, scan, tests |
+| `hotl:resuming` | Resume an interrupted workflow run with verify-first strategy |
 | `hotl:verification-before-completion` | Before claiming work is done |
 | `hotl:setup-project` | To generate adapter files for Codex, Cline, Cursor, Copilot |
 

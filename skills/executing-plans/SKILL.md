@@ -62,6 +62,12 @@ The `verify` field supports 4 types. A scalar string is shorthand for `type: she
 - **type: human-review** — ALWAYS pause for human, show prompt, wait for approval (never auto-approve)
 - **type: artifact** — check path exists, evaluate assert (kind: exists | contains | matches-glob)
 
+## Execution State Persistence
+
+This executor writes execution state to `.hotl/state/<run-id>.json` using the same sidecar lifecycle as loop-execution (create on start, update on step transition, capture verify output). See `skills/loop-execution/SKILL.md` for the full persistence spec and `skills/resuming/SKILL.md` for the sidecar schema.
+
+To resume an interrupted executing-plans run, use `/hotl:resume`.
+
 ## Process
 
 1. Resolve and read the plan (see above)
