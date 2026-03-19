@@ -112,4 +112,6 @@ Once the self-check passes, offer execution options:
 2. **Manual execution** — `/hotl:execute-plan` for linear execution with explicit checkpoints
 3. **Subagent execution (this session)** — `/hotl:subagent-execute` delegates implementation-friendly steps to fresh subagents while the controller keeps gates and verification
 
+If a previous run was interrupted, use `/hotl:resume` to continue from where it left off.
+
 *(Always tell the user the exact filename so they can pass it to the execution command if multiple workflow files exist.)*

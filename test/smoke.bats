@@ -206,6 +206,23 @@ assert len(data['additional_context']) > 0, 'additional_context is empty'
     fi
 }
 
+# ── resumable execution ──────────────────────────────────────────────────────
+
+@test "resume command exists and invokes hotl:resuming" {
+    [ -f "$REPO_ROOT/commands/resume.md" ]
+    grep -q "hotl:resuming" "$REPO_ROOT/commands/resume.md"
+}
+
+@test "resuming skill exists with verify-first and sidecar state" {
+    [ -f "$REPO_ROOT/skills/resuming/SKILL.md" ]
+    grep -q "verify-first" "$REPO_ROOT/skills/resuming/SKILL.md"
+    grep -q ".hotl/state" "$REPO_ROOT/skills/resuming/SKILL.md"
+}
+
+@test "using-hotl skill index lists hotl:resuming" {
+    grep -q "hotl:resuming" "$REPO_ROOT/skills/using-hotl/SKILL.md"
+}
+
 # ── run-hook.cmd ──────────────────────────────────────────────────────────────
 
 @test "hooks/run-hook.cmd is executable" {

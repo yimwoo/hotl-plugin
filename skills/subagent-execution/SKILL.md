@@ -19,7 +19,7 @@ This is a **delegation profile** over the HOTL execution state machine defined i
 
 ## Execution
 
-Follow the **HOTL Execution State Machine** in `skills/loop-execution/SKILL.md` for the full execution flow (workflow resolution, branch/worktree preflight, structural lint, typed verification, loop rules, gate rules, completion).
+Follow the **HOTL Execution State Machine** in `skills/loop-execution/SKILL.md` for the full execution flow (workflow resolution, interrupted run detection, branch/worktree preflight, structural lint, execution state persistence, typed verification, loop rules, gate rules, completion).
 
 The only difference is **how each step body runs:**
 

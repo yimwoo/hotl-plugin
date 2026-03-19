@@ -64,6 +64,12 @@ After every 3 completed steps, pause and show:
 - NEVER skip gates on security-sensitive steps (auth, encrypt, secret, password, token, billing)
 - On failure: show the actual verify output — do not summarize or hide errors
 
+### Execution State Persistence
+
+HOTL persists execution state in `.hotl/state/<run-id>.json` (sidecar). This is the authoritative source of truth — workflow checkboxes are a human-visible mirror. State is updated on each step transition, verify result, and status change.
+
+If the session is interrupted, use `/hotl:resume` to continue. Executors also auto-detect interrupted runs and offer resume when starting a workflow that has unfinished state.
+
 ### Delegated Execution (optional)
 
 Execution supports an optional delegation mode where eligible steps run in fresh subagents while the controller keeps verification and gates. See `hotl-subagent-execution.md` for delegation rules and critical invariants.
