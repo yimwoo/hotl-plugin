@@ -8,27 +8,27 @@ Works with **Claude Code**, **Codex**, and **Cline**. Adapters available for Cur
 
 ## What You Get
 
-Here's what a real HOTL session looks like — 12 steps executed autonomously, all verified:
+Here's what a real HOTL feature-delivery session can look like — 12 steps executed with verification at every stop:
 
 ```
 Execution Summary
 
-| Step                                    | Status          | Iterations |
-|-----------------------------------------|-----------------|------------|
-| Step 1: Update workflow format spec     | Done            | 1          |
-| Step 2: Add test fixtures               | Done            | 1          |
-| Step 3: Update lint script              | Done            | 1          |
-| Step 4: Add smoke tests                 | Done (34/34)    | 1          |
-| Step 5: Update loop-execution           | Done            | 1          |
-| Step 6: Update executing-plans          | Done            | 1          |
-| Step 7: Update subagent-execution       | Done            | 1          |
-| Step 8: Update writing-plans            | Done            | 1          |
-| Step 9: Update Cline execution rule     | Done            | 1          |
-| Step 10: Update Cline planning rule     | Done            | 1          |
-| Step 11: Run full smoke tests           | Done (34/34)    | 1          |
-| Step 12: Human review                   | Auto-approved   | 1          |
+| Step                                          | Status             | Iterations |
+|-----------------------------------------------|--------------------|------------|
+| Step 1: Add feature flag and config wiring    | Done               | 1          |
+| Step 2: Add backend endpoint for saved views  | Done               | 2          |
+| Step 3: Add database migration and model      | Done               | 1          |
+| Step 4: Build saved views panel UI            | Done               | 3          |
+| Step 5: Connect UI to API state flow          | Done               | 2          |
+| Step 6: Add analytics + audit logging         | Done               | 1          |
+| Step 7: Add unit tests for reducers/hooks     | Done (28/28)       | 2          |
+| Step 8: Add API integration tests             | Done (12/12)       | 2          |
+| Step 9: Add e2e coverage for create/apply     | Done (6/6)         | 3          |
+| Step 10: Run lint and typecheck               | Done               | 2          |
+| Step 11: Run full test suite                  | Done (46/46)       | 1          |
+| Step 12: Human review and acceptance          | Approved           | 1          |
 
-12 files modified, 1 new fixture. All 34 smoke tests passing.
+9 files modified, 1 migration added, 3 new test files. Unit, integration, and e2e suites all passing.
 ```
 
 Every step has a verify command. Every verify runs before the step is marked done. If a step fails, execution stops and reports — no silent failures.
@@ -54,7 +54,7 @@ mkdir -p ~/.agents/skills && ln -s ~/.codex/hotl/skills ~/.agents/skills/hotl
 Then restart Codex. Full instructions: [`.codex/INSTALL.md`](.codex/INSTALL.md)
 
 `~/.codex/hotl` is the HOTL stable channel and should track `origin/main`.
-Codex discovers skills from `~/.agents/skills/hotl`. Ask Codex to use `hotl:brainstorming`, `hotl:writing-plans`, or another HOTL skill in plain English.
+Codex discovers skills from `~/.agents/skills/hotl`. In Codex, you can either describe the task in natural language and let HOTL route it, or explicitly mention a skill such as `$hotl:brainstorming`.
 
 ### Cline
 
@@ -69,6 +69,23 @@ Full instructions: [`docs/README.cline.md`](docs/README.cline.md)
 ```bash
 git clone https://github.com/yimwoo/hotl-plugin && cd hotl-plugin && bash install.sh
 ```
+
+---
+
+## Update
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
+```
+
+Or from a local clone:
+
+```bash
+bash update.sh
+```
+
+Covers Claude Code, Codex, and Cline — skips any tool that isn't installed.
+Restart Codex after updating so it re-discovers the latest skills.
 
 ---
 
@@ -191,20 +208,22 @@ Multiple checks per step are supported — all must pass. See [`docs/workflow-fo
 
 If you are using OpenAI Codex, invoke HOTL with normal prompts, not slash commands.
 
-There is no `/hotl:brainstorm` or `/hotl:pr-review` syntax in Codex. Instead, ask Codex to use a HOTL skill by name, or describe the task and let Codex pick the right HOTL skill from the installed set.
+There is no `/hotl:brainstorm` or `/hotl:pr-review` syntax in Codex. Instead, either describe the task naturally and let Codex pick the right HOTL skill from the installed set, or explicitly mention the skill with a `$` prefix such as `$hotl:brainstorming`.
 
 ### Codex Prompt Examples
 
 ```text
-Use hotl:brainstorming to design this feature before writing code.
+Use $hotl:brainstorming to design this feature before writing code.
 
-Use hotl:writing-plans to create a hotl-workflow file for adding OAuth login.
+Please use HOTL to design this feature before writing code.
 
-Use hotl:document-review on hotl-workflow-add-oauth.md before implementation.
+Use $hotl:writing-plans to create a hotl-workflow file for adding OAuth login.
 
-Use hotl:pr-reviewing to review https://github.com/org/repo/pull/123.
+Review hotl-workflow-add-oauth.md with HOTL before implementation.
 
-Use hotl:code-review on the changes in this branch before merge.
+Use $hotl:pr-reviewing to review https://github.com/org/repo/pull/123.
+
+Run a HOTL code review on the changes in this branch before merge.
 
 Use HOTL for this task and choose the correct skill automatically.
 ```
@@ -214,7 +233,7 @@ Use HOTL for this task and choose the correct skill automatically.
 | Tool | How you invoke HOTL |
 | --- | --- |
 | Claude Code | Slash commands such as `/hotl:brainstorm` or `/hotl:pr-review` |
-| Codex | Natural-language prompts that name the skill, such as `Use hotl:brainstorming...` |
+| Codex | Natural-language prompts or explicit skill mentions such as `Use HOTL to plan this` or `$hotl:brainstorming` |
 
 For a Codex-specific setup and usage guide, see [`.codex/INSTALL.md`](.codex/INSTALL.md) and [`docs/README.codex.md`](docs/README.codex.md).
 
@@ -304,25 +323,6 @@ adapters/        Templates for AGENTS.md, Cursor, Copilot, and other tools
 scripts/         Utility scripts including document-lint.sh
 docs/            Setup docs, workflow format reference, and detailed guides
 ```
-
----
-
-## Update
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
-```
-
-Or from a local clone:
-
-```bash
-bash update.sh
-```
-
-Covers Claude Code, Codex, and Cline — skips any tool that isn't installed.
-Restart Codex after updating so it re-discovers the latest skills.
-
----
 
 ## Contributing
 
