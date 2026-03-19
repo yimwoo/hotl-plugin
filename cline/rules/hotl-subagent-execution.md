@@ -31,3 +31,7 @@ This is a **delegation profile** over the HOTL execution state machine. Follow t
 
 - Delegate: contained implementation, test, and localized docs steps
 - Keep controller-owned: security-sensitive, human-gated, and final verification steps
+
+### Reporting
+
+Follows the same Execution Reporting Contract as `hotl-execution.md` — same final summary table column rules, same verbose progress format.

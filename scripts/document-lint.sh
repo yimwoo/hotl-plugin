@@ -214,6 +214,15 @@ if [ "$FILE_TYPE" = "workflow" ]; then
                 *) error "risk_level must be low, medium, or high (got: '$RISK')" ;;
             esac
         fi
+
+        # progress validation (optional field)
+        if echo "$FRONTMATTER" | grep -qi 'progress:'; then
+            PROGRESS=$(echo "$FRONTMATTER" | grep -i 'progress:' | head -1 | sed 's/.*progress:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+            case "$PROGRESS" in
+                verbose) ;;
+                *) error "progress must be 'verbose' if set (got: '$PROGRESS')" ;;
+            esac
+        fi
     fi
 
     # Step structure checks

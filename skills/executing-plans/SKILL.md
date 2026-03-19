@@ -79,3 +79,7 @@ To resume an interrupted executing-plans run, use `/hotl:resume`.
 7. When complete: invoke `hotl:verification-before-completion`
 
 Use this over `loop-execution` when you want explicit human checkpoints at every stage rather than auto-approve.
+
+## Reporting
+
+Inherits the canonical Execution Reporting Contract from `skills/loop-execution/SKILL.md` — same final summary table column rules, same verbose progress format, same precedence for verbose mode.

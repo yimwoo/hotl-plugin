@@ -146,15 +146,72 @@ See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection,
 - Never skip a `gate: human` on steps with security-sensitive keywords (auth, encrypt, secret, key, password, token, permission, role, billing)
 - On STOP: always show the failing verify output so human can diagnose
 
-## Reporting
+## Execution Reporting Contract
+
+This is the canonical reporting spec. Other executors (executing-plans, subagent-execution) inherit this contract.
+
+### Per-Step Log (default, always shown)
 
 After each step, log one line:
 ```
-✓ Step 1: Write failing tests (1 iteration)
-✓ Step 2: Implement auth logic (3 iterations, tests now pass)
-⚡ Step 3: Security review gate (auto-approved, risk: low)
-✓ Step 4: Update docs (1 iteration)
+✓ Step 1: Write failing tests
+✓ Step 2: Implement auth logic (3 attempts)
+⚡ Step 3: Security review gate (auto-approved)
+✓ Step 4: Update docs
 ```
+
+### Final Summary Table
+
+Print at the end of execution. Strict column rules:
+
+```
+| Step | Name                    | Status            | Iterations |
+|------|-------------------------|--------------------|------------|
+|  1   | Write failing tests     | ✓ Done (17 tests)  | 1          |
+|  2   | Implement auth logic    | ✓ Done              | 3          |
+|  3   | Security review gate    | ⚡ Auto-approved    | -          |
+|  4   | Run full test suite     | ✓ Done (65 tests)   | 1          |
+|  5   | Human review            | ✓ Approved          | -          |
+```
+
+**Column rules:**
+- **Step** — step number only
+- **Name** — step name from the workflow
+- **Status** — outcome + details. Values:
+  - `✓ Done` — step completed
+  - `✓ Done (N tests)` — step completed with test count detail
+  - `⚡ Auto-approved` — gate auto-approved
+  - `✓ Approved` — gate approved by human
+  - `✗ Failed` — step verify failure
+  - `✗ Blocked` — executor stopped (max retries reached, gate denied, etc.)
+- **Iterations** — attempt count as a number only (`1`, `2`, `3`). For gates: `-`. Never put test counts or details here.
+
+### Verbose Progress View (opt-in)
+
+When verbose mode is enabled, print a compact step list at each step transition (before starting a step, after a step completes/fails/auto-approves):
+
+```
+  ✓ Step 1: Write failing tests
+  ✓ Step 2: Implement feature
+  → Step 3: Run full test suite (attempt 1/3)
+  · Step 4: Update docs
+  · Step 5: Human review
+```
+
+**Symbols:**
+- `✓` — completed
+- `→` — current step (include attempt info if looping)
+- `·` — pending
+- `⚡` — auto-approved gate
+- `✗` — blocked/failed
+
+Include short result details only when useful (test counts on completed steps, attempt progress on current step, failure reason on blocked steps).
+
+### Verbose Mode Precedence
+
+1. **Executor invocation override wins** — user says "run with verbose progress"
+2. **Workflow frontmatter** — `progress: verbose`
+3. **Default** — non-verbose (per-step log only, no full list)
 
 ## What to Do If No Workflow Found
 
