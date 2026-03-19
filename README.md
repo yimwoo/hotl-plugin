@@ -135,9 +135,9 @@ All skills work with **Claude Code** and **Codex**. Cline users get equivalent r
 
 | Skill | Description | Phase |
 | --- | --- | --- |
-| `hotl:loop-execution` | Execute a `hotl-workflow-*.md` autonomously — loops until success criteria met, auto-approves low-risk gates, pauses at high-risk gates. | Execute |
-| `hotl:executing-plans` | Execute an implementation plan linearly with explicit human checkpoints between batches of tasks. | Execute |
-| `hotl:subagent-execution` | Execute a `hotl-workflow-*.md` by delegating steps to fresh subagents while the controller keeps governance and verification. | Execute |
+| `hotl:loop-execution` | The canonical HOTL execution engine — loops until success criteria met, auto-approves low-risk gates, pauses at high-risk gates. | Execute |
+| `hotl:executing-plans` | Loop execution with explicit human checkpoints between batches of tasks. | Execute |
+| `hotl:subagent-execution` | Delegated step runner over the loop execution engine — delegates eligible steps to fresh subagents while the controller keeps governance and verification. | Execute |
 | `hotl:dispatch-agents` | Run 2+ independent tasks in parallel with no shared state — dispatches parallel subagents for each task. | Execute |
 
 ### Quality & Review

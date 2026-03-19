@@ -79,19 +79,19 @@ Every workflow execution starts clean, on its own branch, with no risk to the ma
 
 ## 5. Execute
 
-After review, HOTL offers three execution modes:
+All execution modes share one engine: the **HOTL execution state machine** (resolve → preflight → lint → execute → verify → loop → gate → summarize). They differ in how steps run and how often human checkpoints occur.
 
-### Loop Execution
+### Loop Execution (universal engine)
 
-Best for maximum automation. HOTL runs the workflow step by step, retries steps that are allowed to loop, auto-approves low-risk gates, and pauses on high-risk or human-gated steps.
+The canonical execution mode. HOTL runs the workflow step by step, retries steps that are allowed to loop, auto-approves low-risk gates, and pauses on high-risk or human-gated steps. Works on all platforms.
 
-### Manual Execution
+### Manual Execution (checkpointed)
 
-Best for tighter oversight. HOTL executes the workflow in order and stops for explicit human checkpoints. You review progress before the next batch continues.
+Loop execution with explicit human checkpoints every 3 steps. You review progress before the next batch continues. Best for tighter oversight.
 
-### Subagent Execution
+### Subagent Execution (delegated step runner)
 
-Best for same-session delegation. HOTL stays in the current session as the controller. Implementation-friendly steps are delegated to fresh subagents. Verification, stop conditions, and approval gates stay with the controller. Risky or human-gated steps are controlled directly.
+Loop execution with a delegated step runner. The controller stays in the current session and keeps governance, verification, and stop conditions. Eligible implementation steps are delegated to fresh subagents. Requires platform support for subagents (Claude Code, Codex).
 
 ## 6. Verify Before Completion
 

@@ -64,6 +64,10 @@ After every 3 completed steps, pause and show:
 - NEVER skip gates on security-sensitive steps (auth, encrypt, secret, password, token, billing)
 - On failure: show the actual verify output — do not summarize or hide errors
 
+### Delegated Execution (optional)
+
+Execution supports an optional delegation mode where eligible steps run in fresh subagents while the controller keeps verification and gates. See `hotl-subagent-execution.md` for delegation rules and critical invariants.
+
 ### When All Steps Complete
 
 Show a summary table of all steps with status. Then run a final verification:
