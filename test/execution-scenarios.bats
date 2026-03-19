@@ -1,0 +1,122 @@
+#!/usr/bin/env bats
+
+# HOTL Execution Scenario Tests
+# Validates execution behavior through fixtures, skill content, and behavioral specs.
+
+setup() {
+    REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+    LOOP_SKILL="$REPO_ROOT/skills/loop-execution/SKILL.md"
+    EXEC_SKILL="$REPO_ROOT/skills/executing-plans/SKILL.md"
+    SUBAGENT_SKILL="$REPO_ROOT/skills/subagent-execution/SKILL.md"
+    FIXTURES="$REPO_ROOT/test/fixtures"
+    SCENARIOS="$REPO_ROOT/test/scenarios"
+}
+
+# ── Scenario 1: Retry and max-iterations stop ───────────────────────────────
+
+@test "scenario 01: retry fixture passes lint" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$FIXTURES/hotl-workflow-retry-sample.md"
+    [ "$status" -eq 0 ]
+}
+
+@test "scenario 01: loop-execution describes retry with attempt logging" {
+    grep -qi "retry\|retrying" "$LOOP_SKILL"
+    grep -qi "max_iterations\|max iterations" "$LOOP_SKILL"
+}
+
+@test "scenario 01: loop-execution describes stop after max iterations" {
+    grep -qi "reached max iterations\|max_iterations.*STOP\|iterations = max_iterations" "$LOOP_SKILL"
+}
+
+@test "scenario 01: behavioral spec exists" {
+    [ -f "$SCENARIOS/01-retry-stop.md" ]
+}
+
+# ── Scenario 2: Gate handling ────────────────────────────────────────────────
+
+@test "scenario 02: gates fixture passes lint" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$FIXTURES/hotl-workflow-gates-sample.md"
+    [ "$status" -eq 0 ]
+}
+
+@test "scenario 02: loop-execution describes human gate pause" {
+    grep -qi "gate.*human.*PAUSE\|PAUSE.*gate\|gate: human" "$LOOP_SKILL"
+}
+
+@test "scenario 02: loop-execution describes auto-approve path" {
+    grep -qi "auto.approve\|Auto-approved" "$LOOP_SKILL"
+}
+
+@test "scenario 02: behavioral spec exists" {
+    [ -f "$SCENARIOS/02-gate-handling.md" ]
+}
+
+# ── Scenario 3: Risk level overrides auto-approve ────────────────────────────
+
+@test "scenario 03: loop-execution states high risk forces human gates" {
+    grep -qi "risk_level.*high.*always\|high.*forces.*human\|risk_level: high.*always" "$LOOP_SKILL"
+}
+
+@test "scenario 03: loop-execution lists security-sensitive keywords" {
+    grep -qi "auth.*encrypt\|secret.*password\|token.*billing\|security-sensitive" "$LOOP_SKILL"
+}
+
+@test "scenario 03: behavioral spec exists" {
+    [ -f "$SCENARIOS/03-risk-override.md" ]
+}
+
+# ── Scenario 4: Final summary reporting contract ────────────────────────────
+
+@test "scenario 04: loop-execution defines Status column values" {
+    grep -q "✓ Done" "$LOOP_SKILL"
+    grep -q "⚡ Auto-approved" "$LOOP_SKILL"
+    grep -q "✗ Failed" "$LOOP_SKILL"
+    grep -q "✗ Blocked" "$LOOP_SKILL"
+}
+
+@test "scenario 04: loop-execution defines Iterations as attempt count only" {
+    grep -qi "attempt count.*only\|number only\|count only" "$LOOP_SKILL"
+}
+
+@test "scenario 04: loop-execution states test counts go in Status not Iterations" {
+    grep -qi "Never.*test counts.*Iterations\|test counts.*Status\|Never put test counts" "$LOOP_SKILL"
+}
+
+@test "scenario 04: behavioral spec exists" {
+    [ -f "$SCENARIOS/04-summary-columns.md" ]
+}
+
+# ── Scenario 5: Verbose progress precedence ──────────────────────────────────
+
+@test "scenario 05: progress fixture passes lint" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$FIXTURES/hotl-workflow-progress-sample.md"
+    [ "$status" -eq 0 ]
+}
+
+@test "scenario 05: loop-execution defines verbose precedence" {
+    grep -qi "invocation.*override\|override.*frontmatter\|frontmatter.*default" "$LOOP_SKILL"
+}
+
+@test "scenario 05: loop-execution defines verbose symbols" {
+    grep -q "✓" "$LOOP_SKILL"
+    grep -q "→" "$LOOP_SKILL"
+    grep -q "·" "$LOOP_SKILL"
+}
+
+@test "scenario 05: loop-execution states verbose prints at step transitions only" {
+    grep -qi "step transition\|before starting.*after.*complete" "$LOOP_SKILL"
+}
+
+@test "scenario 05: behavioral spec exists" {
+    [ -f "$SCENARIOS/05-verbose-precedence.md" ]
+}
+
+# ── Executor inheritance ─────────────────────────────────────────────────────
+
+@test "executing-plans references canonical reporting contract from loop-execution" {
+    grep -qi "Reporting.*loop-execution\|canonical.*Reporting\|loop-execution.*reporting" "$EXEC_SKILL"
+}
+
+@test "subagent-execution references canonical reporting contract from loop-execution" {
+    grep -qi "Reporting.*loop-execution\|canonical.*Reporting\|loop-execution.*reporting" "$SUBAGENT_SKILL"
+}
