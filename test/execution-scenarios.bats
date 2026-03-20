@@ -87,7 +87,7 @@ setup() {
 }
 
 @test "scenario 04: compact Codex list keeps status and iterations inline" {
-    grep -qi "status and iteration semantics.*inline\|status and iteration count inline" "$LOOP_SKILL"
+    grep -qi "inline status detail\|status word on every line\|iteration count" "$LOOP_SKILL"
     grep -Fq "Done (1 attempt)" "$LOOP_SKILL"
     grep -Fq "Done (3 attempts)" "$LOOP_SKILL"
     grep -Fq "Approved (1 attempt)" "$LOOP_SKILL"
