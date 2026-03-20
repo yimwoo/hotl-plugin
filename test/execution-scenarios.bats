@@ -170,9 +170,9 @@ setup() {
     grep -q "report_path" "$LOOP_SKILL"
 }
 
-@test "loop-execution requires persistence before visible progress updates" {
-    grep -q "Persist step start before any user-facing progress update" "$LOOP_SKILL"
-    grep -q "persist completion before announcing" "$LOOP_SKILL"
+@test "loop-execution requires runtime calls before visible progress updates" {
+    grep -q "hotl-rt" "$LOOP_SKILL"
+    grep -q "Only after the runtime call succeeds should chat show" "$LOOP_SKILL"
     grep -q "Native progress UI is never a substitute" "$LOOP_SKILL"
 }
 

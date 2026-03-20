@@ -80,109 +80,91 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
 1. Resolve workflow file (see above)
 2. Parse frontmatter: intent, risk_level, auto_approve, branch, worktree
 3. Run Branch/Worktree Preflight (see above)
-4. Initialize persistence before any visible progress:
-   - Derive run_id = <slug>-<unix-timestamp>
-   - Create .hotl/state/ and .hotl/reports/ if missing
-   - Create .hotl/state/<run-id>.json with status: running, current_step: 1, all steps pending
-   - Create .hotl/reports/<run-id>.md with metadata header, full summary table, and empty event log
-   - Store report_path in the sidecar
+4. Initialize run via runtime:
+   - Run: `hotl-rt init <workflow-file>`
+   - This parses the workflow, creates .hotl/state/<run-id>.json with all steps, and initializes .hotl/reports/<run-id>.md
+   - Capture the run_id from stdout
+   - Only after init succeeds should chat output or native plan/progress UI show anything
+
 5. For each step in order:
 
-   a. Persist step start before any user-facing progress update:
-      - Set current_step = N, status = running, last_update = now
-      - Mark step N as running and increment attempts for the current attempt
-      - Update the report table row to → Running, refresh Updated:, append the step-start event
-      - Only after the sidecar/report write succeeds should chat output or native plan/progress UI show "→ Step N"
+   a. Start step via runtime:
+      - Run: `hotl-rt step N start`
+      - This persists step start (status, timestamp, attempts) to state and report
+      - Only after the runtime call succeeds should chat show "→ Step N"
 
    b. Announce: "→ Step N: [name]"
 
-   c. Execute the action
+   c. Execute the action (agent implements the work)
 
-   d. Run verify (typed verification):
-      → If verify is a scalar string: treat as type: shell
-      → If verify is a list: run all checks, ALL must pass
-      → type: shell — run command, check exit code, capture stdout/stderr
-      → type: browser — if browser tooling available, use it with url+check;
-          if unavailable, downgrade to type: human-review with check text as prompt
-      → type: human-review — ALWAYS pause for human, show prompt, wait for approval
-          (never auto-approve, even if auto_approve: true)
-      → type: artifact — check path exists, then evaluate assert:
-          kind: exists → file/dir at path exists
-          kind: contains → file at path contains value text
-          kind: matches-glob → directory at path has file matching value glob
+   d. Verify via runtime:
+      - Run: `hotl-rt step N verify`
+      - The runtime runs the verify command, captures stdout/stderr, and atomically transitions the step to done or failed
+      - If the verify type is unsupported, the runtime blocks the step with a clear reason
+      - For type: browser — if browser tooling unavailable, downgrade to type: human-review
+      - For type: human-review — ALWAYS pause for human (never auto-approve)
+      - For type: artifact — runtime checks path exists and evaluates assert
 
-   e. If verify fails at any point:
-      - Persist last_verify_output to the sidecar before announcing the failure
-      - Append the captured verify output to the report event log before deciding retry/stop
+   e. If verify fails (runtime returns non-zero):
 
-   f. If loop: false
-      → run verify if present
-      → if verify fails: STOP, report to human
-         Before stopping: set run status = blocked, keep current_step = N, mark the step failed in the report, update Updated:
-      → continue to next step
+      f. If loop: false
+         → STOP, report to human
+         → Run: `hotl-rt step N block --reason "verify failed"` if not already marked failed by verify
+         → Show last verify output. Wait for human guidance.
 
-   g. If loop: until [condition]
-      → run verify
-      → if pass: log "✓ [condition] met", continue to next step
-      → if fail AND iterations < max_iterations:
-          persist retry state first (attempt count, last_verify_output, ↻ Retrying in report), then log "↻ Retrying ([n]/[max])...", retry
-      → if fail AND iterations = max_iterations: STOP
-          Report: "Step N reached max iterations ([max]). [condition] not met."
-          Before stopping: set run status = blocked, keep current_step = N, mark the step failed in the report, update Updated:
-          Show last verify output. Wait for human guidance.
+      g. If loop: until [condition]
+         → if iterations < max_iterations:
+             Run: `hotl-rt step N retry` then `hotl-rt step N start`
+             log "↻ Retrying ([n]/[max])...", retry the action
+         → if iterations = max_iterations: STOP
+             Report: "Step N reached max iterations ([max]). [condition] not met."
+             Show last verify output. Wait for human guidance.
 
-   h. On step completion, persist completion before announcing it:
-      - Mark step N completed in the sidecar and set current_step = N + 1 (or leave at N if this was the final step until completion is finalized)
+   h. On step completion (verify passed):
+      - The runtime has already persisted the done status
       - Update the workflow checkbox to [x]
-      - Update the report table row to ✓ Done and append the completion event
-      - Only after the sidecar/report write succeeds should chat output or native plan/progress UI show "✓ Step N"
+      - Only after the runtime confirms success should chat show "✓ Step N"
 
    i. If gate: human
       → if auto_approve: true AND risk_level != high:
-          persist the gate result first (report row/event, last_update)
+          Run: `hotl-rt gate N approved`
           log "⚡ Auto-approved: Step N gate (risk: [risk_level])"
           continue
       → else:
-          before pausing: set run status = paused, update Updated:, append gate event, flush sidecar/report
           PAUSE. Show summary of what was done in this step.
           Ask: "Gate reached at Step N. Continue? (yes/no/show-details)"
-          Wait for human response before proceeding.
+          Wait for human response.
+          Run: `hotl-rt gate N approved` or `hotl-rt gate N rejected`
 
    j. If gate: auto
-      → persist the gate result first (report row/event, last_update)
+      → Run: `hotl-rt gate N approved`
       → always continue, log "⚡ Auto-approved: Step N gate"
 
 6. All steps complete:
-   → before the final summary: set run status = completed, set current_step = total_steps, update Updated:, finalize the report
-   → Print summary table (step name | status | iterations used)
+   → Run: `hotl-rt finalize --json`
+   → Render the summary payload from stdout in platform-appropriate format
    → Invoke hotl:verification-before-completion skill
 ```
 
 ## Execution State Persistence
 
-HOTL persists execution state in `.hotl/state/<run-id>.json` (sidecar file). This is the authoritative source of truth — workflow checkboxes are a human-visible mirror.
+All state persistence is handled by the `hotl-rt` shared runtime (`runtime/hotl-rt`). Agents do not manage state files directly.
 
-### Lifecycle
+The runtime owns:
+- `.hotl/state/<run-id>.json` — authoritative machine state (created by `hotl-rt init`, updated by `hotl-rt step/gate/finalize`)
+- `.hotl/reports/<run-id>.md` — durable Markdown report (initialized at init, updated incrementally, finalized at finalize)
 
-1. **On execution start:** Create `.hotl/state/<run-id>.json` with workflow metadata, step list, and `status: running`
-2. **On each step transition:** Update `current_step`, step status, `attempts`, and `last_update`
-3. **On verify:** Capture last verify output in `last_verify_output`
-4. **On step completion:** Set step status to `completed`, update workflow checkbox to `[x]`
-5. **On completion:** Set run status to `completed`
-6. **On gate pause:** Set run status to `paused`
-7. **On failure/stop:** Set run status to `blocked` with last verify output
+Run ID format: `<slug>-<YYYYMMDDTHHMMSSZ>` (e.g., `add-auth-20260320T212315Z`).
 
-Run ID format: `<slug>-<unix-timestamp>` (e.g., `add-auth-1710700000`).
+Workflow checkboxes (`- [x]`) are a human-visible mirror updated by the agent on step completion. The sidecar is the source of truth.
 
-The sidecar also stores `report_path` — the path to the durable Markdown report for this run. This makes resume and stop/block messaging deterministic.
-
-Operational rule: the sidecar/report write happens before the corresponding chat log or Codex native plan/progress update. Native progress UI is never a substitute for `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md`.
+Operational rule: `hotl-rt` calls happen before the corresponding chat log or Codex native plan/progress update. Native progress UI is never a substitute for the runtime-managed artifacts.
 
 See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection, and verify-first resume flow.
 
 ## Execution Report
 
-HOTL writes a durable Markdown report to `.hotl/reports/<run-id>.md` incrementally during execution. This is the canonical report spec — other executors inherit it.
+The `hotl-rt` runtime writes a durable Markdown report to `.hotl/reports/<run-id>.md` incrementally during execution. This is the canonical report spec — other executors inherit it.
 
 The report survives app rendering quirks (e.g., Codex suppressing intermediate output) and provides a reliable post-run artifact for debugging, trust, and resume.
 
@@ -226,14 +208,16 @@ Table status values: `· Pending`, `→ Running`, `↻ Retrying`, `⚡ Auto-appr
 
 ### Report Lifecycle
 
-1. **On execution start:** Create report with metadata (including `Updated:`) and full table (all `· Pending`). Store `report_path` in sidecar JSON.
-2. **On step start:** Update table to `→ Running`, update `Updated:`, append event
-3. **On verify fail:** Append captured stdout/stderr to event log
-4. **On retry:** Update table to `↻ Retrying`, append retry event
-5. **On step complete:** Update table to `✓ Done`, append completion event
-6. **On gate:** Update table to `⚡ Auto-approved` or `✓ Approved`
-7. **On completion:** Set status to `completed`, update `Updated:`, finalize report
-8. **On stop/block:** Set status to `blocked`, include report path in response
+The `hotl-rt` runtime manages all report updates automatically via its subcommands:
+
+1. **`hotl-rt init`:** Create report with metadata (including `Updated:`) and full table (all `· Pending`). Store `report_path` in sidecar JSON.
+2. **`hotl-rt step N start`:** Update table to `→ Running`, update `Updated:`, append event
+3. **`hotl-rt step N verify` (fail):** Update table, append captured stdout/stderr to event log
+4. **`hotl-rt step N retry`:** Update table to `↻ Retrying`, append retry event
+5. **`hotl-rt step N verify` (pass):** Update table to `✓ Done`, append completion event
+6. **`hotl-rt gate N`:** Update table to `⚡ Auto-approved` or `✓ Approved`
+7. **`hotl-rt finalize`:** Set status to `completed`, update `Updated:`, finalize report
+8. **`hotl-rt step N block`:** Set status to `blocked`, include report path in response
 
 ### Verify Output Policy
 

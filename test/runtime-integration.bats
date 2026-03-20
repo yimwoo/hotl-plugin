@@ -1,0 +1,200 @@
+#!/usr/bin/env bats
+
+# HOTL Runtime Integration Tests
+# Simulates full agent call sequences against the runtime.
+# These are the agent conformance spec — if an agent follows this sequence,
+# the artifacts will be correct.
+
+setup() {
+    REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
+    HOTL_RT="$REPO_ROOT/runtime/hotl-rt"
+    FIXTURES="$REPO_ROOT/test/fixtures"
+    TEST_DIR=$(mktemp -d)
+    cp -r "$FIXTURES" "$TEST_DIR/"
+    cd "$TEST_DIR"
+}
+
+teardown() {
+    rm -rf "$TEST_DIR"
+}
+
+# ── Happy path: init → steps → finalize ─────────────────────────────────────
+
+@test "happy path: all steps done, run completed" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    REPORT=".hotl/reports/${RUN_ID}.md"
+
+    # Step 1: start → verify (passes: echo command)
+    "$HOTL_RT" step 1 start
+    "$HOTL_RT" step 1 verify
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "done" ]
+
+    # Step 2: start → verify (passes: echo command)
+    "$HOTL_RT" step 2 start
+    "$HOTL_RT" step 2 verify
+    [ "$(jq -r '.steps[1].status' "$STATE")" = "done" ]
+
+    # Step 3: start → verify (no verify command — auto-pass)
+    "$HOTL_RT" step 3 start
+    "$HOTL_RT" step 3 verify
+    [ "$(jq -r '.steps[2].status' "$STATE")" = "done" ]
+
+    # Finalize
+    SUMMARY=$("$HOTL_RT" finalize --json)
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "completed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.completed_steps')" = "3" ]
+    [ "$(echo "$SUMMARY" | jq -r '.failed_steps')" = "0" ]
+    [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "0" ]
+
+    # Report should be finalized
+    grep -Fq '**Status:** completed' "$REPORT"
+    grep -q '✓ Done' "$REPORT"
+    grep -q 'Run finalized: completed' "$REPORT"
+}
+
+# ── Failure path: verify fails ──────────────────────────────────────────────
+
+@test "failure path: step verify fails, run not auto-completed" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-retry-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    "$HOTL_RT" step 1 start
+    run "$HOTL_RT" step 1 verify  # pytest not available — fails
+    [ "$status" -ne 0 ]
+
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "failed" ]
+    [ "$(jq -r '.steps[0].verify.passed' "$STATE")" = "false" ]
+    # Run is still "running" — not auto-finalized
+    [ "$(jq -r '.status' "$STATE")" = "running" ]
+}
+
+# ── Block path: agent blocks step before verify ─────────────────────────────
+
+@test "block path: step blocked with reason" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    REPORT=".hotl/reports/${RUN_ID}.md"
+
+    "$HOTL_RT" step 1 start
+    "$HOTL_RT" step 1 block --reason "agent could not edit file"
+
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "blocked" ]
+    [ "$(jq -r '.steps[0].block_reason' "$STATE")" = "agent could not edit file" ]
+
+    # Finalize should mark as failed
+    SUMMARY=$("$HOTL_RT" finalize --json)
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "failed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "1" ]
+}
+
+# ── Gate path: gate recorded alongside step completion ──────────────────────
+
+@test "gate path: approved gate recorded in artifacts" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    REPORT=".hotl/reports/${RUN_ID}.md"
+
+    "$HOTL_RT" step 1 start
+    "$HOTL_RT" step 1 verify
+    "$HOTL_RT" gate 1 approved
+
+    [ "$(jq -r '.steps[0].gate_result' "$STATE")" = "approved" ]
+    grep -q 'Gate Step 1: approved' "$REPORT"
+
+    # Complete remaining steps and finalize
+    "$HOTL_RT" step 2 start
+    "$HOTL_RT" step 2 verify
+    "$HOTL_RT" step 3 start
+    "$HOTL_RT" step 3 verify
+    SUMMARY=$("$HOTL_RT" finalize --json)
+
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "completed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[0].gate_result')" = "approved" ]
+}
+
+# ── Summary mid-run: read-only query during execution ───────────────────────
+
+@test "summary mid-run: returns running status" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+
+    "$HOTL_RT" step 1 start
+    SUMMARY=$("$HOTL_RT" summary "$RUN_ID" --json)
+
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "running" ]
+    [ "$(echo "$SUMMARY" | jq -r '.run_id')" = "$RUN_ID" ]
+    [ "$(echo "$SUMMARY" | jq -r '.total_steps')" = "3" ]
+    # Only step 1 should show as in_progress
+    [ "$(echo "$SUMMARY" | jq -r '.steps[0].status')" = "in_progress" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[1].status')" = "pending" ]
+}
+
+# ── Retry path: fail → retry → pass ────────────────────────────────────────
+
+@test "retry path: fail then retry then pass" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    REPORT=".hotl/reports/${RUN_ID}.md"
+
+    # Temporarily make step 1 use a failing verify command
+    jq '.steps[0].verify.command = "false"' "$STATE" > "${STATE}.tmp" && mv "${STATE}.tmp" "$STATE"
+
+    "$HOTL_RT" step 1 start
+    run "$HOTL_RT" step 1 verify
+    [ "$status" -ne 0 ]
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "failed" ]
+
+    # Retry — fix the verify command to pass
+    "$HOTL_RT" step 1 retry
+    jq '.steps[0].verify.command = "true"' "$STATE" > "${STATE}.tmp" && mv "${STATE}.tmp" "$STATE"
+
+    "$HOTL_RT" step 1 start
+    "$HOTL_RT" step 1 verify
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "done" ]
+    [ "$(jq -r '.steps[0].attempts' "$STATE")" = "2" ]
+
+    # Report should show the retry history
+    grep -q '↻' "$REPORT"
+    grep -q '✓ Done' "$REPORT"
+}
+
+# ── Report incremental updates: report is always current ────────────────────
+
+@test "report is updated incrementally at each transition" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    REPORT=".hotl/reports/${RUN_ID}.md"
+
+    # After init: all pending
+    PENDING=$(grep -c '· Pending' "$REPORT")
+    [ "$PENDING" -eq 3 ]
+
+    # After step 1 start: one running
+    "$HOTL_RT" step 1 start
+    grep -q '→ Running' "$REPORT"
+
+    # After step 1 verify: one done
+    "$HOTL_RT" step 1 verify
+    grep -q '✓ Done' "$REPORT"
+
+    # Event log should have entries
+    EVENT_COUNT=$(grep -c '^\*\*\[' "$REPORT")
+    [ "$EVENT_COUNT" -ge 2 ]
+}
+
+# ── Unsupported verify type: blocks loudly ──────────────────────────────────
+
+@test "unsupported verify type blocks with clear reason" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-unsupported-verify.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    REPORT=".hotl/reports/${RUN_ID}.md"
+
+    "$HOTL_RT" step 1 start
+    run "$HOTL_RT" step 1 verify
+    [ "$status" -ne 0 ]
+
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "blocked" ]
+    jq -r '.steps[0].block_reason' "$STATE" | grep -q 'unsupported verify type: browser'
+
+    grep -q '✗ Blocked' "$REPORT"
+    grep -q 'unsupported verify type: browser' "$REPORT"
+}
