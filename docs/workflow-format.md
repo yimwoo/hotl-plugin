@@ -166,13 +166,22 @@ Execution skills (loop-execution, executing-plans, subagent-execution) run a bra
 
 ## Execution State (`.hotl/state/`)
 
-HOTL executors persist execution state in `.hotl/state/<run-id>.json`. This sidecar file is the authoritative source of truth for execution progress. Workflow checkboxes (`- [x]`) are a human-visible mirror updated on step completion.
+The `hotl-rt` shared runtime (`runtime/hotl-rt`) manages all execution state. Agents call `hotl-rt` subcommands; they do not manage state files directly.
 
-The sidecar tracks: run identity, workflow path, branch, executor mode, current step, per-step status and attempts, last verify output, and timestamps. See `skills/resuming/SKILL.md` for the full schema.
+State is persisted in `.hotl/state/<run-id>.json` — the authoritative source of truth for execution progress. The runtime also maintains `.hotl/reports/<run-id>.md` as a durable Markdown report, updated incrementally on each state transition.
 
-If a chat transcript or native progress card disagrees with the sidecar, trust the sidecar/report artifacts. Executors should update `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md` before emitting the matching user-visible progress event.
+Workflow checkboxes (`- [x]`) are a human-visible mirror updated by the agent on step completion. If a chat transcript or native progress card disagrees with the runtime artifacts, trust the artifacts.
 
-**Run ID format:** `<slug>-<unix-timestamp>` (e.g., `add-auth-1710700000`)
+**Runtime API:**
+```
+hotl-rt init <workflow-file>                  → creates run, state JSON, report
+hotl-rt step <N> start|verify|retry|block     → step state transitions
+hotl-rt gate <N> approved|rejected            → records gate decisions
+hotl-rt finalize [--json]                     → finalizes run, prints summary
+hotl-rt summary <run-id> [--json]             → read-only query
+```
+
+**Run ID format:** `<slug>-<YYYYMMDDTHHMMSSZ>` (e.g., `add-auth-20260320T212315Z`) — human-readable, lexicographically sortable, UTC
 
 **Gitignore:** Add `.hotl/` to your project's `.gitignore` — execution state should not be committed.
 

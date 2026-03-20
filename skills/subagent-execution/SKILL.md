@@ -21,7 +21,7 @@ This is a **delegation profile** over the HOTL execution state machine defined i
 
 Follow the **HOTL Execution State Machine** in `skills/loop-execution/SKILL.md` for the full execution flow (workflow resolution, interrupted run detection, branch/worktree preflight, structural lint, execution state persistence, typed verification, loop rules, gate rules, completion).
 
-The controller owns the sidecar/report lifecycle. Persist `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md` before showing step progress in chat or the Codex progress UI; delegated workers do not become the source of truth.
+The controller owns all `hotl-rt` runtime calls. The controller calls `hotl-rt init`, `hotl-rt step N start/verify/retry/block`, `hotl-rt gate N`, and `hotl-rt finalize` — subagents never call the runtime directly. The runtime-managed `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md` are the source of truth; delegated workers do implementation only.
 
 The only difference is **how each step body runs:**
 

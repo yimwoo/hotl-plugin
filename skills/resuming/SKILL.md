@@ -19,7 +19,7 @@ Execution state is persisted at `.hotl/state/<run-id>.json`. This is the **autho
 
 ```json
 {
-  "run_id": "<slug>-<unix-timestamp>",
+  "run_id": "<slug>-<YYYYMMDDTHHMMSSZ>",
   "workflow_path": "hotl-workflow-<slug>.md",
   "workflow_slug": "<slug>",
   "intent": "<from workflow frontmatter>",
@@ -41,7 +41,7 @@ Execution state is persisted at `.hotl/state/<run-id>.json`. This is the **autho
 
 ### Run ID Format
 
-`<slug>-<unix-timestamp>` (e.g., `add-auth-1710700000`). Derived from the workflow filename and execution start time.
+`<slug>-<YYYYMMDDTHHMMSSZ>` (e.g., `add-auth-20260320T212315Z`). Derived from the workflow filename and UTC execution start time.
 
 ### Status Values
 

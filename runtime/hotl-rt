@@ -1,0 +1,828 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# hotl-rt — HOTL shared runtime
+# Owns state persistence, verification execution, and report generation.
+# Agents call this; they don't replicate it.
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+HOTL_DIR=".hotl"
+STATE_DIR="$HOTL_DIR/state"
+REPORT_DIR="$HOTL_DIR/reports"
+
+# ── Dependency check ────────────────────────────────────────────────────────
+
+require_jq() {
+    if ! command -v jq &>/dev/null; then
+        echo "ERROR: jq is required but not found. Install it: https://jqlang.github.io/jq/" >&2
+        exit 1
+    fi
+}
+
+# ── Helpers ─────────────────────────────────────────────────────────────────
+
+now_iso() {
+    date -u +"%Y-%m-%dT%H:%M:%S+00:00"
+}
+
+now_time() {
+    date -u +"%H:%M:%S"
+}
+
+generate_run_id() {
+    local slug="$1"
+    local ts
+    ts=$(date -u +"%Y%m%dT%H%M%SZ")
+    echo "${slug}-${ts}"
+}
+
+slug_from_workflow() {
+    local file="$1"
+    local base
+    base=$(basename "$file" .md)
+    # Strip hotl-workflow- prefix
+    echo "$base" | sed 's/^hotl-workflow-//'
+}
+
+ensure_dirs() {
+    mkdir -p "$STATE_DIR" "$REPORT_DIR"
+}
+
+# Find the active run's state file (most recent in STATE_DIR)
+find_active_state() {
+    local latest
+    latest=$(ls -t "$STATE_DIR"/*.json 2>/dev/null | head -1)
+    if [ -z "$latest" ]; then
+        echo "ERROR: No active run found in $STATE_DIR/" >&2
+        exit 1
+    fi
+    echo "$latest"
+}
+
+# Read a field from the active state JSON
+state_get() {
+    local file="$1"
+    local path="$2"
+    jq -r "$path" "$file"
+}
+
+# Update state JSON atomically (write to temp, then mv)
+state_write() {
+    local file="$1"
+    local content="$2"
+    local tmp="${file}.tmp"
+    echo "$content" > "$tmp"
+    mv "$tmp" "$file"
+}
+
+# Get the report path from the state file
+report_path_from_state() {
+    local state_file="$1"
+    state_get "$state_file" '.report_path'
+}
+
+# Update a line in the report matching a pattern
+report_update_line() {
+    local report="$1"
+    local pattern="$2"
+    local replacement="$3"
+    local tmp="${report}.tmp"
+    sed "s|${pattern}|${replacement}|" "$report" > "$tmp"
+    mv "$tmp" "$report"
+}
+
+# Append to the report event log
+report_append_event() {
+    local report="$1"
+    local event="$2"
+    echo "$event" >> "$report"
+}
+
+# Update the report summary table row for a step
+report_update_step_row() {
+    local report="$1"
+    local step_num="$2"
+    local new_status="$3"
+    local new_iterations="$4"
+    local tmp="${report}.tmp"
+
+    # Match the table row by step number at the start
+    # Table format: |  N   | Name | Status | Iterations |
+    awk -v num="$step_num" -v status="$new_status" -v iters="$new_iterations" '
+    BEGIN { found=0 }
+    {
+        if (match($0, /^\|[[:space:]]*[0-9]+[[:space:]]*\|/)) {
+            # Extract step number from this row
+            split($0, parts, "|")
+            gsub(/[[:space:]]/, "", parts[2])
+            if (parts[2] == num) {
+                # Rebuild the row preserving the name
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", parts[3])
+                printf "| %2s   | %s | %s | %s |\n", num, parts[3], status, iters
+                found=1
+                next
+            }
+        }
+        print
+    }' "$report" > "$tmp"
+    mv "$tmp" "$report"
+}
+
+# ── Subcommands ─────────────────────────────────────────────────────────────
+
+cmd_init() {
+    if [ $# -lt 1 ]; then
+        echo "usage: hotl-rt init <workflow-file>" >&2
+        exit 1
+    fi
+
+    local workflow="$1"
+    if [ ! -f "$workflow" ]; then
+        echo "ERROR: Workflow file not found: $workflow" >&2
+        exit 1
+    fi
+
+    require_jq
+    ensure_dirs
+
+    local slug
+    slug=$(slug_from_workflow "$workflow")
+    local run_id
+    run_id=$(generate_run_id "$slug")
+    local started_at
+    started_at=$(now_iso)
+
+    # Parse frontmatter
+    local frontmatter
+    frontmatter=$(sed -n '/^---$/,/^---$/p' "$workflow" | sed '1d;$d')
+
+    local fm_intent fm_success fm_risk fm_auto fm_branch
+    fm_intent=$(echo "$frontmatter" | { grep -i '^intent:' || true; } | sed 's/^[Ii]ntent:[[:space:]]*//')
+    fm_success=$(echo "$frontmatter" | { grep -i '^success_criteria:' || true; } | sed 's/^[Ss]uccess_criteria:[[:space:]]*//')
+    fm_risk=$(echo "$frontmatter" | { grep -i '^risk_level:' || true; } | sed 's/^[Rr]isk_level:[[:space:]]*//')
+    [ -z "$fm_risk" ] && fm_risk="low"
+    fm_auto=$(echo "$frontmatter" | { grep -i '^auto_approve:' || true; } | sed 's/^[Aa]uto_approve:[[:space:]]*//')
+    [ -z "$fm_auto" ] && fm_auto="false"
+    fm_branch=$(echo "$frontmatter" | { grep -i '^branch:' || true; } | sed 's/^[Bb]ranch:[[:space:]]*//')
+    [ -z "$fm_branch" ] && fm_branch="hotl/${slug}"
+
+    # Parse steps
+    local content
+    content=$(cat "$workflow")
+
+    local step_numbers=()
+    local step_names=()
+    local step_actions=()
+    local step_loops=()
+    local step_max_iters=()
+    local step_verifies=()
+    local step_verify_types=()
+    local step_gates=()
+
+    local current_step_num=""
+    local current_step_name=""
+    local current_block=""
+    local in_steps=0
+
+    while IFS= read -r line; do
+        # Detect step headers (checkbox or legacy)
+        if echo "$line" | grep -Eq '^- \[[ xX]\] \*\*Step [0-9]+:'; then
+            # Save previous step if any
+            if [ -n "$current_step_num" ]; then
+                _parse_step_block "$current_step_num" "$current_step_name" "$current_block"
+            fi
+            current_step_num=$(echo "$line" | sed -E 's/.*Step ([0-9]+):.*/\1/')
+            current_step_name=$(echo "$line" | sed -E 's/.*Step [0-9]+:[[:space:]]*(.*)\*\*$/\1/')
+            current_block=""
+            in_steps=1
+        elif echo "$line" | grep -Eq '^### [0-9]+\.'; then
+            if [ -n "$current_step_num" ]; then
+                _parse_step_block "$current_step_num" "$current_step_name" "$current_block"
+            fi
+            current_step_num=$(echo "$line" | sed -E 's/^### ([0-9]+)\..*/\1/')
+            current_step_name=$(echo "$line" | sed -E 's/^### [0-9]+\.[[:space:]]*//')
+            current_block=""
+            in_steps=1
+        elif [ "$in_steps" -eq 1 ]; then
+            current_block="${current_block}${line}
+"
+        fi
+    done <<< "$content"
+
+    # Save last step
+    if [ -n "$current_step_num" ]; then
+        _parse_step_block "$current_step_num" "$current_step_name" "$current_block"
+    fi
+
+    local total_steps=${#step_numbers[@]}
+
+    if [ "$total_steps" -eq 0 ]; then
+        echo "ERROR: No steps found in workflow" >&2
+        exit 1
+    fi
+
+    # Build state JSON
+    local steps_json="["
+    for i in "${!step_numbers[@]}"; do
+        local verify_cmd="${step_verifies[$i]}"
+        local verify_type="${step_verify_types[$i]}"
+        local gate_val="${step_gates[$i]}"
+        local max_iter="${step_max_iters[$i]}"
+
+        # Escape strings for JSON
+        local name_esc action_esc verify_esc
+        name_esc=$(echo "${step_names[$i]}" | sed 's/\\/\\\\/g; s/"/\\"/g')
+        action_esc=$(echo "${step_actions[$i]}" | sed 's/\\/\\\\/g; s/"/\\"/g')
+        verify_esc=$(echo "$verify_cmd" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+        [ "$i" -gt 0 ] && steps_json="${steps_json},"
+        steps_json="${steps_json}
+    {
+      \"number\": ${step_numbers[$i]},
+      \"name\": \"${name_esc}\",
+      \"action\": \"${action_esc}\",
+      \"status\": \"pending\",
+      \"attempts\": 0,
+      \"max_iterations\": ${max_iter},
+      \"loop\": \"${step_loops[$i]}\",
+      \"started_at\": null,
+      \"completed_at\": null,
+      \"verify\": {
+        \"command\": \"${verify_esc}\",
+        \"type\": \"${verify_type}\",
+        \"passed\": null,
+        \"stdout\": null,
+        \"stderr\": null
+      },
+      \"gate\": $([ "$gate_val" = "null" ] && echo "null" || echo "\"$gate_val\""),
+      \"gate_result\": null,
+      \"block_reason\": null
+    }"
+    done
+    steps_json="${steps_json}
+  ]"
+
+    local intent_esc success_esc
+    intent_esc=$(echo "$fm_intent" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    success_esc=$(echo "$fm_success" | sed 's/\\/\\\\/g; s/"/\\"/g')
+
+    local state_json="{
+  \"run_id\": \"${run_id}\",
+  \"workflow_path\": \"${workflow}\",
+  \"intent\": \"${intent_esc}\",
+  \"success_criteria\": \"${success_esc}\",
+  \"risk_level\": \"${fm_risk}\",
+  \"auto_approve\": ${fm_auto},
+  \"branch\": \"${fm_branch}\",
+  \"started_at\": \"${started_at}\",
+  \"completed_at\": null,
+  \"status\": \"running\",
+  \"current_step\": 1,
+  \"total_steps\": ${total_steps},
+  \"report_path\": \"${REPORT_DIR}/${run_id}.md\",
+  \"steps\": ${steps_json}
+}"
+
+    local state_file="${STATE_DIR}/${run_id}.json"
+    echo "$state_json" > "$state_file"
+
+    # Build report
+    local report_file="${REPORT_DIR}/${run_id}.md"
+    {
+        echo "# Execution Report: ${run_id}"
+        echo ""
+        echo "**Workflow:** $(basename "$workflow")"
+        echo "**Intent:** ${fm_intent}"
+        echo "**Branch:** ${fm_branch}"
+        echo "**Executor:** loop"
+        echo "**Started:** ${started_at}"
+        echo "**Updated:** ${started_at}"
+        echo "**Status:** running"
+        echo ""
+        echo "| Step | Name | Status | Iterations |"
+        echo "|------|------|--------|------------|"
+        for i in "${!step_numbers[@]}"; do
+            printf "| %2s   | %s | · Pending | - |\n" "${step_numbers[$i]}" "${step_names[$i]}"
+        done
+        echo ""
+        echo "## Event Log"
+        echo ""
+    } > "$report_file"
+
+    # Print run_id to stdout
+    echo "$run_id"
+}
+
+# Parse a step block and append to arrays
+_parse_step_block() {
+    local num="$1"
+    local name="$2"
+    local block="$3"
+
+    local action="" loop_val="false" max_iter="3" verify_cmd="" verify_type="shell" gate_val="null"
+
+    action=$(echo "$block" | { grep -i '^action:' || true; } | sed 's/^[Aa]ction:[[:space:]]*//' | head -1)
+    loop_val=$(echo "$block" | { grep -i '^loop:' || true; } | sed 's/^[Ll]oop:[[:space:]]*//' | head -1)
+    [ -z "$loop_val" ] && loop_val="false"
+
+    local mi
+    mi=$(echo "$block" | { grep -i '^max_iterations:' || true; } | sed 's/^[Mm]ax_iterations:[[:space:]]*//' | head -1)
+    [ -n "$mi" ] && max_iter="$mi"
+
+    # Parse verify (scalar form only for v1 shell support)
+    local verify_line
+    verify_line=$(echo "$block" | { grep -i '^verify:' || true; } | head -1)
+    if [ -n "$verify_line" ]; then
+        local vval
+        vval=$(echo "$verify_line" | sed 's/^[Vv]erify:[[:space:]]*//')
+        if [ -n "$vval" ]; then
+            # Scalar form — type: shell
+            verify_cmd="$vval"
+            verify_type="shell"
+        else
+            # Structured form — look for type: and command:
+            local struct_block=""
+            local in_verify=0
+            while IFS= read -r vline; do
+                if [ "$in_verify" -eq 0 ] && echo "$vline" | grep -qi '^verify:$'; then
+                    in_verify=1
+                    continue
+                fi
+                if [ "$in_verify" -eq 1 ]; then
+                    if echo "$vline" | grep -Eq '^[[:space:]]'; then
+                        struct_block="${struct_block}${vline}
+"
+                    elif [ -z "$vline" ]; then
+                        continue
+                    else
+                        break
+                    fi
+                fi
+            done <<< "$block"
+
+            if [ -n "$struct_block" ]; then
+                verify_type=$(echo "$struct_block" | { grep -i 'type:' || true; } | sed 's/.*type:[[:space:]]*//' | tr -d ' ' | head -1)
+                [ -z "$verify_type" ] && verify_type="shell"
+                verify_cmd=$(echo "$struct_block" | { grep -i 'command:' || true; } | sed 's/.*command:[[:space:]]*//' | head -1)
+                # For browser type, use url+check as the "command" for reference
+                if [ "$verify_type" = "browser" ]; then
+                    local url check
+                    url=$(echo "$struct_block" | { grep -i 'url:' || true; } | sed 's/.*url:[[:space:]]*//' | head -1)
+                    check=$(echo "$struct_block" | { grep -i 'check:' || true; } | sed 's/.*check:[[:space:]]*//' | head -1)
+                    verify_cmd="browser: ${url} — ${check}"
+                fi
+            fi
+        fi
+    fi
+
+    local gv
+    gv=$(echo "$block" | { grep -i '^gate:' || true; } | sed 's/^[Gg]ate:[[:space:]]*//' | head -1)
+    [ -n "$gv" ] && gate_val="$gv"
+
+    step_numbers+=("$num")
+    step_names+=("$name")
+    step_actions+=("$action")
+    step_loops+=("$loop_val")
+    step_max_iters+=("$max_iter")
+    step_verifies+=("$verify_cmd")
+    step_verify_types+=("$verify_type")
+    step_gates+=("$gate_val")
+}
+
+cmd_step() {
+    if [ $# -lt 2 ]; then
+        echo "usage: hotl-rt step <step-number> <start|verify|retry|block>" >&2
+        exit 1
+    fi
+
+    require_jq
+
+    local step_num="$1"
+    local action="$2"
+    shift 2
+
+    local state_file
+    state_file=$(find_active_state)
+    local report
+    report=$(report_path_from_state "$state_file")
+    local ts
+    ts=$(now_iso)
+    local time_short
+    time_short=$(now_time)
+
+    case "$action" in
+        start)
+            # Validate step exists and is pending or failed (for retry-then-start)
+            local current_status
+            current_status=$(jq -r ".steps[$((step_num - 1))].status" "$state_file")
+            if [ "$current_status" != "pending" ] && [ "$current_status" != "in_progress" ]; then
+                echo "ERROR: Step $step_num is '$current_status', expected 'pending'" >&2
+                exit 1
+            fi
+
+            local step_name
+            step_name=$(jq -r ".steps[$((step_num - 1))].name" "$state_file")
+
+            # Update state JSON
+            local updated
+            updated=$(jq --arg ts "$ts" --argjson num "$step_num" '
+                .current_step = $num |
+                .last_update = $ts |
+                .steps[$num - 1].status = "in_progress" |
+                .steps[$num - 1].started_at = $ts |
+                .steps[$num - 1].attempts += 1
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+
+            # Update report
+            local attempts
+            attempts=$(echo "$updated" | jq -r ".steps[$((step_num - 1))].attempts")
+            report_update_step_row "$report" "$step_num" "→ Running" "$attempts"
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            report_append_event "$report" "**[$time_short]** → Step $step_num: $step_name"
+
+            echo "started step $step_num"
+            ;;
+
+        verify)
+            local verify_type verify_cmd step_name
+            verify_type=$(jq -r ".steps[$((step_num - 1))].verify.type" "$state_file")
+            verify_cmd=$(jq -r ".steps[$((step_num - 1))].verify.command" "$state_file")
+            step_name=$(jq -r ".steps[$((step_num - 1))].name" "$state_file")
+
+            # Check for unsupported verify type
+            if [ "$verify_type" != "shell" ] && [ "$verify_type" != "null" ] && [ -n "$verify_type" ]; then
+                # Block with unsupported type
+                local updated
+                updated=$(jq --arg ts "$ts" --arg reason "unsupported verify type: $verify_type" --argjson num "$step_num" '
+                    .last_update = $ts |
+                    .steps[$num - 1].status = "blocked" |
+                    .steps[$num - 1].block_reason = $reason
+                ' "$state_file")
+                state_write "$state_file" "$updated"
+
+                report_update_step_row "$report" "$step_num" "✗ Blocked" "-"
+                report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+                report_append_event "$report" "**[$time_short]** ✗ Step $step_num: Blocked (unsupported verify type: $verify_type)"
+
+                echo "blocked: unsupported verify type: $verify_type"
+                exit 1
+            fi
+
+            if [ -z "$verify_cmd" ] || [ "$verify_cmd" = "null" ]; then
+                # No verify command — auto-pass
+                local updated
+                updated=$(jq --arg ts "$ts" --argjson num "$step_num" '
+                    .last_update = $ts |
+                    .steps[$num - 1].status = "done" |
+                    .steps[$num - 1].completed_at = $ts |
+                    .steps[$num - 1].verify.passed = true
+                ' "$state_file")
+                state_write "$state_file" "$updated"
+
+                local attempts
+                attempts=$(echo "$updated" | jq -r ".steps[$((step_num - 1))].attempts")
+                report_update_step_row "$report" "$step_num" "✓ Done" "$attempts"
+                report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+                report_append_event "$report" "**[$time_short]** ✓ Step $step_num: Done (no verify, $attempts attempt(s))"
+
+                echo "pass (no verify command)"
+                exit 0
+            fi
+
+            # Run the verify command
+            local stdout_file stderr_file
+            stdout_file=$(mktemp)
+            stderr_file=$(mktemp)
+            local exit_code=0
+
+            eval "$verify_cmd" >"$stdout_file" 2>"$stderr_file" || exit_code=$?
+
+            local stdout_content stderr_content
+            stdout_content=$(cat "$stdout_file" | head -c 4096)
+            stderr_content=$(cat "$stderr_file" | head -c 4096)
+            rm -f "$stdout_file" "$stderr_file"
+
+            # Escape for JSON
+            local stdout_esc stderr_esc
+            stdout_esc=$(echo "$stdout_content" | jq -Rs '.')
+            stderr_esc=$(echo "$stderr_content" | jq -Rs '.')
+
+            if [ "$exit_code" -eq 0 ]; then
+                # PASS — transition to done
+                local updated
+                updated=$(jq --arg ts "$ts" --argjson num "$step_num" \
+                    --argjson stdout "$stdout_esc" --argjson stderr "$stderr_esc" '
+                    .last_update = $ts |
+                    .steps[$num - 1].status = "done" |
+                    .steps[$num - 1].completed_at = $ts |
+                    .steps[$num - 1].verify.passed = true |
+                    .steps[$num - 1].verify.stdout = $stdout |
+                    .steps[$num - 1].verify.stderr = $stderr
+                ' "$state_file")
+                state_write "$state_file" "$updated"
+
+                local attempts
+                attempts=$(echo "$updated" | jq -r ".steps[$((step_num - 1))].attempts")
+                report_update_step_row "$report" "$step_num" "✓ Done" "$attempts"
+                report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+                report_append_event "$report" "**[$time_short]** ✓ Step $step_num: Done ($attempts attempt(s))"
+
+                echo "pass"
+            else
+                # FAIL — transition to failed
+                local updated
+                updated=$(jq --arg ts "$ts" --argjson num "$step_num" \
+                    --argjson stdout "$stdout_esc" --argjson stderr "$stderr_esc" '
+                    .last_update = $ts |
+                    .steps[$num - 1].status = "failed" |
+                    .steps[$num - 1].verify.passed = false |
+                    .steps[$num - 1].verify.stdout = $stdout |
+                    .steps[$num - 1].verify.stderr = $stderr
+                ' "$state_file")
+                state_write "$state_file" "$updated"
+
+                local attempts
+                attempts=$(echo "$updated" | jq -r ".steps[$((step_num - 1))].attempts")
+                report_update_step_row "$report" "$step_num" "✗ Failed" "$attempts"
+                report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+                report_append_event "$report" "**[$time_short]** ✗ Step $step_num: Failed ($attempts attempt(s))"
+                if [ -n "$stderr_content" ]; then
+                    report_append_event "$report" "  verify stderr: $stderr_content"
+                fi
+                if [ -n "$stdout_content" ]; then
+                    report_append_event "$report" "  verify stdout: $stdout_content"
+                fi
+
+                echo "fail"
+                exit 1
+            fi
+            ;;
+
+        retry)
+            local current_status
+            current_status=$(jq -r ".steps[$((step_num - 1))].status" "$state_file")
+            if [ "$current_status" != "failed" ]; then
+                echo "ERROR: Step $step_num is '$current_status', expected 'failed' for retry" >&2
+                exit 1
+            fi
+
+            local step_name attempts
+            step_name=$(jq -r ".steps[$((step_num - 1))].name" "$state_file")
+            attempts=$(jq -r ".steps[$((step_num - 1))].attempts" "$state_file")
+            local max_iter
+            max_iter=$(jq -r ".steps[$((step_num - 1))].max_iterations" "$state_file")
+
+            local updated
+            updated=$(jq --arg ts "$ts" --argjson num "$step_num" '
+                .last_update = $ts |
+                .steps[$num - 1].status = "in_progress" |
+                .steps[$num - 1].verify.passed = null |
+                .steps[$num - 1].verify.stdout = null |
+                .steps[$num - 1].verify.stderr = null
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+
+            local new_attempt=$((attempts + 1))
+            report_update_step_row "$report" "$step_num" "↻ Retrying" "$new_attempt"
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            report_append_event "$report" "**[$time_short]** ↻ Step $step_num: Retrying ($new_attempt/$max_iter)"
+
+            echo "retrying step $step_num (attempt $new_attempt/$max_iter)"
+            ;;
+
+        block)
+            local reason=""
+            while [ $# -gt 0 ]; do
+                case "$1" in
+                    --reason) reason="$2"; shift 2 ;;
+                    *) echo "ERROR: Unknown option for block: $1" >&2; exit 1 ;;
+                esac
+            done
+
+            if [ -z "$reason" ]; then
+                echo "ERROR: --reason is required for block" >&2
+                exit 1
+            fi
+
+            local step_name
+            step_name=$(jq -r ".steps[$((step_num - 1))].name" "$state_file")
+
+            local updated
+            updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg reason "$reason" '
+                .last_update = $ts |
+                .steps[$num - 1].status = "blocked" |
+                .steps[$num - 1].block_reason = $reason
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+
+            report_update_step_row "$report" "$step_num" "✗ Blocked" "-"
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            report_append_event "$report" "**[$time_short]** ✗ Step $step_num: Blocked — $reason"
+
+            echo "blocked step $step_num: $reason"
+            ;;
+
+        *)
+            echo "ERROR: Unknown step action: $action" >&2
+            echo "usage: hotl-rt step <step-number> <start|verify|retry|block>" >&2
+            exit 1
+            ;;
+    esac
+}
+
+cmd_gate() {
+    if [ $# -lt 2 ]; then
+        echo "usage: hotl-rt gate <step-number> <approved|rejected>" >&2
+        exit 1
+    fi
+
+    require_jq
+
+    local step_num="$1"
+    local decision="$2"
+
+    if [ "$decision" != "approved" ] && [ "$decision" != "rejected" ]; then
+        echo "ERROR: Gate decision must be 'approved' or 'rejected', got: $decision" >&2
+        exit 1
+    fi
+
+    local state_file
+    state_file=$(find_active_state)
+    local report
+    report=$(report_path_from_state "$state_file")
+    local ts
+    ts=$(now_iso)
+    local time_short
+    time_short=$(now_time)
+
+    local step_name
+    step_name=$(jq -r ".steps[$((step_num - 1))].name" "$state_file")
+
+    local updated
+    updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" '
+        .last_update = $ts |
+        .steps[$num - 1].gate_result = $decision
+    ' "$state_file")
+    state_write "$state_file" "$updated"
+
+    local status_text
+    if [ "$decision" = "approved" ]; then
+        status_text="✓ Approved"
+    else
+        status_text="✗ Rejected"
+    fi
+
+    report_update_step_row "$report" "$step_num" "$status_text" "-"
+    report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+    report_append_event "$report" "**[$time_short]** Gate Step $step_num: $decision"
+
+    echo "gate $step_num: $decision"
+}
+
+cmd_finalize() {
+    require_jq
+
+    local state_file
+    state_file=$(find_active_state)
+    local report
+    report=$(report_path_from_state "$state_file")
+    local ts
+    ts=$(now_iso)
+    local time_short
+    time_short=$(now_time)
+
+    # Determine final status
+    local has_failed has_blocked
+    has_failed=$(jq '[.steps[] | select(.status == "failed")] | length' "$state_file")
+    has_blocked=$(jq '[.steps[] | select(.status == "blocked")] | length' "$state_file")
+
+    local final_status="completed"
+    if [ "$has_failed" -gt 0 ] || [ "$has_blocked" -gt 0 ]; then
+        final_status="failed"
+    fi
+
+    local updated
+    updated=$(jq --arg ts "$ts" --arg status "$final_status" '
+        .status = $status |
+        .completed_at = $ts |
+        .last_update = $ts
+    ' "$state_file")
+    state_write "$state_file" "$updated"
+
+    # Update report
+    report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** $final_status"
+    report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+    report_append_event "$report" "**[$time_short]** Run finalized: $final_status"
+
+    # Build summary payload
+    local summary
+    summary=$(jq '{
+        run_id: .run_id,
+        workflow_path: .workflow_path,
+        intent: .intent,
+        status: .status,
+        started_at: .started_at,
+        completed_at: .completed_at,
+        total_steps: .total_steps,
+        completed_steps: ([.steps[] | select(.status == "done")] | length),
+        failed_steps: ([.steps[] | select(.status == "failed")] | length),
+        blocked_steps: ([.steps[] | select(.status == "blocked")] | length),
+        steps: [.steps[] | {
+            number: .number,
+            name: .name,
+            status: .status,
+            attempts: .attempts,
+            verify_passed: .verify.passed,
+            gate_result: .gate_result,
+            block_reason: .block_reason
+        }]
+    }' "$state_file")
+
+    echo "$summary"
+}
+
+cmd_summary() {
+    if [ $# -lt 1 ]; then
+        echo "usage: hotl-rt summary <run-id> [--json]" >&2
+        exit 1
+    fi
+
+    require_jq
+
+    local run_id="$1"
+    local state_file="${STATE_DIR}/${run_id}.json"
+
+    if [ ! -f "$state_file" ]; then
+        echo "ERROR: No state found for run: $run_id" >&2
+        echo "Available runs:" >&2
+        ls "$STATE_DIR"/*.json 2>/dev/null | xargs -I{} basename {} .json >&2 || echo "  (none)" >&2
+        exit 1
+    fi
+
+    # Same payload format as finalize
+    jq '{
+        run_id: .run_id,
+        workflow_path: .workflow_path,
+        intent: .intent,
+        status: .status,
+        started_at: .started_at,
+        completed_at: .completed_at,
+        total_steps: .total_steps,
+        completed_steps: ([.steps[] | select(.status == "done")] | length),
+        failed_steps: ([.steps[] | select(.status == "failed")] | length),
+        blocked_steps: ([.steps[] | select(.status == "blocked")] | length),
+        steps: [.steps[] | {
+            number: .number,
+            name: .name,
+            status: .status,
+            attempts: .attempts,
+            verify_passed: .verify.passed,
+            gate_result: .gate_result,
+            block_reason: .block_reason
+        }]
+    }' "$state_file"
+}
+
+# ── Dispatcher ──────────────────────────────────────────────────────────────
+
+usage() {
+    cat <<'USAGE'
+usage: hotl-rt <command> [args]
+
+commands:
+  init <workflow-file>                  Initialize a run from a workflow file
+  step <N> start                        Mark step N as in-progress
+  step <N> verify                       Run verify command, auto-transition to done/fail
+  step <N> retry                        Reset failed step to in-progress for retry
+  step <N> block --reason "..."         Mark step as blocked with reason
+  gate <N> <approved|rejected>          Record gate decision
+  finalize [--json]                     Finalize run, print summary payload
+  summary <run-id> [--json]             Read-only summary for any run
+
+HOTL shared runtime — owns state persistence and verification.
+Agents call this; they don't replicate it.
+USAGE
+}
+
+if [ $# -eq 0 ]; then
+    usage
+    exit 1
+fi
+
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+    init)       cmd_init "$@" ;;
+    step)       cmd_step "$@" ;;
+    gate)       cmd_gate "$@" ;;
+    finalize)   cmd_finalize "$@" ;;
+    summary)    cmd_summary "$@" ;;
+    --help|-h|help)  usage ;;
+    *)
+        echo "ERROR: Unknown command: $COMMAND" >&2
+        usage
+        exit 1
+        ;;
+esac

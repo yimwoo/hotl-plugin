@@ -71,9 +71,16 @@ The `verify` field supports 4 types. A scalar string is shorthand for `type: she
 
 ## Execution State Persistence
 
-This executor writes execution state to `.hotl/state/<run-id>.json` using the same sidecar lifecycle as loop-execution (create on start, update on step transition, capture verify output). See `skills/loop-execution/SKILL.md` for the full persistence spec and `skills/resuming/SKILL.md` for the sidecar schema.
+All state persistence is handled by the `hotl-rt` shared runtime (`runtime/hotl-rt`). This executor calls `hotl-rt` for all state transitions:
 
-Mirror those sidecar/report writes before any user-facing chat update or Codex native progress-card change. The progress UI is a mirror, not the source of truth.
+- `hotl-rt init <workflow-file>` — at run start
+- `hotl-rt step N start` — before each step
+- `hotl-rt step N verify` — after each step's action
+- `hotl-rt step N retry` / `hotl-rt step N block --reason "..."` — on failure
+- `hotl-rt gate N approved|rejected` — at gate steps
+- `hotl-rt finalize --json` — at run completion
+
+The runtime owns `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md`. Agents do not manage these files directly. Runtime calls happen before the corresponding chat or progress UI update.
 
 To resume an interrupted executing-plans run, use `/hotl:resume`.
 
@@ -81,11 +88,16 @@ To resume an interrupted executing-plans run, use `/hotl:resume`.
 
 1. Resolve and read the plan (see above)
 2. Run Branch/Worktree Preflight (see above)
-3. Execute tasks in order, 3 at a time
-4. Run typed verification for each step (see above)
+3. Run `hotl-rt init <workflow-file>` to initialize state and report
+4. Execute tasks in order, 3 at a time:
+   - `hotl-rt step N start` before each step
+   - Execute the action
+   - `hotl-rt step N verify` to run typed verification
+   - On failure: `hotl-rt step N retry` or `hotl-rt step N block --reason "..."`
+   - On gate: `hotl-rt gate N approved|rejected`
 5. After each batch: show what was done, ask "Continue to next batch?"
 6. On failure: stop and report — never silently skip a failed step
-7. When complete: invoke `hotl:verification-before-completion`
+7. When complete: `hotl-rt finalize --json`, render summary, invoke `hotl:verification-before-completion`
 
 Use this over `loop-execution` when you want explicit human checkpoints at every stage rather than auto-approve.
 
