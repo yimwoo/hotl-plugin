@@ -60,7 +60,7 @@ These rules apply regardless of delegation decisions:
 
 ## Reporting
 
-Inherits the canonical Execution Reporting Contract and Execution Report spec from `skills/loop-execution/SKILL.md` — same final summary table column rules, same verbose progress format, same precedence for verbose mode, same durable `.hotl/reports/<run-id>.md` artifact.
+Inherits the mandatory Execution Reporting Contract from `skills/loop-execution/SKILL.md` — same platform rendering rules, same live step visibility requirements, same final summary (must be shown), same durable `.hotl/reports/<run-id>.md` artifact.
 
 ## Related Skills
 

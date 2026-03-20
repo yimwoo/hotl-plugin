@@ -84,9 +84,11 @@ HOTL writes a durable Markdown report to `.hotl/reports/<run-id>.md` incremental
 
 Execution supports an optional delegation mode where eligible steps run in fresh subagents while the controller keeps verification and gates. See `hotl-subagent-execution.md` for delegation rules and critical invariants.
 
-### Reporting
+### Reporting (mandatory)
 
-**Final summary table** — strict column rules:
+**Live step visibility:** Cline must use per-step one-line chat logs during execution. The user must see which step is running.
+
+**Final summary:** must use a markdown table at the end of every run. Strict column rules:
 - **Step** — number only
 - **Name** — step name
 - **Status** — outcome + details: `✓ Done`, `✓ Done (N tests)`, `⚡ Auto-approved`, `✓ Approved`, `✗ Failed`, `✗ Blocked`
