@@ -273,7 +273,7 @@ All skills work with **Claude Code** and **Codex**. Cline users get equivalent r
 
 | Skill | Description | Phase |
 | --- | --- | --- |
-| `loop-execution` | The canonical HOTL execution engine — loops until success criteria met, auto-approves low-risk gates, pauses at high-risk gates. Persists state for resume. | Execute |
+| `loop-execution` | The canonical HOTL execution engine — mandatory live step visibility, platform-specific rendering (Codex: native progress card, Claude Code/Cline: chat logs + markdown table). Persists state for resume. | Execute |
 | `executing-plans` | Loop execution with explicit human checkpoints between batches of tasks. | Execute |
 | `subagent-execution` | Delegated step runner over the loop execution engine — delegates eligible steps to fresh subagents while the controller keeps governance and verification. | Execute |
 | `resuming` | Resume an interrupted workflow run — verify-first strategy with sidecar state persistence. | Execute |

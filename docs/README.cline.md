@@ -49,7 +49,7 @@ Cline reads `~/Documents/Cline/Rules/` for global rules. HOTL installs 10 rule f
 | `hotl-brainstorming.md` | Full brainstorming process — questions, approaches, contracts, design doc |
 | `hotl-planning.md` | Create workflow files with atomic steps, verify commands, gates |
 | `hotl-document-review.md` | Lint and review design docs and workflow files before execution |
-| `hotl-execution.md` | Execute plans with checkpoints, never skip failed steps, show evidence |
+| `hotl-execution.md` | Execute plans with checkpoints, per-step chat logs for live visibility, markdown table for final summary |
 | `hotl-subagent-execution.md` | Execute reviewed plans in-session with delegated subagent steps and controller-owned gates |
 | `hotl-tdd.md` | RED-GREEN-REFACTOR — never write code before a failing test |
 | `hotl-debugging.md` | 4-phase debugging — reproduce, understand, hypothesize, fix |

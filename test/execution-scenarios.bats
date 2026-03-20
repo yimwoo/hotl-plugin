@@ -93,9 +93,9 @@ setup() {
     grep -Fq "Approved (1 attempt)" "$LOOP_SKILL"
 }
 
-@test "scenario 04: loop-execution describes Codex native progress as additive only" {
-    grep -qi "Codex app.*native plan\|native plan/progress UI\|built-in progress card" "$LOOP_SKILL"
-    grep -qi "additive\|do not remove.*chat logs\|platforms without a native progress UI" "$LOOP_SKILL"
+@test "scenario 04: loop-execution describes Codex native progress requirements" {
+    grep -qi "native.*progress\|progress card" "$LOOP_SKILL"
+    grep -qi "never replaces the final chat summary\|platforms without native progress" "$LOOP_SKILL"
 }
 
 @test "scenario 04: behavioral spec exists" {
@@ -127,6 +127,28 @@ setup() {
     [ -f "$SCENARIOS/05-verbose-precedence.md" ]
 }
 
+# ── Mandatory UX contract ────────────────────────────────────────────────────
+
+@test "loop-execution has mandatory final summary" {
+    grep -q "Final Summary (mandatory)" "$LOOP_SKILL"
+}
+
+@test "loop-execution has mandatory live step visibility" {
+    grep -q "Live Step Visibility (mandatory)" "$LOOP_SKILL"
+}
+
+@test "loop-execution has platform rendering table" {
+    grep -q "Platform Rendering" "$LOOP_SKILL"
+    grep -q "Claude Code" "$LOOP_SKILL"
+    grep -q "Codex" "$LOOP_SKILL"
+    grep -q "Cline" "$LOOP_SKILL"
+}
+
+@test "loop-execution Codex native progress is mandatory with fallback" {
+    grep -q "mandatory with fallback" "$LOOP_SKILL"
+    grep -qi "MUST use the native" "$LOOP_SKILL"
+}
+
 # ── Executor inheritance ─────────────────────────────────────────────────────
 
 @test "executing-plans references canonical reporting contract from loop-execution" {
@@ -151,7 +173,7 @@ setup() {
 @test "loop-execution requires persistence before visible progress updates" {
     grep -q "Persist step start before any user-facing progress update" "$LOOP_SKILL"
     grep -q "persist completion before announcing" "$LOOP_SKILL"
-    grep -q "Native progress UI is advisory only" "$LOOP_SKILL"
+    grep -q "Native progress UI is never a substitute" "$LOOP_SKILL"
 }
 
 @test "loop-execution describes report format (table + event log)" {

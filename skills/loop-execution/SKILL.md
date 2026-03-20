@@ -176,7 +176,7 @@ Run ID format: `<slug>-<unix-timestamp>` (e.g., `add-auth-1710700000`).
 
 The sidecar also stores `report_path` — the path to the durable Markdown report for this run. This makes resume and stop/block messaging deterministic.
 
-Operational rule: the sidecar/report write happens before the corresponding chat log or Codex native plan/progress update. Native progress UI is advisory only; it is never a substitute for `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md`.
+Operational rule: the sidecar/report write happens before the corresponding chat log or Codex native plan/progress update. Native progress UI is never a substitute for `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md`.
 
 See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection, and verify-first resume flow.
 
@@ -264,15 +264,31 @@ The executor must reference the report path in its response:
 
 This is the canonical reporting spec. Other executors (executing-plans, subagent-execution) inherit this contract.
 
-### Codex Native Progress (advisory)
+### Platform Rendering
 
-When running in the Codex app, use the native plan/progress UI for top-level execution visibility when available. Mirror the active workflow as a short step list with `pending`, `in_progress`, and `completed` states so the user gets the built-in progress card during execution.
+| Platform | Live step visibility | Final summary format |
+|---|---|---|
+| Codex | Native progress card (primary). Per-step chat logs as fallback. | Compact list in chat |
+| Claude Code | Per-step one-line chat logs | Markdown table |
+| Cline | Per-step one-line chat logs | Markdown table |
 
-Rules:
-- Treat the native plan/progress UI as additive. Do not remove or weaken the existing chat logs, compact summaries, or durable `.hotl/reports/...` artifact.
-- Keep the native plan list high-level and short. Use major execution phases or top-level workflow steps, not every retry, verify substep, or low-level log line.
-- Only one native plan step should be `in_progress` at a time.
-- On platforms without a native progress UI, including Claude Code and Cline, keep the existing HOTL chat/report layout unchanged.
+Durable report (`.hotl/reports/<run-id>.md`) always uses full markdown table regardless of platform.
+
+### Live Step Visibility (mandatory)
+
+Every execution run MUST provide live step visibility — the user must see which step is currently executing and which are done, during execution. This is not optional on any platform.
+
+### Codex Native Progress (mandatory with fallback)
+
+When running in the Codex app, the executor MUST use the native plan/progress UI as the primary live step visibility surface:
+
+- MUST initialize the native progress card immediately after run setup (step 4 of the state machine)
+- MUST update it on every step transition — exactly one step `in_progress` at a time
+- MUST keep the native card high-level: major workflow steps only, not retries or verify substeps
+- If the native progress tool is unavailable or errors, MUST immediately switch to per-step chat logs for the remainder of the run. Do not silently drop visibility.
+- Native progress never replaces the final chat summary, durable report, or sidecar state
+
+On platforms without native progress (Claude Code, Cline), the executor MUST use per-step chat logs for live visibility.
 
 ### Per-Step Log (default, always shown)
 
