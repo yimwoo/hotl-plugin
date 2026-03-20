@@ -2,6 +2,28 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.6.0] - 2026-03-20
+
+### Added
+- `runtime/hotl-rt` — shared shell runtime that owns execution state persistence and verification
+- Runtime API: `init`, `step` (start/verify/retry/block), `gate`, `finalize`, `summary`
+- State JSON (`.hotl/state/<run-id>.json`) created at init with full step list — authoritative from the start
+- Reports (`.hotl/reports/<run-id>.md`) initialized at init, updated incrementally at each transition
+- Atomic verify: runtime runs the command, captures stdout/stderr, transitions to done/fail in one call
+- Unsupported verify types now block loudly with a clear reason instead of silently skipping
+- Canonical summary payload via `finalize --json` and `summary <run-id> --json`
+- 39 runtime unit tests (`test/runtime.bats`)
+- 8 runtime integration tests (`test/runtime-integration.bats`) — agent conformance spec
+- Test fixtures for runtime testing (`hotl-workflow-runtime-sample.md`, `hotl-workflow-unsupported-verify.md`)
+
+### Changed
+- `loop-execution` state machine now calls `hotl-rt` for all state transitions instead of managing persistence inline
+- `executing-plans` uses `hotl-rt` for state management instead of inline sidecar lifecycle
+- `subagent-execution` controller calls `hotl-rt` — subagents do implementation only
+- Run ID format changed from `<slug>-<unix-timestamp>` to `<slug>-<YYYYMMDDTHHMMSSZ>` (human-readable UTC)
+- `docs/workflow-format.md` documents the runtime API and new run ID format
+- `CLAUDE.md` directory structure includes `runtime/`
+
 ## [2.5.0] - 2026-03-19
 
 ### Changed
