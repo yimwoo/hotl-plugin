@@ -2,6 +2,26 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.5.0] - 2026-03-19
+
+### Changed
+- Execution reporting is now **mandatory**, not advisory — every run must provide live step visibility and a final chat summary
+- Platform-specific rendering: Claude Code/Cline use markdown table, Codex uses compact list
+- Codex native progress card is required (with chat fallback if unavailable)
+- All "advisory" and "prefer" language replaced with "must" in the execution reporting contract
+- Platform rendering table added to the canonical execution spec
+
+### Fixed
+- Claude Code was incorrectly using compact list for final summary (now uses markdown table)
+- Sidecar state must be persisted before any visible progress update (v2.4.1)
+- HOTL-owned artifacts (workflow files, design docs, `.hotl/`) excluded from dirty worktree checks (v2.4.0)
+
+### Added
+- Durable execution reports at `.hotl/reports/<run-id>.md` with summary table + timestamped event log (v2.3.0)
+- `report_detail: full` frontmatter field for verbose verify output
+- `dirty_worktree: allow` frontmatter field for non-HOTL dirty files
+- 4 new execution scenario tests for mandatory UX contract
+
 ## [2.3.1] - 2026-03-19
 
 ### Fixed
