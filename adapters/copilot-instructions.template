@@ -14,6 +14,13 @@ When suggesting changes to auth, encryption, billing, or access control:
 - Add a comment noting this is high-risk code requiring human review
 - Do not auto-complete sensitive logic — suggest structure and let human fill in details
 
+## Code review awareness
+
+When reviewing code or receiving review feedback:
+- Verify each claim against the actual codebase before acting
+- Flag findings with file:line references when possible
+- BLOCK-level issues take priority over WARN and NOTE
+
 ## Verification mindset
 
 Always suggest test code alongside implementation. Prefer testable patterns.

@@ -1,8 +1,16 @@
 ## HOTL Code Review
 
-**When to use:** After completing implementation, before merging or claiming done.
+**When to use:** After completing implementation, before merging or claiming done. Also triggered automatically at executor review checkpoints.
 
 **Full skill:** Read `~/.cline/hotl/skills/code-review/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
+
+### Review Lifecycle
+
+Code review in HOTL is a governed lifecycle embedded in execution:
+
+1. **Requesting:** Executors invoke `requesting-code-review` at checkpoints to dispatch the reviewer with git range, contracts, and verification evidence
+2. **Reviewing:** The reviewer produces findings with file:line references, severity (BLOCK/WARN/NOTE), and fix direction
+3. **Receiving:** Handle findings via `receiving-code-review` — verify each claim against the codebase and HOTL contracts before acting
 
 ### MANDATORY RULE
 
@@ -33,13 +41,30 @@
 - [ ] Confirm the specific requested behavior works — show evidence
 - [ ] Check for regressions — existing tests still pass
 
-### Severity Levels
+### Findings Format
 
-When reporting issues, use these levels:
+Every finding must include:
 
-- **BLOCK** — Must fix before merge. Broken functionality, security issues, missing tests for critical paths.
-- **WARN** — Should fix soon. Code smells, missing edge case handling, unclear naming.
-- **NOTE** — Consider later. Style preferences, minor improvements.
+```
+- [SEVERITY]: file/path:line — description
+  Why: [why this matters]
+  Fix: [expected remediation direction]
+```
+
+### Receiving Review Feedback
+
+When review findings arrive, follow the `receiving-code-review` protocol:
+
+1. **Verify** — check each finding against the current code
+2. **Evaluate** — does acting on it violate intent, expand scope, or change risk?
+3. **Respond** — classify as accept/reject/defer with evidence
+4. **Implement** — only accepted findings, BLOCK first, verify after each change
+
+### Verdict Model
+
+**Checkpoint reviews:** PROCEED | PROCEED WITH WARNINGS | HOLD
+
+**Final reviews (pre-merge):** READY | READY WITH WARNINGS | NOT READY
 
 ### What You MUST NOT Do
 
@@ -47,3 +72,4 @@ When reporting issues, use these levels:
 - NEVER skip the governance check — especially for high-risk changes
 - NEVER hide issues — report everything you find, even if uncomfortable
 - NEVER mark review as "passed" if any BLOCK issues exist
+- NEVER implement review feedback without verifying the claim first

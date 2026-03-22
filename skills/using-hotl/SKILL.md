@@ -33,6 +33,8 @@ Use the `Skill` tool to invoke any of these when appropriate:
 | `hotl:tdd` | Before writing any implementation code |
 | `hotl:systematic-debugging` | When encountering any bug or unexpected behavior |
 | `hotl:document-review` | Optional — review existing docs, external specs, or hand-authored plans |
+| `hotl:requesting-code-review` | Dispatched by executors at review checkpoints — standardizes what context the reviewer receives |
+| `hotl:receiving-code-review` | Invoked when review findings arrive — verify, evaluate against contracts, then implement |
 | `hotl:code-review` | After completing implementation, before merging |
 | `hotl:pr-reviewing` | Review a PR across multiple dimensions — description, code, scan, tests |
 | `hotl:resuming` | Resume an interrupted workflow run with verify-first strategy |

@@ -2,6 +2,30 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.7.0] - 2026-03-22
+
+### Added
+- `receiving-code-review` skill — governs how agents handle review feedback: Verify → Evaluate → Respond → Implement. Treats review findings as claims to verify, not instructions to obey.
+- `requesting-code-review` skill — standardizes review dispatch at executor checkpoints with git range, HOTL contracts, and verification evidence.
+- Review checkpoints wired into all executors: `executing-plans` (batch boundaries), `subagent-execution` (controller-owned after meaningful batches), `loop-execution` (final completion + conditional at intermediate gates)
+- Dual verdict model: checkpoint reviews use PROCEED/PROCEED WITH WARNINGS/HOLD; final reviews use READY/READY WITH WARNINGS/NOT READY
+- Code-reviewer agent: scope-gated architecture & design review for feature-level, cross-module, and high-risk changes
+- Code-reviewer agent: graceful degradation without a workflow file (plan alignment skipped, other dimensions still run)
+- Code-reviewer agent: verification acknowledgment — does not re-raise issues that verification evidence disproves
+
+### Changed
+- Code-reviewer agent now requires file:line + why + fix on all localized findings
+- Code-reviewer agent uses review type from request to select checkpoint vs final verdict
+- `code-review` skill updated to describe the full review lifecycle (requesting → reviewing → receiving)
+- `dispatch-agents` skill references the review lifecycle instead of bare `hotl:code-review`
+- `using-hotl` skill index includes both new review lifecycle skills
+- Cline rules updated: `hotl-code-review.md`, `hotl-operating-model.md`, `hotl-subagent-execution.md`
+- Codex docs updated with review lifecycle skills
+- Cline docs updated with enriched code-review rule description
+- Adapter templates updated: AGENTS.md, cursor-rules, copilot-instructions
+- `docs/how-it-works.md` adds Phase 6: Code Review at Checkpoints
+- README.md skills table includes `requesting-code-review` and `receiving-code-review`
+
 ## [2.6.0] - 2026-03-20
 
 ### Added

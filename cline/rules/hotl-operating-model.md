@@ -20,7 +20,10 @@ The Human-on-the-Loop (HOTL) model applies to **implementation tasks** — new f
 1. **Brainstorm** — explore intent, ask questions, propose approaches, define contracts
 2. **Plan** — create a `hotl-workflow-<slug>.md` with atomic steps
 3. **Execute** — run the plan step by step with verification
-4. **Review** — verify all success criteria are met before claiming done
+4. **Review** — a first-class lifecycle stage embedded in execution:
+   - Executors invoke `requesting-code-review` at defined checkpoints (batch boundaries, pre-completion)
+   - Findings are handled via `receiving-code-review` — verify claims, evaluate against contracts, then implement
+   - Review happens after step verification, before completion, before finalize
 
 **Do NOT skip steps for implementation tasks.** Do NOT jump from brainstorming to coding. Do NOT mark tasks complete without verification.
 

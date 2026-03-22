@@ -49,6 +49,14 @@ loop: until tests pass
 verify: pytest
 ```
 
+## Code Review Lifecycle
+
+Review is embedded in execution, not a post-hoc check:
+- Executors request review at defined checkpoints (batch boundaries, pre-completion)
+- Review findings are verified against the codebase and HOTL contracts before acting
+- Findings must include file:line references, severity (BLOCK/WARN/NOTE), and fix direction
+- BLOCK issues must be resolved before proceeding
+
 ## Self-Verification Before Claiming Done
 
 Always run tests, lint, and show output before saying work is complete.

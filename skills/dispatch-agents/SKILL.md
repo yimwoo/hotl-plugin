@@ -22,7 +22,7 @@ description: Use when you have 2+ independent tasks with no shared state — dis
 3. Dispatch all agents simultaneously using the Agent tool
 4. Collect results and merge
 5. Run verification across all changes together
-6. Invoke `hotl:code-review` on merged result
+6. Invoke `requesting-code-review` to dispatch the `code-reviewer` agent on merged result, then handle findings via `receiving-code-review`
 
 ## Safety
 
