@@ -2,6 +2,17 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.8.0] - 2026-03-22
+
+### Changed
+- `code-review` skill now dispatches the full `code-reviewer` agent as a subagent by default; falls back to inline review (same output contract) on platforms without subagent support
+- Context gathered automatically: base branch fallback ladder (PR base → origin/HEAD → main → master), composite review scope (committed + staged + unstaged), workflow/contract detection, verification evidence from hotl-rt artifacts
+- Direct reviews use new `direct` review type with final-review verdict model (READY / READY WITH WARNINGS / NOT READY)
+- Findings returned only — no auto-fix unless user explicitly asks (then `receiving-code-review` is invoked)
+- `requesting-code-review` dispatch template updated with `direct` review type and review type definitions
+- Cline code-review rule updated for dispatch-first inline path
+- README, Codex docs, Cline docs updated with new code-review descriptions
+
 ## [2.7.1] - 2026-03-22
 
 ### Fixed

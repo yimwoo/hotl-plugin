@@ -2,7 +2,7 @@
   "name": "hotl",
   "displayName": "HOTL",
   "description": "Human-on-the-Loop operating model: skills, workflows, and adapters for AI-native development",
-  "version": "2.7.1",
+  "version": "2.8.0",
   "author": {
     "name": "yimwoo"
   },
