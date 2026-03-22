@@ -32,7 +32,7 @@ Skills **orchestrate** — they coordinate multi-step processes, enforce discipl
 - Platform-discoverable — the platform can match a skill to a task based on its `description`
 - Invoked by users (directly or via commands) or by other skills
 
-**Examples in this repo:** `brainstorming`, `code-review`, `loop-execution`, `writing-plans`, `pr-reviewing`
+**Examples in this repo:** [`brainstorming`](../skills/brainstorming/SKILL.md), [`code-review`](../skills/code-review/SKILL.md), [`loop-execution`](../skills/loop-execution/SKILL.md), [`writing-plans`](../skills/writing-plans/SKILL.md), [`pr-reviewing`](../skills/pr-reviewing/SKILL.md)
 
 ---
 
@@ -50,7 +50,7 @@ Agents **judge or produce structured output** — they have a defined persona, s
 - **Not** platform-discoverable — only dispatched by skills that know about them
 - Runs in fresh, isolated context (no conversation history from the caller)
 
-**Examples in this repo:** `code-reviewer`
+**Examples in this repo:** [`code-reviewer`](../agents/code-reviewer.md)
 
 ---
 
@@ -129,9 +129,9 @@ Agents do not need indexing — they are dispatched explicitly by the skills tha
 
 For full installation and contributor docs, see:
 - `README.md` — project overview and installation
+- `docs/how-it-works.md` — workflow phases and execution model
 - `docs/README.codex.md` — Codex-specific setup
 - `docs/README.cline.md` — Cline-specific setup
-- `CLAUDE.md` — Claude Code contributor instructions
 
 ---
 
