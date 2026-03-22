@@ -294,7 +294,7 @@ All skills work with **Claude Code** and **Codex**. Cline users get equivalent r
 | `pr-reviewing` | Review a PR across multiple dimensions — description/ticket, code changes, code scan, unit tests — using parallel subagents. Supports GitHub, GitLab, and enterprise platforms. | Review |
 | `requesting-code-review` | Dispatched by executors at review checkpoints — standardizes what context the reviewer receives (git range, contracts, verification evidence). | Review |
 | `receiving-code-review` | Governs how agents handle review findings — verify each claim against the codebase and HOTL contracts before acting (Verify → Evaluate → Respond → Implement). | Review |
-| `code-review` | Post-implementation review against the workflow plan and HOTL contracts. Checks plan alignment, code quality, and governance compliance. | Verify |
+| `code-review` | User-facing entry point for code review. Dispatches the full `code-reviewer` agent by default; falls back to inline review on platforms without subagent support. Returns findings only — no auto-fix. | Review |
 | `verification-before-completion` | Run verification commands and confirm output before claiming work is complete. Evidence before assertions. | Verify |
 
 ### Development Practices

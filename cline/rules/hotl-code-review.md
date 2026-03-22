@@ -4,21 +4,23 @@
 
 **Full skill:** Read `~/.cline/hotl/skills/code-review/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 
-### Review Lifecycle
+### How It Works
 
-Code review in HOTL is a governed lifecycle embedded in execution:
+Cline runs the inline review path (subagent dispatch is not available). The inline review uses the same output contract as the full `code-reviewer` agent — identical dimensions, findings format, and verdict model.
 
-1. **Requesting:** Executors invoke `requesting-code-review` at checkpoints to dispatch the reviewer with git range, contracts, and verification evidence
-2. **Reviewing:** The reviewer produces findings with file:line references, severity (BLOCK/WARN/NOTE), and fix direction
-3. **Receiving:** Handle findings via `receiving-code-review` — verify each claim against the codebase and HOTL contracts before acting
+### Context Gathering
 
-### MANDATORY RULE
+Before reviewing, gather:
 
-**NEVER claim work is complete without running the review checklist below.** Every section MUST be checked. Report findings honestly — do not hide issues.
+1. **Base branch** (fallback ladder): PR base → `origin/HEAD` → `main` → `master`
+2. **Review scope**: committed branch diff plus staged/unstaged changes on feature branches; staged/unstaged/`HEAD~1` on base branch
+3. **Workflow file**: most recently modified `hotl-workflow-*.md` if present
+4. **Contracts**: from workflow frontmatter if available
+5. **Verification evidence**: `.hotl/state/*.json` and `.hotl/reports/*.md` if present; otherwise report "not available"
 
-### Checklist (check ALL sections)
+### Review Dimensions (check ALL)
 
-**1. Plan Alignment**
+**1. Plan Alignment** (skip if no workflow)
 - [ ] All planned steps from the workflow file are completed
 - [ ] Success criteria from the intent contract are met
 - [ ] No scope creep — only what was planned was implemented
@@ -51,20 +53,30 @@ Every finding must include:
   Fix: [expected remediation direction]
 ```
 
-### Receiving Review Feedback
+### Verdict Model
 
-When review findings arrive, follow the `receiving-code-review` protocol:
+**Direct and final reviews:** READY | READY WITH WARNINGS | NOT READY
+
+**Checkpoint reviews:** PROCEED | PROCEED WITH WARNINGS | HOLD
+
+### Post-Review
+
+Return findings + verdict only. Do NOT automatically fix findings.
+
+If the user asks to fix them, follow the `receiving-code-review` protocol:
 
 1. **Verify** — check each finding against the current code
 2. **Evaluate** — does acting on it violate intent, expand scope, or change risk?
 3. **Respond** — classify as accept/reject/defer with evidence
 4. **Implement** — only accepted findings, BLOCK first, verify after each change
 
-### Verdict Model
+### Review Lifecycle
 
-**Checkpoint reviews:** PROCEED | PROCEED WITH WARNINGS | HOLD
-
-**Final reviews (pre-merge):** READY | READY WITH WARNINGS | NOT READY
+```
+code-review              = user-facing entry point (this rule)
+requesting-code-review   = internal executor/orchestration entry point
+receiving-code-review    = follow-up handler for acting on findings
+```
 
 ### What You MUST NOT Do
 
@@ -73,3 +85,4 @@ When review findings arrive, follow the `receiving-code-review` protocol:
 - NEVER hide issues — report everything you find, even if uncomfortable
 - NEVER mark review as "passed" if any BLOCK issues exist
 - NEVER implement review feedback without verifying the claim first
+- NEVER auto-fix findings unless the user explicitly asks

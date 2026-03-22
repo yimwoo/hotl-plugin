@@ -48,7 +48,7 @@ When dispatching the `hotl:code-reviewer` agent, provide this context:
 ```
 Review the following implementation work.
 
-**Review type:** checkpoint | final | follow-up
+**Review type:** checkpoint | final | follow-up | direct
 **Workflow:** {workflow_file} (or "No workflow — reviewing against stated intent")
 **Steps reviewed:** {step_range} (or "N/A")
 **Git range:** {review_base}..{HEAD_SHA}
@@ -82,3 +82,10 @@ Produce findings with file:line references.
 2. Follow Verify → Evaluate → Respond → Implement
 3. If any accepted BLOCK finding requires re-review after fix, dispatch a scoped follow-up review
 4. Do not proceed past the checkpoint until all BLOCK findings are resolved
+
+## Review Types
+
+- **checkpoint** — executor mid-run at a batch boundary (uses PROCEED/HOLD verdict)
+- **final** — executor completing a governed workflow run (uses READY/NOT READY verdict)
+- **follow-up** — scoped re-review after fixing BLOCK findings
+- **direct** — user-invoked review via `hotl:code-review` (uses READY/NOT READY verdict). Findings are returned to the user without automatically invoking `receiving-code-review`.
