@@ -51,9 +51,32 @@ current_branch() {
     git -C "$1" branch --show-current 2>/dev/null || true
 }
 
-is_clean_work_tree() {
+has_local_changes() {
     local path="$1"
-    git -C "${path}" diff --quiet && git -C "${path}" diff --cached --quiet
+    [ -n "$(git -C "${path}" status --short --untracked-files=all 2>/dev/null)" ]
+}
+
+resolve_path() {
+    local path="$1"
+    (
+        cd "${path}" > /dev/null 2>&1 && pwd -P
+    )
+}
+
+backup_codex_install() {
+    local path="$1"
+    local real_path backup_root timestamp backup_dir
+
+    real_path="$(resolve_path "${path}")"
+    backup_root="${HOME}/.codex/backups/hotl"
+    timestamp="$(date +"%Y%m%d-%H%M%S")"
+    backup_dir="${backup_root}/${timestamp}"
+
+    mkdir -p "${backup_dir}/worktree"
+    git -C "${path}" status --short --branch > "${backup_dir}/git-status.txt" 2>/dev/null || true
+    rsync -a --exclude '.git' "${real_path}/" "${backup_dir}/worktree/"
+
+    printf '%s\n' "${backup_dir}"
 }
 
 # ── Claude Code ───────────────────────────────────────────────────────────────
@@ -105,37 +128,40 @@ if is_git_work_tree "${CODEX_HOTL_DIR}"; then
     FOUND=$((FOUND + 1))
     CODEX_BRANCH="$(current_branch "${CODEX_HOTL_DIR}")"
     CODEX_BRANCH_DISPLAY="${CODEX_BRANCH:-detached HEAD}"
+    CODEX_DIRTY=0
 
-    if ! is_clean_work_tree "${CODEX_HOTL_DIR}"; then
-        echo "Codex install at ${CODEX_HOTL_DIR} has uncommitted changes; skipping update."
-        SKIPPED=$((SKIPPED + 1))
+    if has_local_changes "${CODEX_HOTL_DIR}"; then
+        CODEX_DIRTY=1
+    fi
+
+    echo "Updating Codex plugin at ${CODEX_HOTL_DIR}..."
+
+    if [ "${CODEX_DIRTY}" -eq 1 ] && [ "${FORCE_CODEX}" -eq 0 ]; then
+        CODEX_BACKUP_DIR="$(backup_codex_install "${CODEX_HOTL_DIR}")"
+        echo "Codex install has local changes; backed them up to ${CODEX_BACKUP_DIR} before updating."
         echo ""
-    elif [ "${CODEX_BRANCH_DISPLAY}" != "main" ]; then
+    elif [ "${CODEX_DIRTY}" -eq 1 ]; then
+        echo "Codex install has local changes; --force-codex set, skipping backup and resetting to origin/main."
+        echo ""
+    fi
+
+    if [ "${CODEX_BRANCH_DISPLAY}" != "main" ]; then
         echo "Codex install is on branch ${CODEX_BRANCH_DISPLAY}; switching back to stable branch main."
         git -C "${CODEX_HOTL_DIR}" switch main
         echo ""
-        echo "Updating Codex plugin at ${CODEX_HOTL_DIR}..."
-        git -C "${CODEX_HOTL_DIR}" pull --ff-only origin main
-
-        if [ -L "${HOME}/.agents/skills/hotl" ]; then
-            echo "  Skills symlink intact at ~/.agents/skills/hotl"
-        fi
-
-        UPDATED=$((UPDATED + 1))
-        echo "  Codex plugin updated."
-        echo ""
-    else
-        echo "Updating Codex plugin at ${CODEX_HOTL_DIR}..."
-        git -C "${CODEX_HOTL_DIR}" pull --ff-only origin main
-
-        if [ -L "${HOME}/.agents/skills/hotl" ]; then
-            echo "  Skills symlink intact at ~/.agents/skills/hotl"
-        fi
-
-        UPDATED=$((UPDATED + 1))
-        echo "  Codex plugin updated."
-        echo ""
     fi
+
+    git -C "${CODEX_HOTL_DIR}" fetch origin main
+    git -C "${CODEX_HOTL_DIR}" reset --hard origin/main
+    git -C "${CODEX_HOTL_DIR}" clean -fd
+
+    if [ -L "${HOME}/.agents/skills/hotl" ]; then
+        echo "  Skills symlink intact at ~/.agents/skills/hotl"
+    fi
+
+    UPDATED=$((UPDATED + 1))
+    echo "  Codex plugin updated."
+    echo ""
 fi
 
 # ── Cline ─────────────────────────────────────────────────────────────────────
@@ -152,7 +178,7 @@ if is_git_work_tree "${CLINE_HOTL_DIR}"; then
             [ -f "${rule_file}" ] || continue
             cp "${rule_file}" "${CLINE_RULES_DIR}/"
         done
-        RULE_COUNT=$(ls "${CLINE_RULES_DIR}"/hotl-*.md 2>/dev/null | wc -l | tr -d ' ')
+        RULE_COUNT=$(find "${CLINE_RULES_DIR}" -maxdepth 1 -name 'hotl-*.md' | wc -l | tr -d ' ')
         echo "  ${RULE_COUNT} rule files updated."
     fi
 

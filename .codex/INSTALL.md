@@ -60,11 +60,19 @@ ones coming from `~/.agents/skills/hotl`.
 ## Updating
 
 ```bash
-bash ~/.codex/hotl/update.sh
+curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
 ```
 
-If the install drifted onto another branch, the updater switches it back to the
-stable `main` branch before pulling the latest HOTL skills.
+This is the recommended Codex update path because it downloads the newest
+updater first.
+
+`~/.codex/hotl` is the HOTL stable channel. If it drifted onto another branch,
+the updater switches it back to `main`. If it has local changes, the updater
+backs them up under `~/.codex/backups/hotl/<timestamp>/` and then resets the
+stable install to the latest `origin/main`.
+
+Use `bash ~/.codex/hotl/update.sh --force-codex` only when you want to discard
+local Codex changes without creating that backup.
 
 Restart Codex after updating so it re-discovers the latest skill files.
 

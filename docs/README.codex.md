@@ -100,11 +100,24 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 ## Updating
 
 ```bash
-bash ~/.codex/hotl/update.sh
+curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
 ```
 
-If the install drifted onto another branch, the updater switches it back to the
-stable `main` branch before pulling the latest HOTL skills.
+This is the recommended Codex update path because it fetches the latest updater
+script first, then refreshes the stable install at `~/.codex/hotl`.
+
+If `~/.codex/hotl` drifted onto another branch, the updater switches it back to
+the stable `main` branch before syncing.
+If it finds local changes in the Codex install, it saves a snapshot under
+`~/.codex/backups/hotl/<timestamp>/` and then resets the stable install to the
+latest `origin/main`.
+
+If you intentionally want to discard local Codex changes without saving that
+backup, run:
+
+```bash
+bash ~/.codex/hotl/update.sh --force-codex
+```
 
 To check if an update is available without updating:
 

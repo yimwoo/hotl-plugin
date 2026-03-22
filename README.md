@@ -55,6 +55,7 @@ Then restart Codex. Full instructions: [`.codex/INSTALL.md`](.codex/INSTALL.md)
 
 `~/.codex/hotl` is the HOTL stable channel and should track `origin/main`.
 Codex discovers skills from `~/.agents/skills/hotl`. In Codex, you can either describe the task in natural language and let HOTL route it, or explicitly mention a skill such as `$brainstorming`. In the app UI, these may appear as title-cased names like `Brainstorming`.
+Treat `~/.codex/hotl` as an installed runtime, not a development clone. If you want to hack on HOTL itself, do that in a separate repo checkout or worktree.
 
 ### Cline
 
@@ -74,17 +75,23 @@ git clone https://github.com/yimwoo/hotl-plugin && cd hotl-plugin && bash instal
 
 ## Update
 
+Recommended, especially for Codex:
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
 ```
 
-Or from a local clone:
+That always downloads the latest updater first, then refreshes any installed HOTL environments.
+
+If you already have a fresh local clone of this repo, you can also run:
 
 ```bash
 bash update.sh
 ```
 
 Covers Claude Code, Codex, and Cline — skips any tool that isn't installed.
+For Codex, the updater treats `~/.codex/hotl` as the stable channel: it switches back to `main` if needed, and if it finds local changes it snapshots them under `~/.codex/backups/hotl/<timestamp>/` before resetting to the latest `origin/main`.
+Use `--force-codex` only if you want to discard local Codex changes without creating that backup.
 Restart Codex after updating so it re-discovers the latest skills.
 
 ### Update Notifications

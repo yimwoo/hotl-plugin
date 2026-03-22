@@ -38,14 +38,40 @@ case "$cmd" in
             exit 0
         fi
         ;;
+    status)
+        if [ "${1:-}" = "--short" ] || [ "${1:-}" = "--porcelain" ]; then
+            if [ -f "$dirty_file" ]; then
+                printf ' M README.md\n'
+            fi
+            if [ "${2:-}" = "--branch" ] || [ "${3:-}" = "--branch" ]; then
+                printf '## %s\n' "$(cat "$branch_file")"
+            fi
+            exit 0
+        fi
+        ;;
     diff)
         if [ "${1:-}" = "--quiet" ] || { [ "${1:-}" = "--cached" ] && [ "${2:-}" = "--quiet" ]; }; then
             [ ! -f "$dirty_file" ]
             exit $?
         fi
         ;;
+    fetch)
+        echo "fetch $repo ${1:-} ${2:-}" >> "$LOG_FILE"
+        exit 0
+        ;;
     pull)
         echo "pull $repo" >> "$LOG_FILE"
+        exit 0
+        ;;
+    reset)
+        if [ "${1:-}" = "--hard" ]; then
+            rm -f "$dirty_file"
+            echo "reset $repo ${2:-}" >> "$LOG_FILE"
+            exit 0
+        fi
+        ;;
+    clean)
+        echo "clean $repo $*" >> "$LOG_FILE"
         exit 0
         ;;
     switch)
@@ -75,6 +101,13 @@ make_fake_codex_install() {
     printf '%s\n' "$branch_name" > "$target_dir/.fake_branch"
     ln -s "$target_dir" "$home_dir/.codex/hotl"
     ln -s "$home_dir/.codex/hotl/skills" "$home_dir/.agents/skills/hotl"
+}
+
+mark_fake_codex_dirty() {
+    local target_dir="$1"
+
+    : > "$target_dir/.fake_dirty"
+    printf 'local change\n' > "$target_dir/README.md"
 }
 
 assert_codex_prompt_resolves() {
@@ -485,7 +518,8 @@ print(match.group(1) if match else '')
     [ "$status" -eq 0 ]
     [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
     [[ "$output" == *"Codex plugin updated."* ]]
-    grep -q "pull ${tmp_home}/.codex/hotl" "$fake_log"
+    grep -q "fetch ${tmp_home}/.codex/hotl origin main" "$fake_log"
+    grep -q "reset ${tmp_home}/.codex/hotl origin/main" "$fake_log"
 }
 
 @test "update.sh switches Codex back to main on a clean non-main branch" {
@@ -504,10 +538,33 @@ print(match.group(1) if match else '')
     [[ "$output" == *"Codex install is on branch feature/hotl-test; switching back to stable branch main."* ]]
     [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
     grep -q "switch ${tmp_home}/.codex/hotl main" "$fake_log"
-    grep -q "pull ${tmp_home}/.codex/hotl" "$fake_log"
+    grep -q "fetch ${tmp_home}/.codex/hotl origin main" "$fake_log"
+    grep -q "reset ${tmp_home}/.codex/hotl origin/main" "$fake_log"
 }
 
-@test "update.sh still accepts --force-codex while returning Codex to main" {
+@test "update.sh backs up dirty Codex installs before resetting to stable main" {
+    tmp_home="$(mktemp -d)"
+    fake_bin="$tmp_home/bin"
+    fake_log="$tmp_home/git.log"
+    codex_target="$tmp_home/codex-worktree"
+
+    : > "$fake_log"
+    make_fake_git "$fake_bin" "$fake_log"
+    make_fake_codex_install "$tmp_home" "$codex_target" "main"
+    mark_fake_codex_dirty "$codex_target"
+
+    run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh"
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Codex install has local changes; backed them up to ${tmp_home}/.codex/backups/hotl/"* ]]
+    [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
+    grep -q "fetch ${tmp_home}/.codex/hotl origin main" "$fake_log"
+    grep -q "reset ${tmp_home}/.codex/hotl origin/main" "$fake_log"
+    [ -d "$tmp_home/.codex/backups/hotl" ]
+    [ "$(find "$tmp_home/.codex/backups/hotl" -path '*/worktree/README.md' | wc -l | tr -d ' ')" -ge 1 ]
+}
+
+@test "update.sh --force-codex resets dirty Codex installs without creating a backup" {
     tmp_home="$(mktemp -d)"
     fake_bin="$tmp_home/bin"
     fake_log="$tmp_home/git.log"
@@ -516,14 +573,17 @@ print(match.group(1) if match else '')
     : > "$fake_log"
     make_fake_git "$fake_bin" "$fake_log"
     make_fake_codex_install "$tmp_home" "$codex_target" "feature/hotl-test"
+    mark_fake_codex_dirty "$codex_target"
 
     run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh" --force-codex
 
     [ "$status" -eq 0 ]
+    [[ "$output" == *"--force-codex set, skipping backup and resetting to origin/main."* ]]
     [[ "$output" == *"switching back to stable branch main."* ]]
-    [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
     grep -q "switch ${tmp_home}/.codex/hotl main" "$fake_log"
-    grep -q "pull ${tmp_home}/.codex/hotl" "$fake_log"
+    grep -q "fetch ${tmp_home}/.codex/hotl origin main" "$fake_log"
+    grep -q "reset ${tmp_home}/.codex/hotl origin/main" "$fake_log"
+    [ ! -d "$tmp_home/.codex/backups/hotl" ]
 }
 
 @test "update.sh reminds Codex users to restart after an update" {

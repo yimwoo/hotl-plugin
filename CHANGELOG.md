@@ -2,6 +2,18 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.7.1] - 2026-03-22
+
+### Fixed
+- Codex updater no longer skips stable installs that have local drift or incidental edits. It now snapshots local changes under `~/.codex/backups/hotl/<timestamp>/`, returns the install to `origin/main`, and refreshes the discovered HOTL skills.
+- `--force-codex` now has real behavior: discard local Codex install drift without creating a backup, then reset to the latest stable `main`.
+- `update.sh` is now `shellcheck` clean.
+
+### Changed
+- Codex update docs now recommend the remote updater command so users always fetch the latest updater script before refreshing installed HOTL environments.
+- README and Codex install docs now explicitly describe `~/.codex/hotl` as a stable runtime install, not a development clone.
+- Smoke coverage now verifies clean updates, branch drift recovery, dirty-install backup behavior, and forced Codex resets.
+
 ## [2.7.0] - 2026-03-22
 
 ### Added
