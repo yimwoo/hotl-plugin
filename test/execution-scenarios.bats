@@ -47,6 +47,11 @@ setup() {
     grep -qi "auto.approve\|Auto-approved" "$LOOP_SKILL"
 }
 
+@test "scenario 02: loop-execution records gate mode for auto and human approvals" {
+    grep -q "approved --mode auto" "$LOOP_SKILL"
+    grep -q "approved --mode human" "$LOOP_SKILL"
+}
+
 @test "scenario 02: behavioral spec exists" {
     [ -f "$SCENARIOS/02-gate-handling.md" ]
 }

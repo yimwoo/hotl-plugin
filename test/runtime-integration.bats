@@ -100,9 +100,10 @@ teardown() {
 
     "$HOTL_RT" step 1 start
     "$HOTL_RT" step 1 verify
-    "$HOTL_RT" gate 1 approved
+    "$HOTL_RT" gate 1 approved --mode auto
 
     [ "$(jq -r '.steps[0].gate_result' "$STATE")" = "approved" ]
+    [ "$(jq -r '.steps[0].gate_mode' "$STATE")" = "auto" ]
     grep -q 'Gate Step 1: approved' "$REPORT"
 
     # Complete remaining steps and finalize
@@ -116,6 +117,7 @@ teardown() {
     [ "$(echo "$SUMMARY" | jq -r '.steps[0].status')" = "done" ]
     [ "$(echo "$SUMMARY" | jq -r '.steps[0].attempts')" = "1" ]
     [ "$(echo "$SUMMARY" | jq -r '.steps[0].gate_result')" = "approved" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[0].gate_mode')" = "auto" ]
 }
 
 # ── Summary mid-run: read-only query during execution ───────────────────────

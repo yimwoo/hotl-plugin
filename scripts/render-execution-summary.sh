@@ -27,12 +27,19 @@ summary_json="${3:-}"
 
 normalize_status() {
     local step_json="$1"
-    local gate_result status
+    local gate_result gate_mode status
     gate_result=$(echo "$step_json" | jq -r '.gate_result // "null"')
+    gate_mode=$(echo "$step_json" | jq -r '.gate_mode // "null"')
     status=$(echo "$step_json" | jq -r '.status // "pending"')
 
     case "$gate_result" in
-        approved) echo "Approved" ;;
+        approved)
+            if [ "$gate_mode" = "auto" ]; then
+                echo "Auto-approved"
+            else
+                echo "Approved"
+            fi
+            ;;
         rejected) echo "Rejected" ;;
         *)
             case "$status" in
@@ -92,6 +99,14 @@ table_iterations() {
     echo "$attempts"
 }
 
+sanitize_inline_text() {
+    printf '%s' "$1" | tr '\n' ' '
+}
+
+sanitize_table_cell() {
+    sanitize_inline_text "$1" | sed 's/\\/\\\\/g; s/|/\\|/g'
+}
+
 emit_codex() {
     echo "Execution Summary"
     echo ""
@@ -100,6 +115,7 @@ emit_codex() {
         local number name normalized symbol attempts
         number=$(echo "$step_json" | jq -r '.number')
         name=$(echo "$step_json" | jq -r '.name')
+        name=$(sanitize_inline_text "$name")
         normalized=$(normalize_status "$step_json")
         symbol=$(status_symbol "$normalized")
         attempts=$(attempt_text "$step_json")
@@ -116,6 +132,7 @@ emit_table() {
         local number name normalized symbol iterations
         number=$(echo "$step_json" | jq -r '.number')
         name=$(echo "$step_json" | jq -r '.name')
+        name=$(sanitize_table_cell "$name")
         normalized=$(normalize_status "$step_json")
         symbol=$(status_symbol "$normalized")
         iterations=$(table_iterations "$step_json")

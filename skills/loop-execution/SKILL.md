@@ -120,24 +120,24 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
              Report: "Step N reached max iterations ([max]). [condition] not met."
              Show last verify output. Wait for human guidance.
 
-   h. On step completion (verify passed):
+      h. On step completion (verify passed):
       - The runtime has already persisted the done status
       - Update the workflow checkbox to [x]
       - Only after the runtime confirms success should chat show "✓ Step N"
 
    i. If gate: human
       → if auto_approve: true AND risk_level != high:
-          Run: `hotl-rt gate N approved`
+          Run: `hotl-rt gate N approved --mode auto`
           log "⚡ Auto-approved: Step N gate (risk: [risk_level])"
           continue
       → else:
           PAUSE. Show summary of what was done in this step.
           Ask: "Gate reached at Step N. Continue? (yes/no/show-details)"
           Wait for human response.
-          Run: `hotl-rt gate N approved` or `hotl-rt gate N rejected`
+          Run: `hotl-rt gate N approved --mode human` or `hotl-rt gate N rejected --mode human`
 
    j. If gate: auto
-      → Run: `hotl-rt gate N approved`
+      → Run: `hotl-rt gate N approved --mode auto`
       → always continue, log "⚡ Auto-approved: Step N gate"
 
 6. All steps complete:

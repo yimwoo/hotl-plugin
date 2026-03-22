@@ -240,14 +240,14 @@ parse_verify_item_json() {
 parse_verify_block_json() {
     local block="$1"
 
-    if echo "$block" | grep -Eq '^[[:space:]]*-[[:space:]]*type:'; then
+    if echo "$block" | grep -Eq '^[[:space:]]*-[[:space:]]+'; then
         local checks_json="["
         local current_item=""
         local item_json=""
         local first=1
 
         while IFS= read -r vline; do
-            if echo "$vline" | grep -Eq '^[[:space:]]*-[[:space:]]*type:'; then
+            if echo "$vline" | grep -Eq '^[[:space:]]*-[[:space:]]+'; then
                 if [ -n "$current_item" ]; then
                     item_json=$(parse_verify_item_json "$current_item")
                     if [ "$first" -eq 1 ]; then
@@ -347,6 +347,10 @@ run_single_verify_check() {
                     return 1
                     ;;
                 contains)
+                    if [ -z "$assert_value" ] || [ "$assert_value" = "null" ]; then
+                        VERIFY_BLOCK_REASON="artifact assert kind contains requires value"
+                        return 200
+                    fi
                     if [ ! -f "$path" ]; then
                         VERIFY_STDERR="artifact missing: $path"
                         return 1
@@ -359,6 +363,10 @@ run_single_verify_check() {
                     return 1
                     ;;
                 matches-glob)
+                    if [ -z "$assert_value" ] || [ "$assert_value" = "null" ]; then
+                        VERIFY_BLOCK_REASON="artifact assert kind matches-glob requires value"
+                        return 200
+                    fi
                     if [ ! -d "$path" ]; then
                         VERIFY_STDERR="artifact directory missing: $path"
                         return 1
@@ -559,6 +567,7 @@ cmd_init() {
       \"verify\": ${verify_json},
       \"gate\": $([ "$gate_val" = "null" ] && echo "null" || echo "\"$gate_val\""),
       \"gate_result\": null,
+      \"gate_mode\": null,
       \"block_reason\": null
     }"
     done
@@ -948,7 +957,7 @@ cmd_step() {
 
 cmd_gate() {
     if [ $# -lt 2 ]; then
-        echo "usage: hotl-rt gate <step-number> <approved|rejected>" >&2
+        echo "usage: hotl-rt gate <step-number> <approved|rejected> [--mode auto|human]" >&2
         exit 1
     fi
 
@@ -956,9 +965,29 @@ cmd_gate() {
 
     local step_num="$1"
     local decision="$2"
+    shift 2
+    local gate_mode="human"
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --mode)
+                gate_mode="$2"
+                shift 2
+                ;;
+            *)
+                echo "ERROR: Unknown option for gate: $1" >&2
+                exit 1
+                ;;
+        esac
+    done
 
     if [ "$decision" != "approved" ] && [ "$decision" != "rejected" ]; then
         echo "ERROR: Gate decision must be 'approved' or 'rejected', got: $decision" >&2
+        exit 1
+    fi
+
+    if [ "$gate_mode" != "auto" ] && [ "$gate_mode" != "human" ]; then
+        echo "ERROR: Gate mode must be 'auto' or 'human', got: $gate_mode" >&2
         exit 1
     fi
 
@@ -975,24 +1004,29 @@ cmd_gate() {
     step_name=$(jq -r ".steps[$((step_num - 1))].name" "$state_file")
 
     local updated
-    updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" '
+    updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" --arg gate_mode "$gate_mode" '
         .last_update = $ts |
-        .steps[$num - 1].gate_result = $decision
+        .steps[$num - 1].gate_result = $decision |
+        .steps[$num - 1].gate_mode = $gate_mode
     ' "$state_file")
     state_write "$state_file" "$updated"
 
     local status_text
     if [ "$decision" = "approved" ]; then
-        status_text="✓ Approved"
+        if [ "$gate_mode" = "auto" ]; then
+            status_text="⚡ Auto-approved"
+        else
+            status_text="✓ Approved"
+        fi
     else
         status_text="✗ Rejected"
     fi
 
     report_update_step_row "$report" "$step_num" "$status_text" "-"
     report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
-    report_append_event "$report" "**[$time_short]** Gate Step $step_num: $decision"
+    report_append_event "$report" "**[$time_short]** Gate Step $step_num: $decision (${gate_mode})"
 
-    echo "gate $step_num: $decision"
+    echo "gate $step_num: $decision (${gate_mode})"
 }
 
 cmd_finalize() {
@@ -1050,6 +1084,7 @@ cmd_finalize() {
             attempts: .attempts,
             verify_passed: .verify.passed,
             gate_result: .gate_result,
+            gate_mode: .gate_mode,
             block_reason: .block_reason
         }]
     }' "$state_file")
@@ -1094,6 +1129,7 @@ cmd_summary() {
             attempts: .attempts,
             verify_passed: .verify.passed,
             gate_result: .gate_result,
+            gate_mode: .gate_mode,
             block_reason: .block_reason
         }]
     }' "$state_file"
@@ -1111,7 +1147,8 @@ commands:
   step <N> verify                       Run verify command, auto-transition to done/fail
   step <N> retry                        Reset failed step to in-progress for retry
   step <N> block --reason "..."         Mark step as blocked with reason
-  gate <N> <approved|rejected>          Record gate decision
+  gate <N> <approved|rejected> [--mode auto|human]
+                                        Record gate decision
   finalize [--json]                     Finalize run, print summary payload
   summary <run-id> [--json]             Read-only summary for any run
 

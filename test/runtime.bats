@@ -253,6 +253,47 @@ teardown() {
     [ "$(jq -r '.steps[3].verify.passed' "$STATE")" = "true" ]
 }
 
+@test "init preserves multi-check verify items when type is not the first key" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-verify-order-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    [ "$(jq '.steps[1].verify.checks | length' "$STATE")" = "2" ]
+    [ "$(jq -r '.steps[1].verify.checks[0].type' "$STATE")" = "shell" ]
+    [ "$(jq -r '.steps[1].verify.checks[1].type' "$STATE")" = "artifact" ]
+}
+
+@test "step verify blocks artifact contains without assert value" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-artifact-verify-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    mkdir -p artifacts/reports
+    echo "render ok" > artifacts/output.txt
+    echo "# report" > artifacts/reports/summary.md
+
+    jq '.steps[1].verify.assert.value = null' "$STATE" > "${STATE}.tmp" && mv "${STATE}.tmp" "$STATE"
+
+    "$HOTL_RT" step 2 start
+    run "$HOTL_RT" step 2 verify
+    [ "$status" -ne 0 ]
+    [ "$(jq -r '.steps[1].status' "$STATE")" = "blocked" ]
+    [ "$(jq -r '.steps[1].block_reason' "$STATE")" = "artifact assert kind contains requires value" ]
+}
+
+@test "step verify blocks artifact matches-glob without assert value" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-artifact-verify-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    mkdir -p artifacts/reports
+    echo "render ok" > artifacts/output.txt
+    echo "# report" > artifacts/reports/summary.md
+
+    jq '.steps[2].verify.assert.value = null' "$STATE" > "${STATE}.tmp" && mv "${STATE}.tmp" "$STATE"
+
+    "$HOTL_RT" step 3 start
+    run "$HOTL_RT" step 3 verify
+    [ "$status" -ne 0 ]
+    [ "$(jq -r '.steps[2].status' "$STATE")" = "blocked" ]
+    [ "$(jq -r '.steps[2].block_reason' "$STATE")" = "artifact assert kind matches-glob requires value" ]
+}
+
 # ── step retry ──────────────────────────────────────────────────────────────
 
 @test "step retry resets failed step to in_progress" {
@@ -332,6 +373,14 @@ teardown() {
     STATE=".hotl/state/${RUN_ID}.json"
 
     [ "$(jq -r '.steps[0].gate_result' "$STATE")" = "approved" ]
+}
+
+@test "gate records auto approval mode" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    "$HOTL_RT" gate 1 approved --mode auto
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    [ "$(jq -r '.steps[0].gate_mode' "$STATE")" = "auto" ]
 }
 
 @test "gate records rejected decision" {

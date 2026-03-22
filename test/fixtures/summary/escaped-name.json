@@ -1,0 +1,24 @@
+{
+  "run_id": "escaped-name-20260322T000000Z",
+  "workflow_path": "hotl-workflow-escaped-name.md",
+  "intent": "Validate escaping for markdown table cells",
+  "status": "completed",
+  "started_at": "2026-03-22T00:00:00+00:00",
+  "completed_at": "2026-03-22T00:01:00+00:00",
+  "total_steps": 1,
+  "completed_steps": 1,
+  "failed_steps": 0,
+  "blocked_steps": 0,
+  "steps": [
+    {
+      "number": 1,
+      "name": "Render pipe | name",
+      "status": "done",
+      "attempts": 1,
+      "verify_passed": true,
+      "gate_result": null,
+      "gate_mode": null,
+      "block_reason": null
+    }
+  ]
+}

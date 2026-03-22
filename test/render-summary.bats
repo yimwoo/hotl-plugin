@@ -21,6 +21,10 @@ render_and_compare() {
     render_and_compare "happy-gate" "codex" "codex.txt"
 }
 
+@test "codex renderer preserves auto-approved gate status" {
+    render_and_compare "auto-gate" "codex" "codex.txt"
+}
+
 @test "codex renderer matches retry fixture" {
     render_and_compare "retry-pass" "codex" "codex.txt"
 }
@@ -35,4 +39,8 @@ render_and_compare() {
 
 @test "cline renderer matches table fixture" {
     render_and_compare "mixed-outcomes" "cline" "table.txt"
+}
+
+@test "table renderer escapes markdown delimiters in step names" {
+    render_and_compare "escaped-name" "claude" "table.txt"
 }

@@ -1,0 +1,34 @@
+{
+  "run_id": "auto-gate-20260322T000000Z",
+  "workflow_path": "hotl-workflow-auto-gate.md",
+  "intent": "Validate summary rendering for auto-approved gates",
+  "status": "completed",
+  "started_at": "2026-03-22T00:00:00+00:00",
+  "completed_at": "2026-03-22T00:01:00+00:00",
+  "total_steps": 2,
+  "completed_steps": 2,
+  "failed_steps": 0,
+  "blocked_steps": 0,
+  "steps": [
+    {
+      "number": 1,
+      "name": "Prepare final summary",
+      "status": "done",
+      "attempts": 1,
+      "verify_passed": true,
+      "gate_result": null,
+      "gate_mode": null,
+      "block_reason": null
+    },
+    {
+      "number": 2,
+      "name": "Auto gate for low-risk review",
+      "status": "done",
+      "attempts": 1,
+      "verify_passed": true,
+      "gate_result": "approved",
+      "gate_mode": "auto",
+      "block_reason": null
+    }
+  ]
+}
