@@ -95,7 +95,24 @@ Loop execution with explicit human checkpoints every 3 steps. You review progres
 
 Loop execution with a delegated step runner. The controller stays in the current session and keeps governance, verification, and stop conditions. Eligible implementation steps are delegated to fresh subagents. Requires platform support for subagents (Claude Code, Codex).
 
-## 6. Verify Before Completion
+## 6. Code Review at Checkpoints
+
+HOTL embeds code review into execution as a first-class lifecycle stage — not a post-hoc check.
+
+**How it works:**
+- Executors invoke `requesting-code-review` at defined checkpoints (batch boundaries, pre-completion) with structured context: git range, HOTL contracts, and verification evidence
+- The `code-reviewer` agent produces findings with file:line references, severity (BLOCK/WARN/NOTE), and fix direction
+- Findings are handled via `receiving-code-review`: verify each claim against the codebase and contracts before acting
+
+**Core rule:** Review feedback is input to evaluate, not instructions to obey. Each finding goes through Verify → Evaluate → Respond → Implement before any change is made.
+
+**Verdict model:**
+- Checkpoint reviews: PROCEED / PROCEED WITH WARNINGS / HOLD
+- Final reviews: READY / READY WITH WARNINGS / NOT READY
+
+BLOCK issues must be resolved before proceeding past a review checkpoint.
+
+## 7. Verify Before Completion
 
 HOTL does not treat "should work" as done. It requires real evidence:
 
