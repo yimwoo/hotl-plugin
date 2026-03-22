@@ -142,10 +142,10 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
 
 6. All steps complete:
    → Run review checkpoint (see Review Checkpoints below)
+   → Invoke hotl:verification-before-completion skill
    → Run: `hotl-rt finalize --json`
    → Render the summary payload with the deterministic renderer: `scripts/render-execution-summary.sh --platform <codex|claude|cline> <summary-json-file>`
    → Never freehand the final summary when the renderer is available
-   → Invoke hotl:verification-before-completion skill
 ```
 
 ## Execution State Persistence

@@ -97,7 +97,7 @@ To resume an interrupted executing-plans run, use `/hotl:resume`.
    - On gate: `hotl-rt gate N approved|rejected`
 5. After each batch: run review checkpoint (see below), then show what was done, ask "Continue to next batch?"
 6. On failure: stop and report — never silently skip a failed step
-7. When complete: run final review checkpoint (see below), then `hotl-rt finalize --json`, render the final summary via `scripts/render-execution-summary.sh`, invoke `hotl:verification-before-completion`
+7. When complete: run final review checkpoint (see below), invoke `hotl:verification-before-completion`, then `hotl-rt finalize --json`, render the final summary via `scripts/render-execution-summary.sh`
 
 ## Review Checkpoints
 

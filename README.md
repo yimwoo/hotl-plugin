@@ -128,13 +128,13 @@ HOTL doesn't force ceremony on every task. It routes by intent:
 
 ## The HOTL Workflow
 
-Implementation tasks (new features, refactors, significant changes) follow six phases:
+Implementation tasks (new features, refactors, significant changes) follow seven phases:
 
 | Phase | What happens |
 | --- | --- |
 | **Brainstorm** | Clarify requirements. Compare approaches. Define intent, verification, and governance contracts. |
 | **Plan** | Generate a `hotl-workflow-<slug>.md` with steps, typed verification, loop conditions, and gates. |
-| **Review** | Self-check built into planning. Structural lint runs automatically in execution preflight. |
+| **Lint** | Self-check built into planning. Structural lint runs automatically in execution preflight. |
 | **Branch** | Create an isolated git branch (`hotl/<slug>` by default). Dirty repos hard-fail. |
 | **Execute** | Run the plan — choose loop (autonomous), manual (checkpoints), or subagent (delegated) mode. |
 | **Review** | Code review at executor checkpoints — findings verified against the codebase and HOTL contracts before acting. |
