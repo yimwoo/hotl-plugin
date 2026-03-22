@@ -37,7 +37,7 @@ Tell Cline what you need in natural language. HOTL rules teach Cline to follow s
 | "use TDD" | Follows RED-GREEN-REFACTOR — writes a failing test before any implementation code |
 | "debug this" | Systematic 4-phase process: reproduce, understand, hypothesize, fix and verify |
 | "review the workflow" | Runs document lint plus qualitative workflow review before execution |
-| "review the code" | Checklist review: plan alignment, code quality, governance — reports BLOCK/WARN/NOTE issues |
+| "review the code" | Checklist review: plan alignment, code quality, governance — reports BLOCK/WARN/NOTE issues with file:line references |
 
 ## How It Works
 
@@ -53,7 +53,7 @@ Cline reads `~/Documents/Cline/Rules/` for global rules. HOTL installs 10 rule f
 | `hotl-subagent-execution.md` | Execute reviewed plans in-session with delegated subagent steps and controller-owned gates |
 | `hotl-tdd.md` | RED-GREEN-REFACTOR — never write code before a failing test |
 | `hotl-debugging.md` | 4-phase debugging — reproduce, understand, hypothesize, fix |
-| `hotl-code-review.md` | Review against plan with BLOCK/WARN/NOTE severity |
+| `hotl-code-review.md` | Review lifecycle: requesting review at checkpoints, receiving findings via verify-evaluate-respond-implement, BLOCK/WARN/NOTE severity with file:line references |
 | `hotl-pr-review.md` | PR review rendering — follow `docs/contracts/pr-review-output.md` for the 9-section output schema |
 
 Each rule file contains:

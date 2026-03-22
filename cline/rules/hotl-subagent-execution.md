@@ -32,6 +32,10 @@ This is a **delegation profile** over the HOTL execution state machine. Follow t
 - Delegate: contained implementation, test, and localized docs steps
 - Keep controller-owned: security-sensitive, human-gated, and final verification steps
 
+### Review Checkpoints
+
+The controller invokes `requesting-code-review` after meaningful delegated batches (3+ implementation steps, cross-module, or high-risk/user-facing/shared-infra changes) and before final completion. Findings are handled via `receiving-code-review` in the controller — never in a subagent. All BLOCK findings must be resolved before delegating the next batch.
+
 ### Reporting
 
 Follows the same Execution Reporting Contract as `hotl-execution.md` — same final summary table column rules, same verbose progress format, same durable `.hotl/reports/<run-id>.md` artifact.

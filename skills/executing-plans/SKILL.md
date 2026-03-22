@@ -95,9 +95,36 @@ To resume an interrupted executing-plans run, use `/hotl:resume`.
    - `hotl-rt step N verify` to run typed verification
    - On failure: `hotl-rt step N retry` or `hotl-rt step N block --reason "..."`
    - On gate: `hotl-rt gate N approved|rejected`
-5. After each batch: show what was done, ask "Continue to next batch?"
+5. After each batch: run review checkpoint (see below), then show what was done, ask "Continue to next batch?"
 6. On failure: stop and report — never silently skip a failed step
-7. When complete: `hotl-rt finalize --json`, render the final summary via `scripts/render-execution-summary.sh`, invoke `hotl:verification-before-completion`
+7. When complete: run final review checkpoint (see below), then `hotl-rt finalize --json`, render the final summary via `scripts/render-execution-summary.sh`, invoke `hotl:verification-before-completion`
+
+## Review Checkpoints
+
+Record `git rev-parse HEAD` as the review base before starting each batch.
+
+### After Each Batch
+
+After all steps in the batch have passed verification:
+1. Invoke `requesting-code-review` to dispatch the `code-reviewer` agent
+   - Review type: checkpoint
+   - Review base: the recorded pre-batch HEAD
+   - Steps reviewed: the batch step numbers
+2. When findings return, invoke `receiving-code-review`
+   - Follow Verify → Evaluate → Respond → Implement
+3. Resolve all BLOCK findings before proceeding to the next batch
+
+### Before Final Completion
+
+A final review is required unless the most recent review already covers all current changes and no code changed afterward.
+
+1. Invoke `requesting-code-review` with review type: final
+   - Review base: branch point or last review base, whichever is more recent
+2. When findings return, invoke `receiving-code-review`
+3. Resolve all BLOCK findings before finalizing
+4. If fixes after the last review changed scope, constraints, or risk_level, request a scoped follow-up review before completing
+
+Review happens after step verification, before `verification-before-completion`, before `hotl-rt finalize`.
 
 Use this over `loop-execution` when you want explicit human checkpoints at every stage rather than auto-approve.
 

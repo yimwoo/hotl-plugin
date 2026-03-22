@@ -58,6 +58,38 @@ These rules apply regardless of delegation decisions:
 - Final verification and summaries
 - Any step whose failure would require architectural judgment
 
+## Review Checkpoints
+
+Record `git rev-parse HEAD` as the review base before delegating each reviewable batch.
+
+### After Meaningful Delegated Batches
+
+After a meaningful batch of delegated implementation completes and verification passes:
+1. Invoke `requesting-code-review` from the controller (not from a subagent)
+   - Review type: checkpoint
+   - Review base: the recorded pre-batch HEAD
+   - Steps reviewed: all steps completed in this batch
+2. When findings return, invoke `receiving-code-review` in the controller
+   - Follow Verify → Evaluate → Respond → Implement
+3. Resolve all BLOCK findings before delegating the next batch
+
+Review is not required after every single delegated step. The controller decides when a batch is "meaningful" based on:
+- 3+ completed implementation steps
+- Cross-module changes
+- High-risk, user-facing, or shared-infra changes
+
+### Before Final Completion
+
+A final review is required unless the most recent review already covers all current changes and no code changed afterward.
+
+1. Invoke `requesting-code-review` with review type: final
+   - Review base: branch point or last review base, whichever is more recent
+2. When findings return, invoke `receiving-code-review`
+3. Resolve all BLOCK findings before finalizing
+4. If fixes after the last review changed scope, constraints, or risk_level, request a scoped follow-up review before completing
+
+Review happens after step verification, before `verification-before-completion`, before `hotl-rt finalize`.
+
 ## Reporting
 
 Inherits the mandatory Execution Reporting Contract from `skills/loop-execution/SKILL.md` — same platform rendering rules, same live step visibility requirements, same final summary (must be shown), same deterministic renderer path (`scripts/render-execution-summary.sh`), same durable `.hotl/reports/<run-id>.md` artifact.

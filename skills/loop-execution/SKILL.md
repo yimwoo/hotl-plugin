@@ -141,6 +141,7 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
       → always continue, log "⚡ Auto-approved: Step N gate"
 
 6. All steps complete:
+   → Run review checkpoint (see Review Checkpoints below)
    → Run: `hotl-rt finalize --json`
    → Render the summary payload with the deterministic renderer: `scripts/render-execution-summary.sh --platform <codex|claude|cline> <summary-json-file>`
    → Never freehand the final summary when the renderer is available
@@ -238,6 +239,39 @@ The executor must reference the report path in its response:
 - **Chat output** = primary live UX (per-step logs, verbose progress, final summary table)
 - **Markdown report** = durable human-readable record (survives app rendering quirks)
 - **JSON sidecar** = authoritative machine state (resume, tooling, structured queries)
+
+## Review Checkpoints
+
+Record `git rev-parse HEAD` as the review base at run start and after each review.
+
+### At Final Completion
+
+After all steps have passed verification, before `hotl-rt finalize`:
+1. A final review is required unless the most recent review already covers all current changes and no code changed afterward
+2. Invoke `requesting-code-review` with review type: final
+   - Review base: branch point or last review base, whichever is more recent
+3. When findings return, invoke `receiving-code-review`
+   - Follow Verify → Evaluate → Respond → Implement
+4. Resolve all BLOCK findings before finalizing
+5. If fixes after the last review changed scope, constraints, or risk_level, request a scoped follow-up review before completing
+
+### At Intermediate Gates (Conditional)
+
+At intermediate `gate: human` steps, request review only when:
+- risk_level is high
+- The gate covers cross-module or feature-scale changes
+- Multiple steps have completed since the last review
+
+When triggered, scope the review to steps completed since the last review checkpoint, not the entire run. Use review type: checkpoint.
+
+Do not request review at every gate by default.
+
+### Review Ordering
+
+Review happens:
+1. After step verification is complete
+2. Before `verification-before-completion`
+3. Before `hotl-rt finalize` / any "done" claim
 
 ## Safety Rules
 
