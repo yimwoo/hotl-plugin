@@ -142,7 +142,8 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
 
 6. All steps complete:
    → Run: `hotl-rt finalize --json`
-   → Render the summary payload from stdout in platform-appropriate format
+   → Render the summary payload with the deterministic renderer: `scripts/render-execution-summary.sh --platform <codex|claude|cline> <summary-json-file>`
+   → Never freehand the final summary when the renderer is available
    → Invoke hotl:verification-before-completion skill
 ```
 
@@ -290,6 +291,8 @@ Every execution run MUST end with a visible summary in chat. The summary MUST in
 
 **Required information per step:** step number, step name, final status, iteration count.
 
+**Rendering rule:** use the repo-owned deterministic renderer at `scripts/render-execution-summary.sh` for the final summary output. Do not freehand the final summary when the renderer is available. The renderer normalizes gate results before formatting, so `gate_result=approved` renders as `Approved` instead of raw `Done`.
+
 **Platform rendering rules:**
 
 **Claude Code and Cline** — use a markdown table (renders cleanly in terminal):
@@ -323,15 +326,15 @@ Print at the end of execution. Strict column rules:
 ```
 Execution Summary
 
-✓ Step 1: Write failing tests — Done (1 attempt)
-✓ Step 2: Implement auth logic — Done (3 attempts)
-⚡ Step 3: Security review gate — Auto-approved (-)
-✓ Step 4: Run full test suite — Done (65 tests, 1 attempt)
-✓ Step 5: Human review — Approved (1 attempt)
+✓ Step 1: Write failing tests - Done (1 attempt)
+✓ Step 2: Implement auth logic - Done (3 attempts)
+⚡ Step 3: Security review gate - Auto-approved (-)
+✓ Step 4: Run full test suite - Done (65 tests, 1 attempt)
+✓ Step 5: Human review - Approved (1 attempt)
 ```
 
 **Compact list rules:**
-- Step name first, then inline status detail after an em dash
+- Step name first, then inline status detail after ` - `
 - Include status word on every line: `Done`, `Approved`, `Auto-approved`, `Failed`, `Blocked`
 - Include iteration count: `1 attempt` / `N attempts`. For gates: `(-)`
 - Test counts go inside status detail before attempt count: `Done (28/28, 2 attempts)`

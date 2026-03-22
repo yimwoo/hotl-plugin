@@ -1,0 +1,4 @@
+| Step | Name | Status | Iterations |
+|------|------|--------|------------|
+| 1 | Add renderer tests | ✓ Done | 2 |
+| 2 | Update executor guidance | ✓ Done | 1 |

@@ -46,6 +46,9 @@ teardown() {
     [ "$(echo "$SUMMARY" | jq -r '.completed_steps')" = "3" ]
     [ "$(echo "$SUMMARY" | jq -r '.failed_steps')" = "0" ]
     [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "0" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[0].status')" = "done" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[0].attempts')" = "1" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[2].attempts')" = "1" ]
 
     # Report should be finalized
     grep -Fq '**Status:** completed' "$REPORT"
@@ -110,6 +113,8 @@ teardown() {
     SUMMARY=$("$HOTL_RT" finalize --json)
 
     [ "$(echo "$SUMMARY" | jq -r '.status')" = "completed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[0].status')" = "done" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[0].attempts')" = "1" ]
     [ "$(echo "$SUMMARY" | jq -r '.steps[0].gate_result')" = "approved" ]
 }
 
@@ -153,9 +158,42 @@ teardown() {
     [ "$(jq -r '.steps[0].status' "$STATE")" = "done" ]
     [ "$(jq -r '.steps[0].attempts' "$STATE")" = "2" ]
 
+    SUMMARY=$("$HOTL_RT" finalize --json)
+    [ "$(echo "$SUMMARY" | jq -r '.steps[0].status')" = "done" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[0].attempts')" = "2" ]
+
     # Report should show the retry history
     grep -q '↻' "$REPORT"
     grep -q '✓ Done' "$REPORT"
+}
+
+# ── Mixed outcomes in summary payload ──────────────────────────────────────
+
+@test "finalize summary preserves failed and blocked step outcomes" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    "$HOTL_RT" step 1 start
+    "$HOTL_RT" step 1 verify
+
+    jq '.steps[1].verify.command = "false"' "$STATE" > "${STATE}.tmp" && mv "${STATE}.tmp" "$STATE"
+    "$HOTL_RT" step 2 start
+    run "$HOTL_RT" step 2 verify
+    [ "$status" -ne 0 ]
+
+    "$HOTL_RT" step 3 start
+    "$HOTL_RT" step 3 block --reason "manual stop for review"
+
+    SUMMARY=$("$HOTL_RT" finalize --json)
+
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "failed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.completed_steps')" = "1" ]
+    [ "$(echo "$SUMMARY" | jq -r '.failed_steps')" = "1" ]
+    [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "1" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[0].status')" = "done" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[1].status')" = "failed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[2].status')" = "blocked" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[2].block_reason')" = "manual stop for review" ]
 }
 
 # ── Report incremental updates: report is always current ────────────────────

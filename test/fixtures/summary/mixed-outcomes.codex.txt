@@ -1,0 +1,6 @@
+Execution Summary
+
+✓ Step 1: Write fixture loader - Done (1 attempt)
+✗ Step 2: Render Codex summary - Failed (1 attempt)
+✗ Step 3: Publish report artifact - Blocked (2 attempts)
+✗ Step 4: Review gate decision - Rejected (-)

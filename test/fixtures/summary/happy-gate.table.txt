@@ -1,0 +1,5 @@
+| Step | Name | Status | Iterations |
+|------|------|--------|------------|
+| 1 | Write renderer fixtures | ✓ Done | 1 |
+| 2 | Run renderer tests | ✓ Done | 1 |
+| 3 | Review final contract | ✓ Approved | - |

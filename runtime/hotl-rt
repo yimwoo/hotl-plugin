@@ -128,6 +128,318 @@ report_update_step_row() {
     mv "$tmp" "$report"
 }
 
+verify_object_shell() {
+    local cmd="$1"
+    jq -cn --arg cmd "$cmd" '
+        {
+            type: "shell",
+            command: $cmd,
+            passed: null,
+            stdout: null,
+            stderr: null
+        }
+    '
+}
+
+verify_object_browser() {
+    local url="$1"
+    local check="$2"
+    local ref="browser: ${url} - ${check}"
+    jq -cn --arg ref "$ref" --arg url "$url" --arg check "$check" '
+        {
+            type: "browser",
+            command: $ref,
+            url: $url,
+            check: $check,
+            passed: null,
+            stdout: null,
+            stderr: null
+        }
+    '
+}
+
+verify_object_human_review() {
+    local prompt="$1"
+    jq -cn --arg prompt "$prompt" '
+        {
+            type: "human-review",
+            command: null,
+            prompt: $prompt,
+            passed: null,
+            stdout: null,
+            stderr: null
+        }
+    '
+}
+
+verify_object_artifact() {
+    local path="$1"
+    local assert_kind="$2"
+    local assert_value="$3"
+    jq -cn --arg path "$path" --arg kind "$assert_kind" --arg value "$assert_value" '
+        {
+            type: "artifact",
+            command: null,
+            path: $path,
+            assert: {
+                kind: $kind,
+                value: (if $value == "" then null else $value end)
+            },
+            passed: null,
+            stdout: null,
+            stderr: null
+        }
+    '
+}
+
+parse_verify_item_json() {
+    local item_block="$1"
+    local verify_type
+    verify_type=$(echo "$item_block" | { grep -i 'type:' || true; } | sed 's/.*type:[[:space:]]*//' | tr -d ' ' | head -1)
+    [ -z "$verify_type" ] && verify_type="shell"
+
+    case "$verify_type" in
+        shell)
+            local cmd
+            cmd=$(echo "$item_block" | { grep -i 'command:' || true; } | sed 's/.*command:[[:space:]]*//' | head -1)
+            verify_object_shell "$cmd"
+            ;;
+        browser)
+            local url check
+            url=$(echo "$item_block" | { grep -i 'url:' || true; } | sed 's/.*url:[[:space:]]*//' | head -1)
+            check=$(echo "$item_block" | { grep -i 'check:' || true; } | sed 's/.*check:[[:space:]]*//' | head -1)
+            verify_object_browser "$url" "$check"
+            ;;
+        human-review)
+            local prompt
+            prompt=$(echo "$item_block" | { grep -i 'prompt:' || true; } | sed 's/.*prompt:[[:space:]]*//' | head -1)
+            verify_object_human_review "$prompt"
+            ;;
+        artifact)
+            local path assert_kind assert_value
+            path=$(echo "$item_block" | { grep -i 'path:' || true; } | sed 's/.*path:[[:space:]]*//' | head -1)
+            assert_kind=$(echo "$item_block" | { grep -i 'kind:' || true; } | sed 's/.*kind:[[:space:]]*//' | head -1)
+            assert_value=$(echo "$item_block" | { grep -i 'value:' || true; } | sed 's/.*value:[[:space:]]*//' | head -1)
+            assert_value=$(echo "$assert_value" | sed 's/^"//; s/"$//')
+            verify_object_artifact "$path" "$assert_kind" "$assert_value"
+            ;;
+        *)
+            jq -cn --arg type "$verify_type" '
+                {
+                    type: $type,
+                    command: null,
+                    passed: null,
+                    stdout: null,
+                    stderr: null
+                }
+            '
+            ;;
+    esac
+}
+
+parse_verify_block_json() {
+    local block="$1"
+
+    if echo "$block" | grep -Eq '^[[:space:]]*-[[:space:]]*type:'; then
+        local checks_json="["
+        local current_item=""
+        local item_json=""
+        local first=1
+
+        while IFS= read -r vline; do
+            if echo "$vline" | grep -Eq '^[[:space:]]*-[[:space:]]*type:'; then
+                if [ -n "$current_item" ]; then
+                    item_json=$(parse_verify_item_json "$current_item")
+                    if [ "$first" -eq 1 ]; then
+                        checks_json="${checks_json}${item_json}"
+                        first=0
+                    else
+                        checks_json="${checks_json},${item_json}"
+                    fi
+                fi
+                current_item=$(echo "$vline" | sed -E 's/^[[:space:]]*-[[:space:]]*//')
+                current_item="${current_item}
+"
+            else
+                current_item="${current_item}${vline}
+"
+            fi
+        done <<< "$block"
+
+        if [ -n "$current_item" ]; then
+            item_json=$(parse_verify_item_json "$current_item")
+            if [ "$first" -eq 1 ]; then
+                checks_json="${checks_json}${item_json}"
+            else
+                checks_json="${checks_json},${item_json}"
+            fi
+        fi
+
+        checks_json="${checks_json}]"
+        jq -cn --argjson checks "$checks_json" '
+            {
+                type: "multi",
+                command: null,
+                checks: $checks,
+                passed: null,
+                stdout: null,
+                stderr: null
+            }
+        '
+        return
+    fi
+
+    parse_verify_item_json "$block"
+}
+
+VERIFY_STDOUT=""
+VERIFY_STDERR=""
+VERIFY_BLOCK_REASON=""
+
+run_single_verify_check() {
+    local check_json="$1"
+    local verify_type
+    verify_type=$(echo "$check_json" | jq -r '.type // "shell"')
+
+    VERIFY_STDOUT=""
+    VERIFY_STDERR=""
+    VERIFY_BLOCK_REASON=""
+
+    case "$verify_type" in
+        shell)
+            local verify_cmd
+            verify_cmd=$(echo "$check_json" | jq -r '.command // ""')
+
+            if [ -z "$verify_cmd" ]; then
+                return 0
+            fi
+
+            local stdout_file stderr_file exit_code
+            stdout_file=$(mktemp)
+            stderr_file=$(mktemp)
+            exit_code=0
+
+            eval "$verify_cmd" >"$stdout_file" 2>"$stderr_file" || exit_code=$?
+
+            VERIFY_STDOUT=$(cat "$stdout_file" | head -c 4096)
+            VERIFY_STDERR=$(cat "$stderr_file" | head -c 4096)
+            rm -f "$stdout_file" "$stderr_file"
+            return "$exit_code"
+            ;;
+        artifact)
+            local path assert_kind assert_value
+            path=$(echo "$check_json" | jq -r '.path // ""')
+            assert_kind=$(echo "$check_json" | jq -r '.assert.kind // ""')
+            assert_value=$(echo "$check_json" | jq -r '.assert.value // ""')
+
+            if [ -z "$path" ]; then
+                VERIFY_BLOCK_REASON="artifact verify missing path"
+                return 200
+            fi
+
+            case "$assert_kind" in
+                exists)
+                    if [ -e "$path" ]; then
+                        VERIFY_STDOUT="artifact exists: $path"
+                        return 0
+                    fi
+                    VERIFY_STDERR="artifact missing: $path"
+                    return 1
+                    ;;
+                contains)
+                    if [ ! -f "$path" ]; then
+                        VERIFY_STDERR="artifact missing: $path"
+                        return 1
+                    fi
+                    if grep -Fq -- "$assert_value" "$path"; then
+                        VERIFY_STDOUT="artifact contains expected text: $path"
+                        return 0
+                    fi
+                    VERIFY_STDERR="artifact missing expected text in $path"
+                    return 1
+                    ;;
+                matches-glob)
+                    if [ ! -d "$path" ]; then
+                        VERIFY_STDERR="artifact directory missing: $path"
+                        return 1
+                    fi
+                    if find "$path" -maxdepth 1 -type f -name "$assert_value" | grep -q .; then
+                        VERIFY_STDOUT="artifact matches glob: $path/$assert_value"
+                        return 0
+                    fi
+                    VERIFY_STDERR="no artifact matches $assert_value in $path"
+                    return 1
+                    ;;
+                *)
+                    VERIFY_BLOCK_REASON="unsupported artifact assert kind: $assert_kind"
+                    return 200
+                    ;;
+            esac
+            ;;
+        *)
+            VERIFY_BLOCK_REASON="unsupported verify type: $verify_type"
+            return 200
+            ;;
+    esac
+}
+
+run_verify_checks() {
+    local verify_json="$1"
+    local verify_type
+    verify_type=$(echo "$verify_json" | jq -r '.type // "shell"')
+
+    VERIFY_STDOUT=""
+    VERIFY_STDERR=""
+    VERIFY_BLOCK_REASON=""
+
+    if [ "$verify_type" = "multi" ]; then
+        local check_count
+        check_count=$(echo "$verify_json" | jq '.checks | length')
+        local idx
+
+        for idx in $(seq 0 $((check_count - 1))); do
+            local check_json
+            check_json=$(echo "$verify_json" | jq -c ".checks[$idx]")
+            run_single_verify_check "$check_json"
+            local rc=$?
+
+            if [ "$rc" -eq 200 ]; then
+                return 200
+            fi
+
+            if [ -n "$VERIFY_STDOUT" ]; then
+                if [ -n "${VERIFY_COMBINED_STDOUT:-}" ]; then
+                    VERIFY_COMBINED_STDOUT="${VERIFY_COMBINED_STDOUT}
+${VERIFY_STDOUT}"
+                else
+                    VERIFY_COMBINED_STDOUT="$VERIFY_STDOUT"
+                fi
+            fi
+
+            if [ -n "$VERIFY_STDERR" ]; then
+                if [ -n "${VERIFY_COMBINED_STDERR:-}" ]; then
+                    VERIFY_COMBINED_STDERR="${VERIFY_COMBINED_STDERR}
+${VERIFY_STDERR}"
+                else
+                    VERIFY_COMBINED_STDERR="$VERIFY_STDERR"
+                fi
+            fi
+
+            if [ "$rc" -ne 0 ]; then
+                VERIFY_STDOUT="${VERIFY_COMBINED_STDOUT:-}"
+                VERIFY_STDERR="${VERIFY_COMBINED_STDERR:-}"
+                return "$rc"
+            fi
+        done
+
+        VERIFY_STDOUT="${VERIFY_COMBINED_STDOUT:-}"
+        VERIFY_STDERR="${VERIFY_COMBINED_STDERR:-}"
+        return 0
+    fi
+
+    run_single_verify_check "$verify_json"
+}
+
 # ── Subcommands ─────────────────────────────────────────────────────────────
 
 cmd_init() {
@@ -175,8 +487,7 @@ cmd_init() {
     local step_actions=()
     local step_loops=()
     local step_max_iters=()
-    local step_verifies=()
-    local step_verify_types=()
+    local step_verify_jsons=()
     local step_gates=()
 
     local current_step_num=""
@@ -224,16 +535,14 @@ cmd_init() {
     # Build state JSON
     local steps_json="["
     for i in "${!step_numbers[@]}"; do
-        local verify_cmd="${step_verifies[$i]}"
-        local verify_type="${step_verify_types[$i]}"
+        local verify_json="${step_verify_jsons[$i]}"
         local gate_val="${step_gates[$i]}"
         local max_iter="${step_max_iters[$i]}"
 
         # Escape strings for JSON
-        local name_esc action_esc verify_esc
+        local name_esc action_esc
         name_esc=$(echo "${step_names[$i]}" | sed 's/\\/\\\\/g; s/"/\\"/g')
         action_esc=$(echo "${step_actions[$i]}" | sed 's/\\/\\\\/g; s/"/\\"/g')
-        verify_esc=$(echo "$verify_cmd" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
         [ "$i" -gt 0 ] && steps_json="${steps_json},"
         steps_json="${steps_json}
@@ -247,13 +556,7 @@ cmd_init() {
       \"loop\": \"${step_loops[$i]}\",
       \"started_at\": null,
       \"completed_at\": null,
-      \"verify\": {
-        \"command\": \"${verify_esc}\",
-        \"type\": \"${verify_type}\",
-        \"passed\": null,
-        \"stdout\": null,
-        \"stderr\": null
-      },
+      \"verify\": ${verify_json},
       \"gate\": $([ "$gate_val" = "null" ] && echo "null" || echo "\"$gate_val\""),
       \"gate_result\": null,
       \"block_reason\": null
@@ -319,7 +622,9 @@ _parse_step_block() {
     local name="$2"
     local block="$3"
 
-    local action="" loop_val="false" max_iter="3" verify_cmd="" verify_type="shell" gate_val="null"
+    local action="" loop_val="false" max_iter="3" gate_val="null"
+    local verify_json
+    verify_json=$(verify_object_shell "")
 
     action=$(echo "$block" | { grep -i '^action:' || true; } | sed 's/^[Aa]ction:[[:space:]]*//' | head -1)
     loop_val=$(echo "$block" | { grep -i '^loop:' || true; } | sed 's/^[Ll]oop:[[:space:]]*//' | head -1)
@@ -337,10 +642,8 @@ _parse_step_block() {
         vval=$(echo "$verify_line" | sed 's/^[Vv]erify:[[:space:]]*//')
         if [ -n "$vval" ]; then
             # Scalar form — type: shell
-            verify_cmd="$vval"
-            verify_type="shell"
+            verify_json=$(verify_object_shell "$vval")
         else
-            # Structured form — look for type: and command:
             local struct_block=""
             local in_verify=0
             while IFS= read -r vline; do
@@ -361,16 +664,7 @@ _parse_step_block() {
             done <<< "$block"
 
             if [ -n "$struct_block" ]; then
-                verify_type=$(echo "$struct_block" | { grep -i 'type:' || true; } | sed 's/.*type:[[:space:]]*//' | tr -d ' ' | head -1)
-                [ -z "$verify_type" ] && verify_type="shell"
-                verify_cmd=$(echo "$struct_block" | { grep -i 'command:' || true; } | sed 's/.*command:[[:space:]]*//' | head -1)
-                # For browser type, use url+check as the "command" for reference
-                if [ "$verify_type" = "browser" ]; then
-                    local url check
-                    url=$(echo "$struct_block" | { grep -i 'url:' || true; } | sed 's/.*url:[[:space:]]*//' | head -1)
-                    check=$(echo "$struct_block" | { grep -i 'check:' || true; } | sed 's/.*check:[[:space:]]*//' | head -1)
-                    verify_cmd="browser: ${url} — ${check}"
-                fi
+                verify_json=$(parse_verify_block_json "$struct_block")
             fi
         fi
     fi
@@ -384,8 +678,7 @@ _parse_step_block() {
     step_actions+=("$action")
     step_loops+=("$loop_val")
     step_max_iters+=("$max_iter")
-    step_verifies+=("$verify_cmd")
-    step_verify_types+=("$verify_type")
+    step_verify_jsons+=("$verify_json")
     step_gates+=("$gate_val")
 }
 
@@ -445,32 +738,15 @@ cmd_step() {
             ;;
 
         verify)
-            local verify_type verify_cmd step_name
+            local verify_type verify_cmd step_name verify_json
             verify_type=$(jq -r ".steps[$((step_num - 1))].verify.type" "$state_file")
             verify_cmd=$(jq -r ".steps[$((step_num - 1))].verify.command" "$state_file")
+            verify_json=$(jq -c ".steps[$((step_num - 1))].verify" "$state_file")
             step_name=$(jq -r ".steps[$((step_num - 1))].name" "$state_file")
 
-            # Check for unsupported verify type
-            if [ "$verify_type" != "shell" ] && [ "$verify_type" != "null" ] && [ -n "$verify_type" ]; then
+            # No verify configuration — auto-pass
+            if [ -z "$verify_json" ] || [ "$verify_json" = "null" ]; then
                 # Block with unsupported type
-                local updated
-                updated=$(jq --arg ts "$ts" --arg reason "unsupported verify type: $verify_type" --argjson num "$step_num" '
-                    .last_update = $ts |
-                    .steps[$num - 1].status = "blocked" |
-                    .steps[$num - 1].block_reason = $reason
-                ' "$state_file")
-                state_write "$state_file" "$updated"
-
-                report_update_step_row "$report" "$step_num" "✗ Blocked" "-"
-                report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
-                report_append_event "$report" "**[$time_short]** ✗ Step $step_num: Blocked (unsupported verify type: $verify_type)"
-
-                echo "blocked: unsupported verify type: $verify_type"
-                exit 1
-            fi
-
-            if [ -z "$verify_cmd" ] || [ "$verify_cmd" = "null" ]; then
-                # No verify command — auto-pass
                 local updated
                 updated=$(jq --arg ts "$ts" --argjson num "$step_num" '
                     .last_update = $ts |
@@ -490,18 +766,56 @@ cmd_step() {
                 exit 0
             fi
 
-            # Run the verify command
-            local stdout_file stderr_file
-            stdout_file=$(mktemp)
-            stderr_file=$(mktemp)
-            local exit_code=0
+            if [ -z "$verify_cmd" ] || [ "$verify_cmd" = "null" ]; then
+                if [ "$verify_type" = "shell" ]; then
+                    # No verify command — auto-pass
+                    local updated
+                    updated=$(jq --arg ts "$ts" --argjson num "$step_num" '
+                        .last_update = $ts |
+                        .steps[$num - 1].status = "done" |
+                        .steps[$num - 1].completed_at = $ts |
+                        .steps[$num - 1].verify.passed = true
+                    ' "$state_file")
+                    state_write "$state_file" "$updated"
 
-            eval "$verify_cmd" >"$stdout_file" 2>"$stderr_file" || exit_code=$?
+                    local attempts
+                    attempts=$(echo "$updated" | jq -r ".steps[$((step_num - 1))].attempts")
+                    report_update_step_row "$report" "$step_num" "✓ Done" "$attempts"
+                    report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+                    report_append_event "$report" "**[$time_short]** ✓ Step $step_num: Done (no verify, $attempts attempt(s))"
+
+                    echo "pass (no verify command)"
+                    exit 0
+                fi
+            fi
+
+            VERIFY_COMBINED_STDOUT=""
+            VERIFY_COMBINED_STDERR=""
+            set +e
+            run_verify_checks "$verify_json"
+            local exit_code=$?
+            set -e
+
+            if [ "$exit_code" -eq 200 ]; then
+                local updated
+                updated=$(jq --arg ts "$ts" --arg reason "$VERIFY_BLOCK_REASON" --argjson num "$step_num" '
+                    .last_update = $ts |
+                    .steps[$num - 1].status = "blocked" |
+                    .steps[$num - 1].block_reason = $reason
+                ' "$state_file")
+                state_write "$state_file" "$updated"
+
+                report_update_step_row "$report" "$step_num" "✗ Blocked" "-"
+                report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+                report_append_event "$report" "**[$time_short]** ✗ Step $step_num: Blocked ($VERIFY_BLOCK_REASON)"
+
+                echo "blocked: $VERIFY_BLOCK_REASON"
+                exit 1
+            fi
 
             local stdout_content stderr_content
-            stdout_content=$(cat "$stdout_file" | head -c 4096)
-            stderr_content=$(cat "$stderr_file" | head -c 4096)
-            rm -f "$stdout_file" "$stderr_file"
+            stdout_content="${VERIFY_STDOUT:-}"
+            stderr_content="${VERIFY_STDERR:-}"
 
             # Escape for JSON
             local stdout_esc stderr_esc
@@ -529,34 +843,35 @@ cmd_step() {
                 report_append_event "$report" "**[$time_short]** ✓ Step $step_num: Done ($attempts attempt(s))"
 
                 echo "pass"
-            else
-                # FAIL — transition to failed
-                local updated
-                updated=$(jq --arg ts "$ts" --argjson num "$step_num" \
-                    --argjson stdout "$stdout_esc" --argjson stderr "$stderr_esc" '
-                    .last_update = $ts |
-                    .steps[$num - 1].status = "failed" |
-                    .steps[$num - 1].verify.passed = false |
-                    .steps[$num - 1].verify.stdout = $stdout |
-                    .steps[$num - 1].verify.stderr = $stderr
-                ' "$state_file")
-                state_write "$state_file" "$updated"
-
-                local attempts
-                attempts=$(echo "$updated" | jq -r ".steps[$((step_num - 1))].attempts")
-                report_update_step_row "$report" "$step_num" "✗ Failed" "$attempts"
-                report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
-                report_append_event "$report" "**[$time_short]** ✗ Step $step_num: Failed ($attempts attempt(s))"
-                if [ -n "$stderr_content" ]; then
-                    report_append_event "$report" "  verify stderr: $stderr_content"
-                fi
-                if [ -n "$stdout_content" ]; then
-                    report_append_event "$report" "  verify stdout: $stdout_content"
-                fi
-
-                echo "fail"
-                exit 1
+                exit 0
             fi
+
+            # FAIL — transition to failed
+            local updated
+            updated=$(jq --arg ts "$ts" --argjson num "$step_num" \
+                --argjson stdout "$stdout_esc" --argjson stderr "$stderr_esc" '
+                .last_update = $ts |
+                .steps[$num - 1].status = "failed" |
+                .steps[$num - 1].verify.passed = false |
+                .steps[$num - 1].verify.stdout = $stdout |
+                .steps[$num - 1].verify.stderr = $stderr
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+
+            local attempts
+            attempts=$(echo "$updated" | jq -r ".steps[$((step_num - 1))].attempts")
+            report_update_step_row "$report" "$step_num" "✗ Failed" "$attempts"
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            report_append_event "$report" "**[$time_short]** ✗ Step $step_num: Failed ($attempts attempt(s))"
+            if [ -n "$stderr_content" ]; then
+                report_append_event "$report" "  verify stderr: $stderr_content"
+            fi
+            if [ -n "$stdout_content" ]; then
+                report_append_event "$report" "  verify stdout: $stdout_content"
+            fi
+
+            echo "fail"
+            exit 1
             ;;
 
         retry)

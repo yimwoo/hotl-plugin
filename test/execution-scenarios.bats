@@ -149,6 +149,21 @@ setup() {
     grep -qi "MUST use the native" "$LOOP_SKILL"
 }
 
+# ── Scenario 6: Deterministic final summary rendering ──────────────────────
+
+@test "scenario 06: renderer script exists" {
+    [ -x "$REPO_ROOT/scripts/render-execution-summary.sh" ]
+}
+
+@test "scenario 06: loop-execution requires deterministic summary renderer" {
+    grep -q "scripts/render-execution-summary.sh" "$LOOP_SKILL"
+    grep -qi "Do not freehand the final summary" "$LOOP_SKILL"
+}
+
+@test "scenario 06: behavioral spec exists" {
+    [ -f "$SCENARIOS/06-codex-summary-rendering.md" ]
+}
+
 # ── Executor inheritance ─────────────────────────────────────────────────────
 
 @test "executing-plans references canonical reporting contract from loop-execution" {

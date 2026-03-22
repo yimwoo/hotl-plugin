@@ -1,0 +1,32 @@
+{
+  "run_id": "retry-pass-20260321T000000Z",
+  "workflow_path": "hotl-workflow-retry-pass.md",
+  "intent": "Validate summary rendering after a retry succeeds",
+  "status": "completed",
+  "started_at": "2026-03-21T00:00:00+00:00",
+  "completed_at": "2026-03-21T00:03:00+00:00",
+  "total_steps": 2,
+  "completed_steps": 2,
+  "failed_steps": 0,
+  "blocked_steps": 0,
+  "steps": [
+    {
+      "number": 1,
+      "name": "Add renderer tests",
+      "status": "done",
+      "attempts": 2,
+      "verify_passed": true,
+      "gate_result": null,
+      "block_reason": null
+    },
+    {
+      "number": 2,
+      "name": "Update executor guidance",
+      "status": "done",
+      "attempts": 1,
+      "verify_passed": true,
+      "gate_result": null,
+      "block_reason": null
+    }
+  ]
+}

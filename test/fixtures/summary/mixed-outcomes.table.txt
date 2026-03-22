@@ -1,0 +1,6 @@
+| Step | Name | Status | Iterations |
+|------|------|--------|------------|
+| 1 | Write fixture loader | ✓ Done | 1 |
+| 2 | Render Codex summary | ✗ Failed | 1 |
+| 3 | Publish report artifact | ✗ Blocked | 2 |
+| 4 | Review gate decision | ✗ Rejected | - |

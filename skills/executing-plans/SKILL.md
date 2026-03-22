@@ -97,10 +97,10 @@ To resume an interrupted executing-plans run, use `/hotl:resume`.
    - On gate: `hotl-rt gate N approved|rejected`
 5. After each batch: show what was done, ask "Continue to next batch?"
 6. On failure: stop and report — never silently skip a failed step
-7. When complete: `hotl-rt finalize --json`, render summary, invoke `hotl:verification-before-completion`
+7. When complete: `hotl-rt finalize --json`, render the final summary via `scripts/render-execution-summary.sh`, invoke `hotl:verification-before-completion`
 
 Use this over `loop-execution` when you want explicit human checkpoints at every stage rather than auto-approve.
 
 ## Reporting
 
-Inherits the mandatory Execution Reporting Contract from `skills/loop-execution/SKILL.md` — same platform rendering rules, same live step visibility requirements, same final summary (must be shown), same durable `.hotl/reports/<run-id>.md` artifact.
+Inherits the mandatory Execution Reporting Contract from `skills/loop-execution/SKILL.md` — same platform rendering rules, same live step visibility requirements, same final summary (must be shown), same deterministic renderer path (`scripts/render-execution-summary.sh`), same durable `.hotl/reports/<run-id>.md` artifact.

@@ -1,0 +1,41 @@
+{
+  "run_id": "happy-gate-20260321T000000Z",
+  "workflow_path": "hotl-workflow-happy-gate.md",
+  "intent": "Validate happy-path summary rendering with an approved gate",
+  "status": "completed",
+  "started_at": "2026-03-21T00:00:00+00:00",
+  "completed_at": "2026-03-21T00:02:00+00:00",
+  "total_steps": 3,
+  "completed_steps": 3,
+  "failed_steps": 0,
+  "blocked_steps": 0,
+  "steps": [
+    {
+      "number": 1,
+      "name": "Write renderer fixtures",
+      "status": "done",
+      "attempts": 1,
+      "verify_passed": true,
+      "gate_result": null,
+      "block_reason": null
+    },
+    {
+      "number": 2,
+      "name": "Run renderer tests",
+      "status": "done",
+      "attempts": 1,
+      "verify_passed": true,
+      "gate_result": null,
+      "block_reason": null
+    },
+    {
+      "number": 3,
+      "name": "Review final contract",
+      "status": "done",
+      "attempts": 1,
+      "verify_passed": true,
+      "gate_result": "approved",
+      "block_reason": null
+    }
+  ]
+}

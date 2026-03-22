@@ -211,6 +211,48 @@ teardown() {
     grep -q '✓ Done' "$REPORT"
 }
 
+@test "step verify passes artifact exists check" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-artifact-verify-sample.md)
+    mkdir -p artifacts/reports
+    echo "render ok" > artifacts/output.txt
+    echo "# report" > artifacts/reports/summary.md
+
+    "$HOTL_RT" step 1 start
+    "$HOTL_RT" step 1 verify
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "done" ]
+    [ "$(jq -r '.steps[0].verify.passed' "$STATE")" = "true" ]
+}
+
+@test "step verify passes artifact matches-glob check" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-artifact-verify-sample.md)
+    mkdir -p artifacts/reports
+    echo "render ok" > artifacts/output.txt
+    echo "# report" > artifacts/reports/summary.md
+
+    "$HOTL_RT" step 3 start
+    "$HOTL_RT" step 3 verify
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    [ "$(jq -r '.steps[2].status' "$STATE")" = "done" ]
+    [ "$(jq -r '.steps[2].verify.passed' "$STATE")" = "true" ]
+}
+
+@test "step verify runs all checks in list form" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-artifact-verify-sample.md)
+    mkdir -p artifacts/reports
+    echo "render ok" > artifacts/output.txt
+    echo "# report" > artifacts/reports/summary.md
+
+    "$HOTL_RT" step 4 start
+    "$HOTL_RT" step 4 verify
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    [ "$(jq -r '.steps[3].status' "$STATE")" = "done" ]
+    [ "$(jq -r '.steps[3].verify.passed' "$STATE")" = "true" ]
+}
+
 # ── step retry ──────────────────────────────────────────────────────────────
 
 @test "step retry resets failed step to in_progress" {

@@ -1,0 +1,50 @@
+{
+  "run_id": "mixed-outcomes-20260321T000000Z",
+  "workflow_path": "hotl-workflow-mixed-outcomes.md",
+  "intent": "Validate summary rendering for mixed final outcomes",
+  "status": "failed",
+  "started_at": "2026-03-21T00:00:00+00:00",
+  "completed_at": "2026-03-21T00:04:00+00:00",
+  "total_steps": 4,
+  "completed_steps": 2,
+  "failed_steps": 1,
+  "blocked_steps": 1,
+  "steps": [
+    {
+      "number": 1,
+      "name": "Write fixture loader",
+      "status": "done",
+      "attempts": 1,
+      "verify_passed": true,
+      "gate_result": null,
+      "block_reason": null
+    },
+    {
+      "number": 2,
+      "name": "Render Codex summary",
+      "status": "failed",
+      "attempts": 1,
+      "verify_passed": false,
+      "gate_result": null,
+      "block_reason": null
+    },
+    {
+      "number": 3,
+      "name": "Publish report artifact",
+      "status": "blocked",
+      "attempts": 2,
+      "verify_passed": null,
+      "gate_result": null,
+      "block_reason": "missing report path"
+    },
+    {
+      "number": 4,
+      "name": "Review gate decision",
+      "status": "done",
+      "attempts": 1,
+      "verify_passed": true,
+      "gate_result": "rejected",
+      "block_reason": null
+    }
+  ]
+}

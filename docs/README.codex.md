@@ -86,6 +86,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `loop-execution` — autonomous execution with retries
   - **Codex native progress (mandatory):** HOTL must use the native progress card as the primary live step visibility surface. If the native tool is unavailable or errors, immediately switch to per-step chat logs.
   - **Codex final summary:** must use compact step list in chat (not wide markdown table). Durable report keeps the full table.
+  - **Deterministic renderer:** final summaries should be rendered via `scripts/render-execution-summary.sh` instead of freehand formatting when the repo provides that script.
 - `executing-plans` — manual checkpointed execution
 - `subagent-execution` — same-session delegated execution with controller-owned verification
 - `pr-reviewing` — review a PR across description, code, scan, and tests
@@ -115,6 +116,18 @@ update banner in the app. Use the manual check command above when you want to
 verify whether `~/.codex/hotl` is behind.
 
 Restart Codex after updating so it re-discovers the latest skill files.
+
+## Codex Manual Canary
+
+Use this short canary when you want to validate Codex execution UX in the real app:
+
+1. Run a HOTL workflow that has at least one gate and at least one verified implementation step.
+2. Confirm the native progress card appears immediately after runtime initialization.
+3. Confirm only one workflow step is shown as active at a time.
+4. Confirm the run ends with a visible final chat summary that includes every step, its status, and its attempt count or gate marker.
+5. If the native progress card does not appear or errors, confirm HOTL falls back to per-step chat logs and still shows the final chat summary.
+
+When the repo includes `scripts/render-execution-summary.sh`, use it as the source of truth for final-summary formatting. If chat output disagrees with `.hotl/reports/<run-id>.md` or the renderer output, trust the runtime artifacts first.
 
 ## Uninstalling
 
