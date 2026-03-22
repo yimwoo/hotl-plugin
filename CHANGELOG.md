@@ -2,6 +2,12 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.9.0] - 2026-03-22
+
+### Added
+- `docs/authoring-skills-vs-agents.md` — canonical reference for writing HOTL skills and agents, covering decision framework (skill vs agent vs inline), repo conventions, 8 annotated common mistakes, 3 real examples, pre-merge checklist, and copy-paste templates for both skills and agents
+- Platform-neutral language throughout — no Claude Code-specific tool names or slash commands in the guide
+
 ## [2.8.0] - 2026-03-22
 
 ### Changed
