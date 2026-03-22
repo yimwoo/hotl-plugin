@@ -53,7 +53,7 @@ Cline reads `~/Documents/Cline/Rules/` for global rules. HOTL installs 10 rule f
 | `hotl-subagent-execution.md` | Execute reviewed plans in-session with delegated subagent steps and controller-owned gates |
 | `hotl-tdd.md` | RED-GREEN-REFACTOR — never write code before a failing test |
 | `hotl-debugging.md` | 4-phase debugging — reproduce, understand, hypothesize, fix |
-| `hotl-code-review.md` | Review lifecycle: requesting review at checkpoints, receiving findings via verify-evaluate-respond-implement, BLOCK/WARN/NOTE severity with file:line references |
+| `hotl-code-review.md` | Dispatch-first code review: gathers context automatically, runs inline review with same output contract as the full reviewer, findings only (no auto-fix), BLOCK/WARN/NOTE with file:line references |
 | `hotl-pr-review.md` | PR review rendering — follow `docs/contracts/pr-review-output.md` for the 9-section output schema |
 
 Each rule file contains:

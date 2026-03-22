@@ -92,7 +92,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `pr-reviewing` — review a PR across description, code, scan, and tests
   - **Output contract:** `docs/contracts/pr-review-output.md` defines the canonical 9-section review schema
   - **Codex rendering (advisory):** emit platform-native inline findings first (e.g., `::code-comment` directives for BLOCK and WARN findings with file:line), then render the full 9-section structured summary. Use plain markdown for the summary.
-- `code-review` — review branch changes against the workflow and HOTL contracts
+- `code-review` — user-facing entry point for code review; dispatches the full `code-reviewer` agent by default, returns findings only
 - `requesting-code-review` — dispatched by executors at review checkpoints with git range, contracts, and verification evidence
 - `receiving-code-review` — governs how agents handle review findings: verify each claim against the codebase and HOTL contracts before acting (Verify → Evaluate → Respond → Implement)
 - `verification-before-completion` — require test and command output before claiming success
