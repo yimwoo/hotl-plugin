@@ -268,6 +268,7 @@ For a Codex-specific setup and usage guide, see [`.codex/INSTALL.md`](.codex/INS
 ## Skills
 
 All skills work with **Claude Code** and **Codex**. Cline users get equivalent rules automatically.
+Want to add or modify HOTL abstractions? See [Authoring Skills vs Agents](docs/authoring-skills-vs-agents.md) for guidance on when to create a skill, an agent, or an inline prompt.
 
 ### Design & Planning
 
