@@ -306,6 +306,7 @@ When running in the Codex app, the executor MUST use the native plan/progress UI
 - MUST keep the native card high-level: major workflow steps only, not retries or verify substeps
 - If the native progress tool is unavailable or errors, MUST immediately switch to per-step chat logs for the remainder of the run. Do not silently drop visibility.
 - Native progress never replaces the final chat summary, durable report, or sidecar state
+- If Codex needs an explicit readout of the active workflow step, use `scripts/show-codex-current-step.sh` to print the current step number, name, status, and attempts from the active run without mutating state
 
 On platforms without native progress (Claude Code, Cline), the executor MUST use per-step chat logs for live visibility.
 
@@ -356,6 +357,8 @@ Print at the end of execution. Strict column rules:
 - **Iterations** — attempt count as a number only (`1`, `2`, `3`). For gates: `-`. Never put test counts or details here.
 
 **Codex** — use a compact list (wide tables render poorly in the Codex app):
+
+Use `scripts/finalize-codex-summary.sh` for Codex final summaries so finalize and render happen sequentially from one helper. Do not split "write summary JSON" and "render summary" into separate parallel actions in Codex. Claude Code and Cline keep using the existing markdown-table path.
 
 ```
 Execution Summary
