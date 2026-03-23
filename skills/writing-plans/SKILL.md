@@ -38,6 +38,8 @@ verify: [scalar command OR typed block]
 gate: human | auto   # optional
 ```
 
+**CRITICAL — field indentation:** `action:`, `loop:`, `verify:`, `max_iterations:`, and `gate:` MUST start at column 0 (no leading spaces). The document linter matches `^action:`, `^loop:`, etc. — any indentation (even 2 spaces under the list item) will fail validation. Only the sub-fields of structured `verify:` blocks (like `type:`, `path:`, `assert:`) are indented.
+
 ## Typed Verification
 
 Choose the appropriate verify type for each step:

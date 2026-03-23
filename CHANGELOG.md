@@ -2,6 +2,18 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.9.1] - 2026-03-22
+
+### Added
+- Shared review checklists under `docs/checklists/` — four reusable heuristic files (architecture-and-design, security-and-reliability, performance-and-boundary-conditions, removal-and-simplification) plus a README index
+- `code-review` inline fallback expanded from 3 to 6 review dimensions: plan alignment, code quality and design, security and reliability, performance and boundary conditions, removal and simplification, HOTL governance
+- Clean-review statement in both `code-review` and `pr-reviewing` — when no issues found, reviews must state what was checked, what was not covered, and residual risks/verification gaps
+- `pr-reviewing` subagent B now references architecture-and-design and removal-and-simplification checklists
+- `pr-reviewing` subagent C now references security-and-reliability checklist with expanded items (race conditions, TOCTOU, unsafe deserialization, weak crypto, rate limits)
+- `pr-reviewing` subagent D now references performance-and-boundary-conditions checklist for test edge-case assessment
+- Per-dimension clean-review requirement added to `pr-review-output.md` contract (Section 9)
+- All checklist references include graceful fallback for portability
+
 ## [2.9.0] - 2026-03-22
 
 ### Added

@@ -91,10 +91,26 @@ When subagents are not available, run the review inline using the same output co
 
 When no workflow: state "Plan alignment: skipped (no workflow provided)"
 
-**Code quality:**
+**Code quality and design:**
 - Tests exist and pass for all new behavior
 - No code duplication introduced (DRY)
 - Error handling at system boundaries only
+- Reference `docs/checklists/architecture-and-design.md` for SOLID and architecture smell heuristics. If the checklist file is not available, continue with best-effort review.
+
+**Security and reliability:**
+- Reference `docs/checklists/security-and-reliability.md` for expanded security heuristics.
+- Check for injection, auth gaps, race conditions, secret leakage, unsafe patterns.
+- If the checklist file is not available, continue with best-effort review.
+
+**Performance and boundary conditions:**
+- Reference `docs/checklists/performance-and-boundary-conditions.md` for performance and boundary condition heuristics.
+- Check for N+1 queries, unbounded memory, off-by-one, null handling, swallowed exceptions.
+- If the checklist file is not available, continue with best-effort review.
+
+**Removal and simplification:**
+- Reference `docs/checklists/removal-and-simplification.md` for dead code and simplification heuristics.
+- Flag unused exports, dead branches, feature-flagged-off code. Classify as safe-delete-now or defer-with-plan.
+- If the checklist file is not available, continue with best-effort review.
 
 **HOTL governance:**
 - risk_level: high steps had human gate approval
@@ -120,3 +136,11 @@ For localized issues: file:line is required. For scope-level findings: provide t
 - **NOTE:** Consider in future (style, minor improvements)
 
 BLOCK issues must be resolved before claiming done.
+
+### Clean Review
+
+When no issues are found across all dimensions, the review must explicitly state:
+
+- **What was checked:** List the dimensions that were reviewed (e.g., "Reviewed: plan alignment, code quality and design, security and reliability, HOTL governance")
+- **What was not covered:** Note any dimensions that could not be assessed due to the diff content (e.g., "No test files in diff — test quality not assessed", "No database changes — migration review not applicable")
+- **Residual risks and verification gaps:** Call out areas where the review has inherent limits (e.g., "Did not verify runtime behavior under concurrency", "No migration files in diff — database-impact review limited", "Security scan limited to static analysis of changed files")
