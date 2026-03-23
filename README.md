@@ -129,7 +129,7 @@ There is no `/hotl:brainstorm` or `/hotl:pr-review` syntax in Codex. Instead, de
 | --- | --- | --- |
 | Design & Planning | `brainstorming`, `writing-plans`, `document-review` | Clarify requirements, define contracts, and create executable workflow plans |
 | Execution | `loop-execution`, `executing-plans`, `subagent-execution`, `resuming`, `dispatch-agents` | Run workflows with verification, retries, persistence, and delegation |
-| Quality & Review | `pr-reviewing`, `code-review`, `requesting-code-review`, `receiving-code-review`, `verification-before-completion` | Review changes and require evidence before completion |
+| Quality & Review | `pr-reviewing`, `code-review`, `requesting-code-review`, `receiving-code-review`, `verification-before-completion` | Review changes and require evidence before completion. Both `code-review` and `pr-reviewing` reference shared [review checklists](docs/checklists/) for SOLID/architecture, security, performance/boundary conditions, and removal/simplification heuristics. |
 | Dev Practices | `tdd`, `systematic-debugging` | Apply test-first development and structured debugging workflows |
 | Setup | `setup-project`, `using-hotl` | Generate adapter files and establish HOTL operating context |
 
