@@ -78,9 +78,17 @@ requesting-code-review   = internal executor/orchestration entry point
 receiving-code-review    = follow-up handler for acting on findings
 ```
 
+## Output Contract
+
+Both dispatched and inline reviews must conform to `docs/contracts/code-review-output.md`. Every review must contain these 6 sections in order: Scope (with verification evidence), Reviewed Dimensions, Findings, What Was Not Covered, Residual Risks, Verdict.
+
+### Platform-Native Annotation Dedup
+
+When the platform emits platform-native annotations for localized findings (e.g., `::code-comment` in Codex, inline GitHub review comments), do not restate those findings verbatim in the Findings section. Instead, use the grouped one-liner format defined in the output contract.
+
 ## Inline Fallback
 
-When subagents are not available, run the review inline using the same output contract as the `code-reviewer` agent. The inline review must produce identical structure — not a weaker format.
+When subagents are not available, run the review inline using the same output contract. The inline review must produce identical 6-section structure — not a weaker format.
 
 ### Dimensions
 
@@ -139,8 +147,4 @@ BLOCK issues must be resolved before claiming done.
 
 ### Clean Review
 
-When no issues are found across all dimensions, the review must explicitly state:
-
-- **What was checked:** List the dimensions that were reviewed (e.g., "Reviewed: plan alignment, code quality and design, security and reliability, HOTL governance")
-- **What was not covered:** Note any dimensions that could not be assessed due to the diff content (e.g., "No test files in diff — test quality not assessed", "No database changes — migration review not applicable")
-- **Residual risks and verification gaps:** Call out areas where the review has inherent limits (e.g., "Did not verify runtime behavior under concurrency", "No migration files in diff — database-impact review limited", "Security scan limited to static analysis of changed files")
+Per the output contract, when a dimension has no findings it must still state what was checked, what was not covered, and residual risks. Additionally, the review must always include sections 4 (What Was Not Covered) and 5 (Residual Risks) even when no individual dimension has findings.

@@ -95,6 +95,13 @@ Use HOTL for this task and choose the most appropriate skill automatically.
   - **Output contract:** `docs/contracts/pr-review-output.md` defines the canonical 9-section review schema
   - **Codex rendering (advisory):** emit platform-native inline findings first (e.g., `::code-comment` directives for BLOCK and WARN findings with file:line), then render the full 9-section structured summary. Use plain markdown for the summary.
 - `code-review` — user-facing entry point for code review; dispatches the full `code-reviewer` agent by default, returns findings only
+  - **Output contract:** `docs/contracts/code-review-output.md` defines the canonical 6-section review schema
+  - **Codex rendering profile:**
+    - Emit `::code-comment` directives only for actionable, file-localized defects at BLOCK or WARN severity
+    - Keep `priority` and `confidence` as machine-readable metadata in the directive — do not surface `[P1]`/`[P2]` in the title. Titles must be plain descriptive text (e.g., `"Debug server exposed on all interfaces"`)
+    - Workflow/governance findings, NOTE-severity observations, and findings without a specific file:line stay in the markdown summary only — no `::code-comment`
+    - `::code-comment` is additive rendering — the full 6-section structured summary is always emitted regardless of how many annotations exist
+    - Dedup: when inline annotations are emitted, the Findings section uses a grouped one-liner (1–5: category breakdown; 6+: collapsed) instead of restating each finding
 - `requesting-code-review` — dispatched by executors at review checkpoints with git range, contracts, and verification evidence
 - `receiving-code-review` — governs how agents handle review findings: verify each claim against the codebase and HOTL contracts before acting (Verify → Evaluate → Respond → Implement)
 - `verification-before-completion` — require test and command output before claiming success
