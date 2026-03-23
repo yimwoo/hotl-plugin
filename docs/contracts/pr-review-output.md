@@ -70,6 +70,11 @@ All findings from all dimensions, collected in one list. Each finding includes:
 - What could not be verified and why (missing tooling, network restrictions, auth failures)
 - Any limitations of the review (partial diff, large PR truncation, etc.)
 
+**Per-dimension clean-review requirement:** When a dimension verdict is PASS with no findings, that dimension's section must include:
+- What was checked within that dimension
+- What was not covered (e.g., "no test files in diff — test quality not assessed")
+- Residual risks and verification gaps (e.g., "security scan limited to static analysis of changed files")
+
 ## Verdict Logic
 
 The overall verdict is derived from **dimension-level verdicts**, not individual findings:

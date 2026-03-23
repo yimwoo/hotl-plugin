@@ -142,8 +142,9 @@ You are reviewing code changes in a PR.
 1. **Correctness:** Logic errors, off-by-one, null/undefined risks, race conditions
 2. **Edge cases:** Missing error handling at system boundaries, unhandled states
 3. **Readability:** Unclear naming, magic numbers, overly complex logic
-4. **Design:** YAGNI violations, unnecessary abstractions, code duplication
+4. **Design:** YAGNI violations, unnecessary abstractions, code duplication. Reference `docs/checklists/architecture-and-design.md` for SOLID and architecture smell heuristics. These are review heuristics, not merge policy — use professional judgment to determine severity. If the checklist file is not available, continue with best-effort review.
 5. **Security (quick scan):** Obvious injection risks, hardcoded secrets (detailed scan in separate subagent)
+6. **Removal and simplification:** Reference `docs/checklists/removal-and-simplification.md`. Flag unused/redundant code introduced or left behind by this PR. Classify as safe-delete-now or defer-with-plan. If the checklist file is not available, continue with best-effort review.
 
 ## Output Format
 
@@ -181,11 +182,16 @@ If no linters are configured, note "No project linters found" and proceed to Pha
 
 ## Phase 2: AI Security & Quality Scan
 
+Reference `docs/checklists/security-and-reliability.md` for expanded coverage beyond OWASP Top 10. If the checklist file is not available, continue with best-effort review.
+
 Analyze the diff for:
 1. **OWASP Top 10:** Injection (SQL, command, XSS), broken auth, sensitive data exposure, XXE, broken access control, security misconfiguration, insecure deserialization
 2. **Hardcoded secrets:** API keys, tokens, passwords, connection strings in code
 3. **Unsafe patterns:** eval(), dangerouslySetInnerHTML, shell exec with user input, unparameterized queries
 4. **Dependency concerns:** New dependencies added — are they well-maintained? Known vulnerabilities?
+5. **Concurrency risks:** Race conditions, TOCTOU (check-then-act without locks), missing synchronization on shared state
+6. **Crypto and serialization:** Unsafe deserialization of untrusted input, weak or deprecated cryptographic algorithms, insecure defaults
+7. **Resource exhaustion:** Missing rate limits, unbounded loops controlled by external input, CPU/memory hotspots
 
 ## Output Format
 
@@ -232,11 +238,14 @@ You are reviewing the unit test status for a PR.
 
 ## Phase 3: Test Quality (AI Review)
 
+Use boundary-condition heuristics from `docs/checklists/performance-and-boundary-conditions.md` to assess whether tests cover risky input/state transitions. If the checklist file is not available, continue with best-effort review.
+
 Review test files in the diff:
 1. Are assertions meaningful (not just `expect(true).toBe(true)`)?
 2. Are edge cases tested (empty input, boundaries, error paths)?
 3. Are tests testing behavior, not implementation details?
 4. Any redundant/duplicate tests?
+5. Do tests cover risky boundary conditions (null/undefined, empty collections, numeric limits, off-by-one)?
 
 ## Output Format
 
@@ -265,6 +274,7 @@ Specifically:
 1. Collect all subagent results (Subagent A produces 2 dimension verdicts: Description + Ticket Alignment; Subagents B, C, D each produce 1; total: 5)
 2. Produce the canonical 9-section summary following the contract
 3. Emit platform-native inline findings where the runtime supports them (e.g., `::code-comment` in Codex, line-level GitHub review comments in Claude Code full mode)
+4. When a dimension verdict is PASS with no findings, that dimension's section must state: what was checked, what was not covered, and residual risks including verification gaps
 
 ## Step 4: Post to GitHub (Full Mode Only)
 
