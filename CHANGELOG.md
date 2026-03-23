@@ -2,6 +2,17 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.9.2] - 2026-03-23
+
+### Added
+- `docs/contracts/code-review-output.md` — platform-neutral 6-section output contract for code reviews (Scope, Reviewed Dimensions, Findings, What Was Not Covered, Residual Risks, Verdict)
+- Codex rendering profile in `docs/README.codex.md` — clean `::code-comment` titles (no `[P1]`/`[P2]`), BLOCK/WARN-only inline annotations, dedup via grouped one-liner
+
+### Changed
+- `agents/code-reviewer.md` now references the shared output contract and requires all 6 sections (adds Scope with verification evidence, What Was Not Covered, Residual Risks)
+- `skills/code-review/SKILL.md` inline fallback references the same contract with platform-native annotation dedup rule
+- Severity vocabulary unified: BLOCK/WARN/NOTE is the only user-facing severity system; `priority`/`confidence` remain as directive metadata only
+
 ## [2.9.1] - 2026-03-22
 
 ### Added
