@@ -3,6 +3,8 @@
 ## Given
 - `hotl-rt finalize --json` returns the canonical summary payload
 - A renderer converts that payload into final summary output for a target platform
+- Codex can use a repo-owned helper to finalize and render the summary sequentially
+- Codex can use a repo-owned helper to show the current workflow step from the active run
 
 ## Expected Behavior
 
@@ -28,5 +30,6 @@ The renderer must produce deterministic final summaries from the same payload re
 
 ## Not Expected
 - Missing final chat summary when the runtime payload exists
+- Racy Codex execution that renders only the `Execution Summary` header because the summary file was read before it was fully written
 - Raw gate steps shown as `Done (1 attempt)` instead of `Approved (-)` or `Rejected (-)`
 - Platform-specific differences in the normalized semantic outcome for the same payload

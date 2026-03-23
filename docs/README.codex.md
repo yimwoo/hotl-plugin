@@ -86,7 +86,9 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `loop-execution` — autonomous execution with retries
   - **Codex native progress (mandatory):** HOTL must use the native progress card as the primary live step visibility surface. If the native tool is unavailable or errors, immediately switch to per-step chat logs.
   - **Codex final summary:** must use compact step list in chat (not wide markdown table). Durable report keeps the full table.
-  - **Deterministic renderer:** final summaries should be rendered via `scripts/render-execution-summary.sh` instead of freehand formatting when the repo provides that script.
+  - **Codex helper path:** use `scripts/finalize-codex-summary.sh` so finalize and rendering happen sequentially from one helper instead of separate ad hoc commands.
+  - **Current step helper:** use `scripts/show-codex-current-step.sh` when you need an explicit current-step readout in Codex chat.
+  - **Deterministic renderer:** `scripts/finalize-codex-summary.sh` delegates to `scripts/render-execution-summary.sh`, which remains the source of truth for Codex summary formatting.
 - `executing-plans` — manual checkpointed execution
 - `subagent-execution` — same-session delegated execution with controller-owned verification
 - `pr-reviewing` — review a PR across description, code, scan, and tests

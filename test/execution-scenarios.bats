@@ -165,6 +165,16 @@ setup() {
     grep -qi "Do not freehand the final summary" "$LOOP_SKILL"
 }
 
+@test "scenario 06: loop-execution references Codex-only final-summary helper" {
+    grep -q "scripts/finalize-codex-summary.sh" "$LOOP_SKILL"
+    grep -qi "Codex final summaries" "$LOOP_SKILL"
+}
+
+@test "scenario 06: loop-execution references Codex current-step helper" {
+    grep -q "scripts/show-codex-current-step.sh" "$LOOP_SKILL"
+    grep -qi "active workflow step" "$LOOP_SKILL"
+}
+
 @test "scenario 06: behavioral spec exists" {
     [ -f "$SCENARIOS/06-codex-summary-rendering.md" ]
 }
