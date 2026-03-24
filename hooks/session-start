@@ -21,7 +21,8 @@ escape_for_json() {
 }
 
 using_hotl_escaped=$(escape_for_json "$using_hotl_content")
-session_context="<EXTREMELY_IMPORTANT>\nYou have HOTL superpowers.\n\n**Below is the full content of your 'hotl:using-hotl' skill - your introduction to using HOTL skills. For all other skills, use the 'Skill' tool:**\n\n${using_hotl_escaped}\n</EXTREMELY_IMPORTANT>"
+plugin_path_escaped=$(escape_for_json "$PLUGIN_ROOT")
+session_context="<EXTREMELY_IMPORTANT>\nYou have HOTL superpowers.\n\n**Below is the full content of your 'hotl:using-hotl' skill - your introduction to using HOTL skills. For all other skills, use the 'Skill' tool:**\n\n${using_hotl_escaped}\n\n**HOTL Plugin Base Path:**\nWhen running hotl-rt or HOTL scripts (document-lint.sh, render-execution-summary.sh, finalize-codex-summary.sh, show-codex-current-step.sh), use this base path: ${plugin_path_escaped}\n\nExamples:\n  bash ${plugin_path_escaped}/runtime/hotl-rt init <workflow-file>\n  bash ${plugin_path_escaped}/scripts/render-execution-summary.sh --platform claude <json-file>\n  bash ${plugin_path_escaped}/scripts/document-lint.sh <workflow-file>\n</EXTREMELY_IMPORTANT>"
 
 cat <<EOF
 {
