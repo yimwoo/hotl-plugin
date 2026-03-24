@@ -2,6 +2,17 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.9.3] - 2026-03-23
+
+### Added
+- `docs/contracts/README.md` — cross-contract conventions layer with three vocabularies (severity, verdict, execution status) and four convention rules (semantics vs rendering, severity vocabulary, section ordering, clean-report requirement)
+- `docs/contracts/execution-report-output.md` — execution report output contract covering report format, execution status vocabulary, final summary semantics, and platform rendering tables
+
+### Changed
+- `skills/loop-execution/SKILL.md` — extracted ~200 lines of inline report spec into the execution report contract; retained live execution behavior (step visibility, Codex native progress, verbose view)
+- `skills/executing-plans/SKILL.md` and `skills/subagent-execution/SKILL.md` — replaced "inherits from loop-execution" with direct contract reference
+- Updated README.md, docs/README.codex.md with contracts directory and execution report contract references
+
 ## [2.9.2] - 2026-03-23
 
 ### Added
