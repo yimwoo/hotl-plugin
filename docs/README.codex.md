@@ -88,13 +88,14 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `writing-plans` — create `hotl-workflow-<slug>.md` files
 - `document-review` — run structural lint and qualitative review before execution
 - `loop-execution` — autonomous execution with retries
+  - **Output contract:** `docs/contracts/execution-report-output.md` defines the execution report schema, status vocabulary, and platform rendering tables
   - **Codex native progress (mandatory):** HOTL must use the native progress card as the primary live step visibility surface. If the native tool is unavailable or errors, immediately switch to per-step chat logs.
   - **Codex final summary:** must use compact step list in chat (not wide markdown table). Durable report keeps the full table.
   - **Codex helper path:** use `scripts/finalize-codex-summary.sh` so finalize and rendering happen sequentially from one helper instead of separate ad hoc commands.
   - **Current step helper:** use `scripts/show-codex-current-step.sh` when you need an explicit current-step readout in Codex chat.
   - **Deterministic renderer:** `scripts/finalize-codex-summary.sh` delegates to `scripts/render-execution-summary.sh`, which remains the source of truth for Codex summary formatting.
-- `executing-plans` — manual checkpointed execution
-- `subagent-execution` — same-session delegated execution with controller-owned verification
+- `executing-plans` — manual checkpointed execution (references same output contract)
+- `subagent-execution` — same-session delegated execution with controller-owned verification (references same output contract)
 - `pr-reviewing` — review a PR across description, code, scan, and tests
   - **Output contract:** `docs/contracts/pr-review-output.md` defines the canonical 9-section review schema
   - **Codex rendering (advisory):** emit platform-native inline findings first (e.g., `::code-comment` directives for BLOCK and WARN findings with file:line), then render the full 9-section structured summary. Use plain markdown for the summary.

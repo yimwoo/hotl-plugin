@@ -170,6 +170,8 @@ cline/rules/     Global rules for Cline
 adapters/        Templates for AGENTS.md, Cursor, Copilot, and other tools
 scripts/         Utility scripts including document-lint.sh
 docs/            Setup docs, workflow format reference, and detailed guides
+docs/contracts/  Output contracts (PR review, code review, execution report)
+docs/checklists/ Reusable review heuristics
 ```
 
 ## Contributing
