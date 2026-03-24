@@ -176,6 +176,11 @@ To find `hotl-rt` and HOTL scripts (`document-lint.sh`, `render-execution-summar
 
 The same resolution applies to all HOTL scripts under `scripts/`.
 
+**Dependency: `jq`.** `hotl-rt` requires `jq` for JSON state management. If `hotl-rt` fails with a `jq not found` error:
+1. Show the user the platform-specific install command from the error output
+2. Fall back to inline execution — run steps with per-step chat logs and manual checkbox updates, but without state persistence (`.hotl/state/`), durable reports (`.hotl/reports/`), or deterministic summary rendering
+3. Note in the final output that the run was not state-managed due to missing `jq`
+
 ## Execution Report
 
 Execution report output must conform to `docs/contracts/execution-report-output.md`. The contract defines the durable report format (metadata, summary table, event log), execution status vocabulary, final summary semantics, platform rendering tables, and the deterministic renderer reference.

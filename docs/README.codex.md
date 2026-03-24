@@ -2,6 +2,10 @@
 
 HOTL is a Human-on-the-Loop AI coding workflow for Codex. This repo installs HOTL as native Codex skills so you can brainstorm, plan, execute, review, and verify changes with more structure.
 
+## Prerequisites
+
+HOTL execution requires [`jq`](https://jqlang.github.io/jq/) for state persistence. Install it: `brew install jq` (macOS), `sudo apt-get install jq` (Linux), or `scoop install jq` (Windows).
+
 ## Installation
 
 1. Clone the repo:

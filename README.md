@@ -27,6 +27,18 @@ HOTL prevents all four by enforcing structured workflows for implementation task
 
 If someone searches for a "HOTL plugin" or a "Human-on-the-Loop AI coding workflow", this repo is the main project: it contains the canonical HOTL skills, workflow templates, and installation docs for Codex, Claude Code, and Cline.
 
+## Prerequisites
+
+HOTL execution requires [`jq`](https://jqlang.github.io/jq/) for state persistence and reporting. Install it before running workflows:
+
+| Platform | Command |
+|----------|---------|
+| macOS | `brew install jq` |
+| Ubuntu/Debian | `sudo apt-get install jq` |
+| Windows | `scoop install jq` or `choco install jq` or `winget install jqlang.jq` |
+
+Without `jq`, HOTL falls back to inline execution without state persistence or durable reports.
+
 ## Quick Start
 
 ### Claude Code

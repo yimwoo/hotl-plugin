@@ -4,6 +4,10 @@ HOTL is a Human-on-the-Loop AI coding workflow for Cline. It adds structured bra
 
 Works with **any API provider** — Oracle Code Assist (OCA), OpenAI (GPT-4, GPT-5), Anthropic (Claude), Google (Gemini), local models, and more.
 
+## Prerequisites
+
+HOTL execution requires [`jq`](https://jqlang.github.io/jq/) for state persistence. Install it: `brew install jq` (macOS), `sudo apt-get install jq` (Linux), or `scoop install jq` (Windows).
+
 ## Install (One Command)
 
 ```bash
