@@ -2,6 +2,13 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.9.5] - 2026-03-24
+
+### Improved
+- `hotl-rt` now shows platform-specific `jq` install commands when `jq` is missing (macOS/brew, Debian/apt, Fedora/dnf, Windows/scoop/choco/winget)
+- `loop-execution` skill documents graceful fallback to inline execution when `hotl-rt` is unavailable due to missing `jq`
+- Added `jq` as a documented prerequisite in README.md, docs/README.codex.md, and docs/README.cline.md
+
 ## [2.9.4] - 2026-03-24
 
 ### Fixed
