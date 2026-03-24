@@ -2,10 +2,6 @@
 
 HOTL is a Human-on-the-Loop AI coding workflow for Codex. This repo installs HOTL as native Codex skills so you can brainstorm, plan, execute, review, and verify changes with more structure.
 
-## Prerequisites
-
-HOTL execution requires [`jq`](https://jqlang.github.io/jq/) for state persistence. Install it: `brew install jq` (macOS), `sudo apt-get install jq` (Linux), or `scoop install jq` (Windows).
-
 ## Installation
 
 1. Clone the repo:
@@ -93,6 +89,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `document-review` — run structural lint and qualitative review before execution
 - `loop-execution` — autonomous execution with retries
   - **Output contract:** `docs/contracts/execution-report-output.md` defines the execution report schema, status vocabulary, and platform rendering tables
+  - **Optional dependency:** State persistence and resumable execution require [`jq`](https://jqlang.github.io/jq/). Without it, HOTL still works but runs without state files or durable reports.
   - **Codex native progress (mandatory):** HOTL must use the native progress card as the primary live step visibility surface. If the native tool is unavailable or errors, immediately switch to per-step chat logs.
   - **Codex final summary:** must use compact step list in chat (not wide markdown table). Durable report keeps the full table.
   - **Codex helper path:** use `scripts/finalize-codex-summary.sh` so finalize and rendering happen sequentially from one helper instead of separate ad hoc commands.

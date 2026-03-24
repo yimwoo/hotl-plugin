@@ -27,18 +27,6 @@ HOTL prevents all four by enforcing structured workflows for implementation task
 
 If someone searches for a "HOTL plugin" or a "Human-on-the-Loop AI coding workflow", this repo is the main project: it contains the canonical HOTL skills, workflow templates, and installation docs for Codex, Claude Code, and Cline.
 
-## Prerequisites
-
-HOTL execution requires [`jq`](https://jqlang.github.io/jq/) for state persistence and reporting. Install it before running workflows:
-
-| Platform | Command |
-|----------|---------|
-| macOS | `brew install jq` |
-| Ubuntu/Debian | `sudo apt-get install jq` |
-| Windows | `scoop install jq` or `choco install jq` or `winget install jqlang.jq` |
-
-Without `jq`, HOTL falls back to inline execution without state persistence or durable reports.
-
 ## Quick Start
 
 ### Claude Code
@@ -106,7 +94,7 @@ Execution Summary
 
 Every step has a verify command. If verification fails, execution stops and reports instead of silently claiming success.
 
-**Resumable execution:** HOTL persists state in `.hotl/state/` so interrupted runs can pick up where they stopped. Resume is verify-first: HOTL re-checks the last step before advancing. For the deeper execution model, see [`docs/how-it-works.md`](docs/how-it-works.md) and [`docs/workflow-format.md`](docs/workflow-format.md).
+**Resumable execution:** HOTL persists state in `.hotl/state/` so interrupted runs can pick up where they stopped. Resume is verify-first: HOTL re-checks the last step before advancing. State persistence and resumable execution require [`jq`](https://jqlang.github.io/jq/) — install it with `brew install jq` (macOS), `apt-get install jq` (Linux), or `scoop install jq` (Windows). Without `jq`, HOTL still works but runs without state files or durable reports. For the deeper execution model, see [`docs/how-it-works.md`](docs/how-it-works.md) and [`docs/workflow-format.md`](docs/workflow-format.md).
 
 ## Smart Task Routing
 
