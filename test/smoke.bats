@@ -371,10 +371,12 @@ assert 'sessionStartNotice' not in data.get('hookSpecificOutput', {})
     grep -q '| `dirty_worktree`' "$REPO_ROOT/docs/workflow-format.md"
 }
 
-@test "loop-execution defines canonical Execution Reporting Contract" {
-    grep -q "Execution Reporting Contract" "$REPO_ROOT/skills/loop-execution/SKILL.md"
-    grep -q "Iterations" "$REPO_ROOT/skills/loop-execution/SKILL.md"
+@test "loop-execution references execution report contract and defines live behavior" {
+    grep -q "execution-report-output.md" "$REPO_ROOT/skills/loop-execution/SKILL.md"
+    grep -q "Live Step Visibility" "$REPO_ROOT/skills/loop-execution/SKILL.md"
     grep -q "verbose" "$REPO_ROOT/skills/loop-execution/SKILL.md"
+    test -f "$REPO_ROOT/docs/contracts/execution-report-output.md"
+    grep -q "Iterations" "$REPO_ROOT/docs/contracts/execution-report-output.md"
 }
 
 # ── typed verification ───────────────────────────────────────────────────────

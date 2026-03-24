@@ -166,79 +166,9 @@ See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection,
 
 ## Execution Report
 
-The `hotl-rt` runtime writes a durable Markdown report to `.hotl/reports/<run-id>.md` incrementally during execution. This is the canonical report spec — other executors inherit it.
+Execution report output must conform to `docs/contracts/execution-report-output.md`. The contract defines the durable report format (metadata, summary table, event log), execution status vocabulary, final summary semantics, platform rendering tables, and the deterministic renderer reference.
 
-The report survives app rendering quirks (e.g., Codex suppressing intermediate output) and provides a reliable post-run artifact for debugging, trust, and resume.
-
-### Report Format
-
-**Metadata header:**
-```markdown
-# Execution Report: <run-id>
-
-**Workflow:** hotl-workflow-<slug>.md
-**Intent:** <intent from frontmatter>
-**Branch:** <branch name>
-**Executor:** loop | executing-plans | subagent
-**Started:** <ISO 8601>
-**Updated:** <ISO 8601>
-**Status:** running | completed | paused | blocked
-```
-
-**Summary table** (updated in-place at each step transition):
-```markdown
-| Step | Name              | Status      | Iterations |
-|------|-------------------|-------------|------------|
-|  1   | Write tests       | ✓ Done      | 1          |
-|  2   | Implement feature | → Running   | -          |
-|  3   | Human review      | · Pending   | -          |
-```
-
-Table status values: `· Pending`, `→ Running`, `↻ Retrying`, `⚡ Auto-approved`, `✓ Done`, `✓ Approved`, `✗ Failed`, `✗ Blocked`
-
-**Timestamped event log** (appended after each step transition):
-```markdown
-## Event Log
-
-**[10:00:05]** → Step 1: Write tests
-**[10:01:12]** ✓ Step 1: Done (1 attempt)
-**[10:01:15]** → Step 2: Implement feature
-**[10:02:30]** ↻ Step 2: Retrying (2/3)
-  verify output:
-  FAILED: test_auth - AssertionError: expected 401, got 200
-```
-
-### Report Lifecycle
-
-The `hotl-rt` runtime manages all report updates automatically via its subcommands:
-
-1. **`hotl-rt init`:** Create report with metadata (including `Updated:`) and full table (all `· Pending`). Store `report_path` in sidecar JSON.
-2. **`hotl-rt step N start`:** Update table to `→ Running`, update `Updated:`, append event
-3. **`hotl-rt step N verify` (fail):** Update table, append captured stdout/stderr to event log
-4. **`hotl-rt step N retry`:** Update table to `↻ Retrying`, append retry event
-5. **`hotl-rt step N verify` (pass):** Update table to `✓ Done`, append completion event
-6. **`hotl-rt gate N`:** Update table to `⚡ Auto-approved` or `✓ Approved`
-7. **`hotl-rt finalize`:** Set status to `completed`, update `Updated:`, finalize report
-8. **`hotl-rt step N block`:** Set status to `blocked`, include report path in response
-
-### Verify Output Policy
-
-- **Default:** failed verifies include captured stdout/stderr in the event log. Successful verifies get a one-line result only.
-- **`report_detail: full`** (frontmatter opt-in): all verify output included for every step, successful or not.
-
-### Report Path Reference
-
-The executor must reference the report path in its response:
-- At successful completion
-- On gate pause / human review pause
-- On blocked / failed / max iterations stop
-- During resume detection for interrupted runs
-
-### Relationship to Other Artifacts
-
-- **Chat output** = primary live UX (per-step logs, verbose progress, final summary table)
-- **Markdown report** = durable human-readable record (survives app rendering quirks)
-- **JSON sidecar** = authoritative machine state (resume, tooling, structured queries)
+The `hotl-rt` runtime writes the durable report to `.hotl/reports/<run-id>.md` incrementally. The report survives app rendering quirks and provides a reliable post-run artifact for debugging, trust, and resume.
 
 ## Review Checkpoints
 
@@ -279,23 +209,21 @@ Review happens:
 - Never skip a `gate: human` on steps with security-sensitive keywords (auth, encrypt, secret, key, password, token, permission, role, billing)
 - On STOP: always show the failing verify output so human can diagnose
 
-## Execution Reporting Contract
+## Live Execution Behavior
 
-This is the canonical reporting spec. Other executors (executing-plans, subagent-execution) inherit this contract.
+Report format, status vocabulary, final summary semantics, and platform rendering tables for final artifacts are defined in `docs/contracts/execution-report-output.md`. This section covers runtime behavior that is executor-owned: live step visibility, progress updates, and verbose mode.
 
-### Platform Rendering
+### Platform Live Step Visibility
 
-| Platform | Live step visibility | Final summary format |
-|---|---|---|
-| Codex | Native progress card (primary). Per-step chat logs as fallback. | Compact list in chat |
-| Claude Code | Per-step one-line chat logs | Markdown table |
-| Cline | Per-step one-line chat logs | Markdown table |
-
-Durable report (`.hotl/reports/<run-id>.md`) always uses full markdown table regardless of platform.
+| Platform | Live step visibility |
+|---|---|
+| Codex | Native progress card (primary). Per-step chat logs as fallback. |
+| Claude Code | Per-step one-line chat logs |
+| Cline | Per-step one-line chat logs |
 
 ### Live Step Visibility (mandatory)
 
-Every execution run MUST provide live step visibility — the user must see which step is currently executing and which are done, during execution. This is not optional on any platform.
+Every execution run MUST provide live step visibility — the user must see which step is currently executing and which are done. This is not optional on any platform.
 
 ### Codex Native Progress (mandatory with fallback)
 
@@ -319,64 +247,6 @@ After each step, log one line:
 ⚡ Step 3: Security review gate (auto-approved)
 ✓ Step 4: Update docs
 ```
-
-### Final Summary (mandatory)
-
-Every execution run MUST end with a visible summary in chat. The summary MUST include: step number, name, status, and iterations for every step. This is not optional.
-
-**Required information per step:** step number, step name, final status, iteration count.
-
-**Rendering rule:** use the repo-owned deterministic renderer at `scripts/render-execution-summary.sh` for the final summary output. Do not freehand the final summary when the renderer is available. The renderer normalizes gate results before formatting, so `gate_result=approved` renders as `Approved` instead of raw `Done`.
-
-**Platform rendering rules:**
-
-**Claude Code and Cline** — use a markdown table (renders cleanly in terminal):
-
-Print at the end of execution. Strict column rules:
-
-```
-| Step | Name                    | Status            | Iterations |
-|------|-------------------------|--------------------|------------|
-|  1   | Write failing tests     | ✓ Done (17 tests)  | 1          |
-|  2   | Implement auth logic    | ✓ Done              | 3          |
-|  3   | Security review gate    | ⚡ Auto-approved    | -          |
-|  4   | Run full test suite     | ✓ Done (65 tests)   | 1          |
-|  5   | Human review            | ✓ Approved          | -          |
-```
-
-**Column rules:**
-- **Step** — step number only
-- **Name** — step name from the workflow
-- **Status** — outcome + details. Values:
-  - `✓ Done` — step completed
-  - `✓ Done (N tests)` — step completed with test count detail
-  - `⚡ Auto-approved` — gate auto-approved
-  - `✓ Approved` — gate approved by human
-  - `✗ Failed` — step verify failure
-  - `✗ Blocked` — executor stopped (max retries reached, gate denied, etc.)
-- **Iterations** — attempt count as a number only (`1`, `2`, `3`). For gates: `-`. Never put test counts or details here.
-
-**Codex** — use a compact list (wide tables render poorly in the Codex app):
-
-Use `scripts/finalize-codex-summary.sh` for Codex final summaries so finalize and render happen sequentially from one helper. Do not split "write summary JSON" and "render summary" into separate parallel actions in Codex. Claude Code and Cline keep using the existing markdown-table path.
-
-```
-Execution Summary
-
-✓ Step 1: Write failing tests - Done (1 attempt)
-✓ Step 2: Implement auth logic - Done (3 attempts)
-⚡ Step 3: Security review gate - Auto-approved (-)
-✓ Step 4: Run full test suite - Done (65 tests, 1 attempt)
-✓ Step 5: Human review - Approved (1 attempt)
-```
-
-**Compact list rules:**
-- Step name first, then inline status detail after ` - `
-- Include status word on every line: `Done`, `Approved`, `Auto-approved`, `Failed`, `Blocked`
-- Include iteration count: `1 attempt` / `N attempts`. For gates: `(-)`
-- Test counts go inside status detail before attempt count: `Done (28/28, 2 attempts)`
-
-**Durable report** (`.hotl/reports/<run-id>.md`) always uses the full markdown table regardless of platform.
 
 ### Verbose Progress View (opt-in)
 

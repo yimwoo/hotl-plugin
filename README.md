@@ -1,8 +1,10 @@
-# HOTL — Human-on-the-Loop AI Development
+# HOTL Plugin for Codex, Claude Code, and Cline
 
-**Structured guardrails for AI coding tools.** HOTL ensures every AI-generated change goes through design, planning, review, and verification — so nothing lands on `main` without evidence it works.
+**HOTL (Human-on-the-Loop)** is an AI coding workflow plugin and skill pack for **Codex**, **Claude Code**, and **Cline**. It adds design, planning, review, and verification guardrails so AI-generated changes do not land without evidence.
 
-Works with **Claude Code**, **Codex**, and **Cline**. Adapters available for Cursor and GitHub Copilot.
+Use HOTL when you want a structured AI development workflow: brainstorm before coding, write a plan before implementation, review risky changes, and verify results before claiming success.
+
+Works with **Claude Code**, **Codex**, and **Cline**. Adapter templates are also available for Cursor and GitHub Copilot.
 
 ## Table of Contents
 
@@ -22,6 +24,8 @@ Works with **Claude Code**, **Codex**, and **Cline**. Adapters available for Cur
 Most AI coding sessions fail in predictable ways: code starts before requirements are clear, plans skip verification, risky changes execute without review, and the agent claims success without evidence.
 
 HOTL prevents all four by enforcing structured workflows for implementation tasks while staying out of the way for code questions, quick fixes, and debugging.
+
+If someone searches for a "HOTL plugin" or a "Human-on-the-Loop AI coding workflow", this repo is the main project: it contains the canonical HOTL skills, workflow templates, and installation docs for Codex, Claude Code, and Cline.
 
 ## Quick Start
 
@@ -150,8 +154,8 @@ Covers Claude Code, Codex, and Cline, and skips tools that are not installed. In
 | Tool | Integration |
 | --- | --- |
 | Claude Code | Plugin — commands, skills, and hooks |
-| Codex | Native skill discovery |
-| Cline | Global rules + local skill files |
+| Codex | Native skill discovery with HOTL skills |
+| Cline | Global rules plus local HOTL skill files |
 | Cursor | Adapter templates via `/hotl:setup` |
 | GitHub Copilot | Adapter templates via `/hotl:setup` |
 
@@ -166,6 +170,8 @@ cline/rules/     Global rules for Cline
 adapters/        Templates for AGENTS.md, Cursor, Copilot, and other tools
 scripts/         Utility scripts including document-lint.sh
 docs/            Setup docs, workflow format reference, and detailed guides
+docs/contracts/  Output contracts (PR review, code review, execution report)
+docs/checklists/ Reusable review heuristics
 ```
 
 ## Contributing

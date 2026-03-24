@@ -130,4 +130,4 @@ Use this over `loop-execution` when you want explicit human checkpoints at every
 
 ## Reporting
 
-Inherits the mandatory Execution Reporting Contract from `skills/loop-execution/SKILL.md` — same platform rendering rules, same live step visibility requirements, same final summary (must be shown), same deterministic renderer path (`scripts/render-execution-summary.sh`), same durable `.hotl/reports/<run-id>.md` artifact.
+Execution report output must conform to `docs/contracts/execution-report-output.md`. Live step visibility follows the same rules as `skills/loop-execution/SKILL.md` — per-step chat logs on all platforms, deterministic renderer for final summary.
