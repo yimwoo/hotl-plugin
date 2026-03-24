@@ -2,6 +2,16 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.9.4] - 2026-03-24
+
+### Fixed
+- `runtime/hotl-rt` was missing from the Claude Code plugin cache, causing execution to fall back to inline logging instead of proper state persistence and summary rendering
+- `install-cline.sh` and `update.sh` Cline section now copy `runtime/hotl-rt` alongside other scripts
+
+### Added
+- Session-start hook now injects the HOTL plugin base path so the agent can resolve `hotl-rt` and scripts from any user project working directory
+- `skills/loop-execution/SKILL.md` includes a Path Resolution section with per-platform fallback order (Claude Code hook → Codex → Cline → local repo)
+
 ## [2.9.3] - 2026-03-23
 
 ### Added
