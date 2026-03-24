@@ -1,5 +1,7 @@
 # HOTL Plugin for Codex
 
+HOTL is a Human-on-the-Loop AI coding workflow for Codex. This repo installs HOTL as native Codex skills so you can brainstorm, plan, execute, review, and verify changes with more structure.
+
 ## Installation
 
 1. Clone the repo:
@@ -34,6 +36,8 @@ Codex discovers skills in `~/.agents/skills/` at startup. The `using-hotl` skill
 provides the HOTL skill index and routing guidance for the rest of the skill set.
 Codex uses the skill files directly. Claude-style slash commands such as
 `/hotl:pr-review` are not part of the Codex integration.
+If you were searching for a "HOTL plugin for Codex," this is the Codex install path:
+the `hotl-plugin` repo is exposed to Codex through native skill discovery.
 Codex discovers every entry under `~/.agents/skills/`, so the Installed skills
 screen mixes HOTL with any other installed skill packs. HOTL skills are the ones
 coming from `~/.agents/skills/hotl`.

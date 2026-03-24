@@ -1,6 +1,6 @@
-# HOTL for Cline — Structured AI Development Workflows
+# HOTL Plugin for Cline
 
-Stop Cline from jumping straight to code. HOTL (Human-on-the-Loop) adds structured workflows to Cline: brainstorm before coding, plan before implementing, verify before claiming done.
+HOTL is a Human-on-the-Loop AI coding workflow for Cline. It adds structured brainstorming, planning, review, and verification so Cline does not jump straight into implementation without guardrails.
 
 Works with **any API provider** — Oracle Code Assist (OCA), OpenAI (GPT-4, GPT-5), Anthropic (Claude), Google (Gemini), local models, and more.
 
