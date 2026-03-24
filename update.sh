@@ -113,6 +113,12 @@ if is_git_work_tree "${CLAUDE_PLUGIN_DIR}"; then
                 mkdir -p "${CACHE_VER_DIR}scripts/"
                 rsync -a --delete "${CLAUDE_PLUGIN_DIR}/scripts/" "${CACHE_VER_DIR}scripts/"
             fi
+
+            # Sync runtime
+            if [ -d "${CLAUDE_PLUGIN_DIR}/runtime" ]; then
+                mkdir -p "${CACHE_VER_DIR}runtime/"
+                rsync -a --delete "${CLAUDE_PLUGIN_DIR}/runtime/" "${CACHE_VER_DIR}runtime/"
+            fi
         done
         echo "  Cache refreshed."
     fi
@@ -191,6 +197,14 @@ if is_git_work_tree "${CLINE_HOTL_DIR}"; then
             chmod +x "${CLINE_SCRIPTS_DIR}/$(basename "${script_file}")"
         done
         echo "  Scripts refreshed at ${CLINE_SCRIPTS_DIR}."
+    fi
+
+    # Refresh runtime (hotl-rt)
+    if [ -f "${CLINE_HOTL_DIR}/runtime/hotl-rt" ]; then
+        mkdir -p "${CLINE_SCRIPTS_DIR}"
+        cp "${CLINE_HOTL_DIR}/runtime/hotl-rt" "${CLINE_SCRIPTS_DIR}/hotl-rt"
+        chmod +x "${CLINE_SCRIPTS_DIR}/hotl-rt"
+        echo "  Runtime (hotl-rt) refreshed."
     fi
 
     UPDATED=$((UPDATED + 1))

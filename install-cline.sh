@@ -54,6 +54,13 @@ if [ -d "${SCRIPTS_SRC}" ]; then
     done
 fi
 
+# ── Step 4: Install runtime (hotl-rt) to Scripts directory ────────────────────
+
+if [ -f "${HOTL_DIR}/runtime/hotl-rt" ]; then
+    cp "${HOTL_DIR}/runtime/hotl-rt" "${GLOBAL_SCRIPTS_DIR}/hotl-rt"
+    chmod +x "${GLOBAL_SCRIPTS_DIR}/hotl-rt"
+fi
+
 # ── Done ──────────────────────────────────────────────────────────────────────
 
 echo ""

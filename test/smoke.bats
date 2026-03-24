@@ -356,6 +356,11 @@ assert 'sessionStartNotice' not in data.get('hookSpecificOutput', {})
     [ "$status" -eq 0 ]
 }
 
+@test "document-lint accepts demo simulation workflow fixture" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/demo-simulation-workflow.md"
+    [ "$status" -eq 0 ]
+}
+
 # ── execution reporting ──────────────────────────────────────────────────────
 
 @test "workflow-format.md documents progress field" {

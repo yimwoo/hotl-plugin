@@ -165,6 +165,17 @@ Operational rule: `hotl-rt` calls happen before the corresponding chat log or Co
 
 See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection, and verify-first resume flow.
 
+### Path Resolution
+
+To find `hotl-rt` and HOTL scripts (`document-lint.sh`, `render-execution-summary.sh`, etc.), resolve in this order:
+
+1. **Session context (Claude Code):** the session-start hook injects the plugin base path — use it to construct full paths like `bash <plugin-path>/runtime/hotl-rt init <workflow-file>`
+2. **Codex:** resolve from `~/.codex/hotl/runtime/hotl-rt` and `~/.codex/hotl/scripts/`
+3. **Cline:** resolve from `~/Documents/Cline/Scripts/hotl-rt` and `~/Documents/Cline/Scripts/`
+4. **Working in the hotl-plugin repo itself:** use `./runtime/hotl-rt` and `./scripts/`
+
+The same resolution applies to all HOTL scripts under `scripts/`.
+
 ## Execution Report
 
 Execution report output must conform to `docs/contracts/execution-report-output.md`. The contract defines the durable report format (metadata, summary table, event log), execution status vocabulary, final summary semantics, platform rendering tables, and the deterministic renderer reference.
