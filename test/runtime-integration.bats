@@ -8,6 +8,7 @@
 setup() {
     REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
     HOTL_RT="$REPO_ROOT/runtime/hotl-rt"
+    FINALIZE_CODEX="$REPO_ROOT/scripts/finalize-codex-summary.sh"
     FIXTURES="$REPO_ROOT/test/fixtures"
     TEST_DIR=$(mktemp -d)
     cp -r "$FIXTURES" "$TEST_DIR/"
@@ -53,6 +54,39 @@ teardown() {
     # Report should be finalized
     grep -Fq '**Status:** completed' "$REPORT"
     grep -q '✓ Done' "$REPORT"
+    grep -q 'Run finalized: completed' "$REPORT"
+}
+
+@test "demo simulation flow renders report and compact Codex summary" {
+    RUN_ID=$("$HOTL_RT" init fixtures/demo-simulation-workflow.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    REPORT=".hotl/reports/${RUN_ID}.md"
+
+    "$HOTL_RT" step 1 start
+    mkdir -p .hotl-demo/simulation
+    "$HOTL_RT" step 1 verify
+
+    "$HOTL_RT" step 2 start
+    printf '%s\n' '# Demo Note' '' 'This file was created by a throwaway HOTL loop-execution simulation.' > .hotl-demo/simulation/demo-note.md
+    "$HOTL_RT" step 2 verify
+
+    "$HOTL_RT" step 3 start
+    "$HOTL_RT" step 3 verify
+    "$HOTL_RT" gate 3 approved --mode auto
+
+    run "$FINALIZE_CODEX"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Execution Summary"* ]]
+    [[ "$output" == *"Step 1: Create demo workspace - Done (1 attempt)"* ]]
+    [[ "$output" == *"Step 2: Write demo note - Done (1 attempt)"* ]]
+    [[ "$output" == *"Step 3: Demo review gate - Auto-approved (-)"* ]]
+
+    [ "$(jq -r '.status' "$STATE")" = "completed" ]
+    [ "$(jq -r '.steps[2].gate_result' "$STATE")" = "approved" ]
+    [ "$(jq -r '.steps[2].gate_mode' "$STATE")" = "auto" ]
+    [ -f .hotl-demo/simulation/demo-note.md ]
+    grep -Fq '**Status:** completed' "$REPORT"
+    grep -q '⚡ Auto-approved' "$REPORT"
     grep -q 'Run finalized: completed' "$REPORT"
 }
 
