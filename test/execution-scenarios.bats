@@ -170,6 +170,12 @@ setup() {
     grep -qi "Codex final summaries" "$LOOP_SKILL"
 }
 
+@test "scenario 06: loop-execution requires Codex final response to include rendered summary" {
+    grep -q "final response" "$LOOP_SKILL"
+    grep -qi "visible chat text" "$LOOP_SKILL"
+    grep -qi "Do not paraphrase" "$LOOP_SKILL"
+}
+
 @test "scenario 06: loop-execution references Codex current-step helper" {
     grep -q "scripts/show-codex-current-step.sh" "$LOOP_SKILL"
     grep -qi "active workflow step" "$LOOP_SKILL"

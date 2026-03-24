@@ -92,6 +92,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
   - **Codex native progress (mandatory):** HOTL must use the native progress card as the primary live step visibility surface. If the native tool is unavailable or errors, immediately switch to per-step chat logs.
   - **Codex final summary:** must use compact step list in chat (not wide markdown table). Durable report keeps the full table.
   - **Codex helper path:** use `scripts/finalize-codex-summary.sh` so finalize and rendering happen sequentially from one helper instead of separate ad hoc commands.
+  - **Codex final response:** the rendered compact summary must appear directly in the final assistant message as visible chat text. A narrative wrap-up can follow, but cannot replace the summary lines.
   - **Current step helper:** use `scripts/show-codex-current-step.sh` when you need an explicit current-step readout in Codex chat.
   - **Deterministic renderer:** `scripts/finalize-codex-summary.sh` delegates to `scripts/render-execution-summary.sh`, which remains the source of truth for Codex summary formatting.
 - `executing-plans` — manual checkpointed execution (references same output contract)
@@ -155,6 +156,29 @@ Use this short canary when you want to validate Codex execution UX in the real a
 3. Confirm only one workflow step is shown as active at a time.
 4. Confirm the run ends with a visible final chat summary that includes every step, its status, and its attempt count or gate marker.
 5. If the native progress card does not appear or errors, confirm HOTL falls back to per-step chat logs and still shows the final chat summary.
+
+Expected compliant final Codex response shape:
+
+```text
+Execution Summary
+
+✓ Step 1: Write failing tests - Done (1 attempt)
+✓ Step 2: Implement auth logic - Done (3 attempts)
+⚡ Step 3: Security review gate - Auto-approved (-)
+✓ Step 4: Run full test suite - Done (65 tests, 1 attempt)
+✓ Step 5: Human review - Approved (1 attempt)
+
+Tests: 65 passed
+Behavior: walkthrough completed in the app
+```
+
+Non-compliant example:
+
+```text
+The workflow finished successfully. Tests passed and the app looks good.
+```
+
+That prose-only wrap-up is not enough because it omits the rendered step-by-step execution summary.
 
 When the repo includes `scripts/render-execution-summary.sh`, use it as the source of truth for final-summary formatting. If chat output disagrees with `.hotl/reports/<run-id>.md` or the renderer output, trust the runtime artifacts first.
 

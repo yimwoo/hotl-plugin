@@ -53,6 +53,8 @@ Timestamped entries appended after each step transition:
 
 Every execution run must end with a visible summary. The summary must include step number, name, status, and iterations for every step. See Platform Rendering below for format per platform.
 
+For Codex, the compact summary itself must appear as visible chat text in the final assistant message. A prose recap without the rendered step list is non-compliant.
+
 ### 5. Verification Notes
 
 What verification was performed across the run — test commands, linter results, artifacts inspected. Brief, just enough to show what informed the execution outcomes.
@@ -161,6 +163,7 @@ Execution Summary
 - Include status word on every line: `Done`, `Approved`, `Auto-approved`, `Failed`, `Blocked`
 - Include iteration count: `1 attempt` / `N attempts`. For gates: `(-)`
 - Test counts go inside status detail before attempt count: `Done (28/28, 2 attempts)`
+- The rendered compact list must be included directly in the final Codex response; do not replace it with narrative prose
 
 ### Durable Report
 

@@ -143,9 +143,10 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
 6. All steps complete:
    → Run review checkpoint (see Review Checkpoints below)
    → Invoke hotl:verification-before-completion skill
-   → Run: `hotl-rt finalize --json`
-   → Render the summary payload with the deterministic renderer: `scripts/render-execution-summary.sh --platform <codex|claude|cline> <summary-json-file>`
-   → Never freehand the final summary when the renderer is available
+   → For Codex final summaries, run: `scripts/finalize-codex-summary.sh`
+   → For Claude Code/Cline, run: `hotl-rt finalize --json`, write the payload to a temp file, then render it with: `scripts/render-execution-summary.sh --platform <claude|cline> <summary-json-file>`
+   → Do not freehand the final summary when the renderer is available
+   → The rendered summary must be shown as visible chat output in the final response; do not paraphrase it away
 ```
 
 ## Execution State Persistence
@@ -169,6 +170,10 @@ See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection,
 Execution report output must conform to `docs/contracts/execution-report-output.md`. The contract defines the durable report format (metadata, summary table, event log), execution status vocabulary, final summary semantics, platform rendering tables, and the deterministic renderer reference.
 
 The `hotl-rt` runtime writes the durable report to `.hotl/reports/<run-id>.md` incrementally. The report survives app rendering quirks and provides a reliable post-run artifact for debugging, trust, and resume.
+
+Reference `report_path` in user-facing pause, blocked, resume, and completion responses so the durable report is always discoverable.
+
+If the workflow sets `report_detail: full`, successful verify output must also be included in the durable report, not only failures.
 
 ## Review Checkpoints
 
@@ -212,6 +217,34 @@ Review happens:
 ## Live Execution Behavior
 
 Report format, status vocabulary, final summary semantics, and platform rendering tables for final artifacts are defined in `docs/contracts/execution-report-output.md`. This section covers runtime behavior that is executor-owned: live step visibility, progress updates, and verbose mode.
+
+### Final Summary (mandatory)
+
+Every execution run MUST end with a visible final summary in chat. A prose recap alone is not compliant.
+
+For Codex final summaries:
+- MUST use `scripts/finalize-codex-summary.sh` when available
+- MUST include the rendered compact list in the final response as visible chat text
+- MUST keep the rendered step lines intact; do not paraphrase, omit, or replace them with narrative
+- MAY add a short prose recap after the rendered summary, but not instead of it
+
+If the Codex helper is unavailable, fall back to `hotl-rt finalize --json` plus `scripts/render-execution-summary.sh --platform codex ...`, then emit that renderer output directly.
+
+### Platform Rendering
+
+Final artifacts must follow `docs/contracts/execution-report-output.md`:
+
+| Platform | Final summary rendering |
+|---|---|
+| Codex | Compact list in chat. Wide markdown tables are not acceptable here. |
+| Claude Code | Markdown table in chat. |
+| Cline | Markdown table in chat. |
+
+Status vocabulary for final summaries includes `✓ Done`, `⚡ Auto-approved`, `✓ Approved`, `✗ Failed`, and `✗ Blocked`.
+
+Iterations means attempt count only. For tables, the `Iterations` column is a number only or `-` for gates. Never put test counts in `Iterations`; test counts belong in `Status`.
+
+In the Codex compact list, keep the step name first and inline status detail after ` - `. Include the status word on every line and always include iteration count details such as `Done (1 attempt)`, `Done (3 attempts)`, or `Approved (1 attempt)`.
 
 ### Platform Live Step Visibility
 

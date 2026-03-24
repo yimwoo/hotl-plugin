@@ -92,7 +92,7 @@ Review happens after step verification, before `verification-before-completion`,
 
 ## Reporting
 
-Execution report output must conform to `docs/contracts/execution-report-output.md`. Live step visibility follows the same rules as `skills/loop-execution/SKILL.md` — per-step chat logs on all platforms, deterministic renderer for final summary.
+Execution report output must conform to `docs/contracts/execution-report-output.md`. This is the canonical reporting contract from `skills/loop-execution/SKILL.md`. Live step visibility follows the same rules as `skills/loop-execution/SKILL.md` — per-step chat logs on all platforms, deterministic renderer for final summary.
 
 ## Related Skills
 
