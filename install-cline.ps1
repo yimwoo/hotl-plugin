@@ -1,17 +1,39 @@
 # HOTL Plugin Installer for Cline (Windows)
 # Requires: PowerShell 5.1+ (ships with Windows 10+)
 
+param(
+    [switch]$NativeSkills
+)
+
 $ErrorActionPreference = "Stop"
+
+$InstallMode = if ($NativeSkills) { "native-skills" } else { "legacy-rules" }
 
 $HotlDir = Join-Path $env:USERPROFILE ".cline\hotl"
 $RulesSrc = Join-Path $HotlDir "cline\rules"
 $ScriptsSrc = Join-Path $HotlDir "scripts"
 $GlobalRulesDir = Join-Path $env:USERPROFILE "Documents\Cline\Rules"
 $GlobalScriptsDir = Join-Path $env:USERPROFILE "Documents\Cline\Scripts"
+$ClineSkillsDir = Join-Path $env:USERPROFILE ".cline\skills\hotl"
+$ModeFile = Join-Path $HotlDir ".cline-install-mode"
 
 # Windows path values for placeholder replacement
 $HotlHomePath = Join-Path $env:USERPROFILE ".cline\hotl"
 $ScriptsHomePath = $GlobalScriptsDir
+
+# The 10 native Cline skills (by directory name)
+$NativeSkillNames = @("brainstorming", "writing-plans", "document-review", "executing-plans", "subagent-execution", "tdd", "systematic-debugging", "code-review", "pr-reviewing", "loop-execution")
+
+# The 9 legacy workflow rule files (all except hotl-operating-model.md)
+$LegacyWorkflowRules = @("hotl-brainstorming.md", "hotl-planning.md", "hotl-execution.md", "hotl-document-review.md", "hotl-subagent-execution.md", "hotl-tdd.md", "hotl-debugging.md", "hotl-code-review.md", "hotl-pr-review.md")
+
+function Replace-Placeholders {
+    param([string]$FilePath)
+    $Content = Get-Content $FilePath -Raw
+    $Content = $Content -replace '__HOTL_HOME__', $HotlHomePath
+    $Content = $Content -replace '__SCRIPTS_HOME__', $ScriptsHomePath
+    Set-Content -Path $FilePath -Value $Content -NoNewline
+}
 
 # -- Step 1: Install HOTL globally ------------------------------------------------
 
@@ -32,30 +54,80 @@ if (Test-Path (Join-Path $HotlDir ".git")) {
     }
 }
 
-# -- Step 2: Install rules globally to ~/Documents/Cline/Rules/ -------------------
+# Persist install mode
+Set-Content -Path $ModeFile -Value $InstallMode -NoNewline
+
+# -- Step 2: Install rules and/or skills ------------------------------------------
 
 if (-not (Test-Path $GlobalRulesDir)) {
     New-Item -ItemType Directory -Force -Path $GlobalRulesDir | Out-Null
 }
 
-$Copied = 0
-Get-ChildItem -Path $RulesSrc -Filter "hotl-*.md" -ErrorAction SilentlyContinue | ForEach-Object {
-    Copy-Item -Force -Path $_.FullName -Destination $GlobalRulesDir
-    $Copied++
-}
+if ($InstallMode -eq "native-skills") {
+    # Native skills mode: 1 rule + 10 native skills
 
-if ($Copied -eq 0) {
-    Write-Host "ERROR: No rule files found in $RulesSrc" -ForegroundColor Red
-    Write-Host "Try re-running: git clone https://github.com/yimwoo/hotl-plugin.git $HotlDir"
-    exit 1
-}
+    # Install only hotl-operating-model.md as a rule
+    $OpModelSrc = Join-Path $RulesSrc "hotl-operating-model.md"
+    if (Test-Path $OpModelSrc) {
+        Copy-Item -Force -Path $OpModelSrc -Destination $GlobalRulesDir
+        Replace-Placeholders (Join-Path $GlobalRulesDir "hotl-operating-model.md")
+        Write-Host "  Installed hotl-operating-model.md as global rule."
+    } else {
+        Write-Host "ERROR: hotl-operating-model.md not found in $RulesSrc" -ForegroundColor Red
+        exit 1
+    }
 
-# Replace path placeholders with Windows paths in installed rule copies
-Get-ChildItem -Path $GlobalRulesDir -Filter "hotl-*.md" | ForEach-Object {
-    $Content = Get-Content $_.FullName -Raw
-    $Content = $Content -replace '__HOTL_HOME__', $HotlHomePath
-    $Content = $Content -replace '__SCRIPTS_HOME__', $ScriptsHomePath
-    Set-Content -Path $_.FullName -Value $Content -NoNewline
+    # Remove legacy workflow rules if they exist
+    foreach ($RuleName in $LegacyWorkflowRules) {
+        $RulePath = Join-Path $GlobalRulesDir $RuleName
+        if (Test-Path $RulePath) { Remove-Item -Force $RulePath }
+    }
+
+    # Install native skills via copy
+    if (-not (Test-Path $ClineSkillsDir)) {
+        New-Item -ItemType Directory -Force -Path $ClineSkillsDir | Out-Null
+    }
+    $SkillCount = 0
+    foreach ($SkillName in $NativeSkillNames) {
+        $SkillSrc = Join-Path $HotlDir "skills\$SkillName"
+        $SkillDst = Join-Path $ClineSkillsDir $SkillName
+        if (Test-Path $SkillSrc) {
+            if (Test-Path $SkillDst) { Remove-Item -Recurse -Force $SkillDst }
+            Copy-Item -Recurse -Force -Path $SkillSrc -Destination $SkillDst
+            $SkillCount++
+        } else {
+            Write-Host "WARNING: Skill directory not found: $SkillSrc" -ForegroundColor Yellow
+        }
+    }
+
+    $Copied = 1
+    Write-Host "  Installed $SkillCount native Cline skills to $ClineSkillsDir."
+
+} else {
+    # Legacy rules mode: all 10 rules
+
+    # Remove native skills directory if it exists (cleanup from previous native-skills install)
+    if (Test-Path $ClineSkillsDir) {
+        Remove-Item -Recurse -Force $ClineSkillsDir
+        Write-Host "  Removed previous native skills installation."
+    }
+
+    $Copied = 0
+    Get-ChildItem -Path $RulesSrc -Filter "hotl-*.md" -ErrorAction SilentlyContinue | ForEach-Object {
+        Copy-Item -Force -Path $_.FullName -Destination $GlobalRulesDir
+        $Copied++
+    }
+
+    if ($Copied -eq 0) {
+        Write-Host "ERROR: No rule files found in $RulesSrc" -ForegroundColor Red
+        Write-Host "Try re-running: git clone https://github.com/yimwoo/hotl-plugin.git $HotlDir"
+        exit 1
+    }
+
+    # Replace path placeholders with Windows paths in installed rule copies
+    Get-ChildItem -Path $GlobalRulesDir -Filter "hotl-*.md" | ForEach-Object {
+        Replace-Placeholders $_.FullName
+    }
 }
 
 # -- Step 3: Install scripts globally to ~/Documents/Cline/Scripts/ ---------------
@@ -80,13 +152,20 @@ if (Test-Path $RuntimeSrc) {
 # -- Done --------------------------------------------------------------------------
 
 Write-Host ""
-Write-Host "HOTL for Cline installed successfully!"
+Write-Host "HOTL for Cline installed successfully! (mode: $InstallMode)"
 Write-Host ""
-Write-Host "  Global skills:  $HotlDir\skills\"
-Write-Host "  Global rules:   $GlobalRulesDir\ ($Copied rule files)"
+if ($InstallMode -eq "native-skills") {
+    Write-Host "  Global rule:    $GlobalRulesDir\hotl-operating-model.md"
+    Write-Host "  Native skills:  $ClineSkillsDir\ ($SkillCount skills)"
+} else {
+    Write-Host "  Global skills:  $HotlDir\skills\"
+    Write-Host "  Global rules:   $GlobalRulesDir\ ($Copied rule files)"
+}
 Write-Host "  Global scripts: $GlobalScriptsDir\"
 Write-Host ""
-Write-Host "  Rules apply to ALL projects in Cline - no per-project setup needed."
+Write-Host "  Mode persisted to $ModeFile"
+Write-Host ""
+Write-Host "  Workflows apply to ALL projects in Cline - no per-project setup needed."
 Write-Host ""
 Write-Host "Available workflows - just tell Cline:"
 Write-Host '  "brainstorm this feature"     - design with HOTL contracts before coding'

@@ -155,6 +155,60 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.cline\hotl\update.ps
 
 This pulls the latest code and syncs global rules automatically. Also updates Claude Code and Codex if installed. On Windows, rule path placeholders are re-applied during update.
 
+## Native Skills Mode (Cline 3.48.0+)
+
+If your Cline version supports native skills (`use_skill` tool), you can install HOTL as native Cline skills instead of rules. This gives you:
+
+- **Token savings** — skills are lazy-loaded on-demand instead of always in the system prompt
+- **UI discoverability** — HOTL skills appear in Cline's Skills menu
+- **Same workflows** — identical capabilities, just a more efficient delivery mechanism
+
+### Install with native skills
+
+**macOS / Linux:**
+```bash
+bash ~/.cline/hotl/install-cline.sh --native-skills
+```
+
+**Windows (PowerShell):**
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.cline\hotl\install-cline.ps1" -NativeSkills
+```
+
+This installs:
+- 1 global rule: `hotl-operating-model.md` (always-on task router)
+- 10 native skills to `~/.cline/skills/hotl/` (macOS/Linux) or `%USERPROFILE%\.cline\skills\hotl\` (Windows)
+
+The install mode is persisted in `~/.cline/hotl/.cline-install-mode`. Updates automatically refresh the correct mode.
+
+### Switching modes
+
+To switch from legacy rules to native skills (or back), re-run the installer with the desired flag:
+
+```bash
+bash ~/.cline/hotl/install-cline.sh --native-skills   # switch to native skills
+bash ~/.cline/hotl/install-cline.sh                    # switch back to legacy rules
+```
+
+Or during an update:
+
+```bash
+bash ~/.cline/hotl/update.sh --native-skills           # switch to native skills during update
+```
+
+Switching modes automatically cleans up the previous mode's artifacts — no manual cleanup needed.
+
+### Which mode should I use?
+
+| | Legacy rules (default) | Native skills (`--native-skills`) |
+|---|---|---|
+| **Cline version** | Any | 3.48.0+ with `use_skill` support |
+| **Token cost** | All 10 rules always in context | Only operating model rule always in context |
+| **Activation** | Passive (user says trigger phrase) | Active (Cline matches skill description) |
+| **UI** | No skills menu | Skills appear in Cline's Skills menu |
+
+When in doubt, use the default. If you're on a modern Cline and want better token efficiency, use `--native-skills`.
+
 ## FAQ
 
 **Does it work with Oracle Code Assist (OCA)?**

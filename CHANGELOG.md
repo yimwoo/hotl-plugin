@@ -2,6 +2,17 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.9.7] - 2026-03-25
+
+### Added
+- Native Cline skills mode via `--native-skills` / `-NativeSkills` installer flag
+- When enabled: installs 1 operating-model rule + 10 native Cline skills (lazy-loaded, token-efficient) instead of 10 always-on rules
+- Install mode persisted in `~/.cline/hotl/.cline-install-mode` — updates honor the persisted mode without heuristic detection
+- Mode switch cleanup: native-skills removes legacy workflow rules, legacy removes native skills directory
+- Missing marker file defaults to `legacy-rules` for backward compatibility with existing installs
+- `update.sh` and `update.ps1` support `--native-skills` / `-NativeSkills` to switch modes during update
+- `docs/README.cline.md` documents both install modes with comparison table
+
 ## [2.9.6] - 2026-03-25
 
 ### Added
