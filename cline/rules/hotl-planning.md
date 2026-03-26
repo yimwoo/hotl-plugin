@@ -2,7 +2,7 @@
 
 **When to use:** After design approval. Create an implementation plan before coding.
 
-**Full skill:** Read `~/.cline/hotl/skills/writing-plans/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
+**Full skill:** Read `__HOTL_HOME__/skills/writing-plans/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 
 ### MANDATORY — DO NOT SKIP
 

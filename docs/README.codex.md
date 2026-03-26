@@ -4,6 +4,8 @@ HOTL is a Human-on-the-Loop AI coding workflow for Codex. This repo installs HOT
 
 ## Installation
 
+### macOS / Linux
+
 1. Clone the repo:
 
 ```bash
@@ -19,6 +21,27 @@ git clone git@orahub.oci.oraclecorp.com:.../hotl-plugin ~/.codex/hotl
 ```bash
 mkdir -p ~/.agents/skills
 ln -s ~/.codex/hotl/skills ~/.agents/skills/hotl
+```
+
+3. Restart Codex.
+
+### Windows (PowerShell)
+
+1. Clone the repo:
+
+```powershell
+# From GitHub (internet)
+git clone https://github.com/yimwoo/hotl-plugin "$env:USERPROFILE\.codex\hotl"
+
+# From OraHub (corporate network)
+git clone git@orahub.oci.oraclecorp.com:.../hotl-plugin "$env:USERPROFILE\.codex\hotl"
+```
+
+2. Create the skills junction:
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
+cmd /c mklink /J "$env:USERPROFILE\.agents\skills\hotl" "$env:USERPROFILE\.codex\hotl\skills"
 ```
 
 3. Restart Codex.
@@ -115,30 +138,52 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 
 ## Updating
 
+### macOS / Linux
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
 ```
 
-This is the recommended Codex update path because it fetches the latest updater
-script first, then refreshes the stable install at `~/.codex/hotl`.
+### Windows (PowerShell)
 
-If `~/.codex/hotl` drifted onto another branch, the updater switches it back to
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.ps1" -OutFile "$env:TEMP\hotl-update.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\hotl-update.ps1"
+```
+
+Or if already cloned:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hotl\update.ps1"
+```
+
+---
+
+This is the recommended Codex update path because it fetches the latest updater
+script first, then refreshes the stable install at `~/.codex/hotl` (macOS/Linux) or `%USERPROFILE%\.codex\hotl` (Windows).
+
+If the install drifted onto another branch, the updater switches it back to
 the stable `main` branch before syncing.
 If it finds local changes in the Codex install, it saves a snapshot under
-`~/.codex/backups/hotl/<timestamp>/` and then resets the stable install to the
+`~/.codex/backups/hotl/<timestamp>/` (or `%USERPROFILE%\.codex\backups\hotl\` on Windows) and then resets the stable install to the
 latest `origin/main`.
 
 If you intentionally want to discard local Codex changes without saving that
 backup, run:
 
 ```bash
-bash ~/.codex/hotl/update.sh --force-codex
+bash ~/.codex/hotl/update.sh --force-codex        # macOS/Linux
+```
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hotl\update.ps1" -ForceCodex   # Windows
 ```
 
 To check if an update is available without updating:
 
 ```bash
-bash ~/.codex/hotl/update.sh --check
+bash ~/.codex/hotl/update.sh --check               # macOS/Linux
+```
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hotl\update.ps1" -Check        # Windows
 ```
 
 Codex currently discovers HOTL through `~/.agents/skills/hotl`. It does not
@@ -185,7 +230,14 @@ When the repo includes `scripts/render-execution-summary.sh`, use it as the sour
 
 ## Uninstalling
 
+**macOS / Linux:**
 ```bash
 rm ~/.agents/skills/hotl
 rm -rf ~/.codex/hotl
+```
+
+**Windows (PowerShell):**
+```powershell
+Remove-Item "$env:USERPROFILE\.agents\skills\hotl" -Force
+Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\hotl"
 ```

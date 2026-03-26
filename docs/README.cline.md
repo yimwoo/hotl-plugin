@@ -6,6 +6,8 @@ Works with **any API provider** — Oracle Code Assist (OCA), OpenAI (GPT-4, GPT
 
 ## Install (One Command)
 
+### macOS / Linux
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/install-cline.sh | bash
 ```
@@ -17,10 +19,18 @@ git clone https://github.com/yimwoo/hotl-plugin.git ~/.cline/hotl
 bash ~/.cline/hotl/install-cline.sh
 ```
 
+### Windows (PowerShell)
+
+```powershell
+git clone https://github.com/yimwoo/hotl-plugin.git "$env:USERPROFILE\.cline\hotl"
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.cline\hotl\install-cline.ps1"
+```
+
 ### What the script does
 
-1. Installs HOTL skills to `~/.cline/hotl/` (full skill files for detailed instructions)
-2. Copies HOTL rules to `~/Documents/Cline/Rules/` (Cline's global rules directory)
+1. Installs HOTL skills to `~/.cline/hotl/` (macOS/Linux) or `%USERPROFILE%\.cline\hotl\` (Windows)
+2. Copies HOTL rules to `~/Documents/Cline/Rules/` (macOS/Linux) or `%USERPROFILE%\Documents\Cline\Rules\` (Windows)
+3. Replaces path placeholders in rules with OS-appropriate paths at install time
 
 **No per-project setup.** Rules apply to all projects automatically. No settings to paste. No VS Code restart needed — just start a new Cline task.
 
@@ -119,6 +129,8 @@ gate: human
 
 ## Updating
 
+### macOS / Linux
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
 ```
@@ -129,7 +141,19 @@ Or if already cloned:
 bash ~/.cline/hotl/update.sh
 ```
 
-This pulls the latest code and syncs global rules automatically. Also updates Claude Code and Codex if installed.
+### Windows (PowerShell)
+
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.ps1" -OutFile "$env:TEMP\hotl-update.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\hotl-update.ps1"
+```
+
+Or if already cloned:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.cline\hotl\update.ps1"
+```
+
+This pulls the latest code and syncs global rules automatically. Also updates Claude Code and Codex if installed. On Windows, rule path placeholders are re-applied during update.
 
 ## FAQ
 

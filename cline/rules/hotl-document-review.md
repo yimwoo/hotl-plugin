@@ -2,7 +2,7 @@
 
 **When to use:** Optional — for ad hoc review of existing docs, external specs, hand-authored plans, or non-HOTL documents. Not required in the standard HOTL plan-then-execute flow (writing-plans has a built-in self-check, and execution preflight runs structural lint automatically).
 
-**Full skill:** Read `~/.cline/hotl/skills/document-review/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
+**Full skill:** Read `__HOTL_HOME__/skills/document-review/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 
 ### MANDATORY — TWO PHASES, BOTH REQUIRED
 
@@ -13,7 +13,7 @@ You MUST run both phases in order. Do NOT skip Phase 1. Do NOT start execution u
 Run the lint script:
 
 ```bash
-bash ~/Documents/Cline/Scripts/document-lint.sh <file>
+bash __SCRIPTS_HOME__/document-lint.sh <file>
 ```
 
 **If lint FAILS:** STOP. Show all errors. Author MUST fix structural issues. Do NOT proceed to Phase 2.
