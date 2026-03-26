@@ -6,6 +6,7 @@ set -euo pipefail
 
 FORCE_CODEX=0
 CHECK_ONLY=0
+SWITCH_NATIVE_SKILLS=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -15,9 +16,12 @@ while [ $# -gt 0 ]; do
         --check)
             CHECK_ONLY=1
             ;;
+        --native-skills)
+            SWITCH_NATIVE_SKILLS=1
+            ;;
         *)
             echo "Unknown option: $1" >&2
-            echo "Usage: bash update.sh [--check] [--force-codex]" >&2
+            echo "Usage: bash update.sh [--check] [--force-codex] [--native-skills]" >&2
             exit 1
             ;;
     esac
@@ -37,6 +41,8 @@ CODEX_HOTL_DIR="${HOME}/.codex/hotl"
 CLINE_HOTL_DIR="${HOME}/.cline/hotl"
 CLINE_RULES_DIR="${HOME}/Documents/Cline/Rules"
 CLINE_SCRIPTS_DIR="${HOME}/Documents/Cline/Scripts"
+CLINE_SKILLS_DIR="${HOME}/.cline/skills/hotl"
+CLINE_MODE_FILE="${CLINE_HOTL_DIR}/.cline-install-mode"
 
 FOUND=0
 UPDATED=0
@@ -177,15 +183,78 @@ if is_git_work_tree "${CLINE_HOTL_DIR}"; then
     echo "Updating Cline plugin at ${CLINE_HOTL_DIR}..."
     git -C "${CLINE_HOTL_DIR}" pull
 
-    # Refresh global rules
-    if [ -d "${CLINE_RULES_DIR}" ] && [ -d "${CLINE_HOTL_DIR}/cline/rules" ]; then
-        echo "Refreshing Cline global rules at ${CLINE_RULES_DIR}..."
-        for rule_file in "${CLINE_HOTL_DIR}"/cline/rules/hotl-*.md; do
-            [ -f "${rule_file}" ] || continue
-            cp "${rule_file}" "${CLINE_RULES_DIR}/"
+    # Determine Cline install mode
+    CLINE_MODE="legacy-rules"
+    if [ "${SWITCH_NATIVE_SKILLS}" -eq 1 ]; then
+        CLINE_MODE="native-skills"
+        echo "${CLINE_MODE}" > "${CLINE_MODE_FILE}"
+        echo "  Switching Cline install mode to native-skills."
+    elif [ -f "${CLINE_MODE_FILE}" ]; then
+        CLINE_MODE="$(cat "${CLINE_MODE_FILE}")"
+    fi
+
+    # The 10 native Cline skills and 9 legacy workflow rule names
+    NATIVE_SKILLS="brainstorming writing-plans document-review executing-plans subagent-execution tdd systematic-debugging code-review pr-reviewing loop-execution"
+    LEGACY_WORKFLOW_RULES="hotl-brainstorming.md hotl-planning.md hotl-execution.md hotl-document-review.md hotl-subagent-execution.md hotl-tdd.md hotl-debugging.md hotl-code-review.md hotl-pr-review.md"
+
+    replace_cline_placeholders() {
+        local file="$1"
+        sed -i.bak \
+            -e "s|__HOTL_HOME__|~/.cline/hotl|g" \
+            -e "s|__SCRIPTS_HOME__|~/Documents/Cline/Scripts|g" \
+            "${file}"
+        rm -f "${file}.bak"
+    }
+
+    mkdir -p "${CLINE_RULES_DIR}"
+
+    if [ "${CLINE_MODE}" = "native-skills" ]; then
+        echo "  Refreshing Cline in native-skills mode..."
+
+        # Refresh operating model rule only
+        if [ -f "${CLINE_HOTL_DIR}/cline/rules/hotl-operating-model.md" ]; then
+            cp "${CLINE_HOTL_DIR}/cline/rules/hotl-operating-model.md" "${CLINE_RULES_DIR}/"
+            replace_cline_placeholders "${CLINE_RULES_DIR}/hotl-operating-model.md"
+        fi
+
+        # Remove legacy workflow rules
+        for rule_name in ${LEGACY_WORKFLOW_RULES}; do
+            rm -f "${CLINE_RULES_DIR}/${rule_name}"
         done
-        RULE_COUNT=$(find "${CLINE_RULES_DIR}" -maxdepth 1 -name 'hotl-*.md' | wc -l | tr -d ' ')
-        echo "  ${RULE_COUNT} rule files updated."
+
+        # Refresh native skill symlinks
+        mkdir -p "${CLINE_SKILLS_DIR}"
+        for skill_name in ${NATIVE_SKILLS}; do
+            skill_src="${CLINE_HOTL_DIR}/skills/${skill_name}"
+            skill_dst="${CLINE_SKILLS_DIR}/${skill_name}"
+            if [ -d "${skill_src}" ]; then
+                rm -f "${skill_dst}" 2>/dev/null || rm -rf "${skill_dst}" 2>/dev/null || true
+                ln -s "${skill_src}" "${skill_dst}"
+            fi
+        done
+        echo "  1 rule + 10 native skills refreshed."
+    else
+        echo "  Refreshing Cline in legacy-rules mode..."
+
+        # Remove native skills if they exist
+        if [ -d "${CLINE_SKILLS_DIR}" ]; then
+            rm -rf "${CLINE_SKILLS_DIR}"
+        fi
+
+        # Refresh all rules
+        if [ -d "${CLINE_HOTL_DIR}/cline/rules" ]; then
+            for rule_file in "${CLINE_HOTL_DIR}"/cline/rules/hotl-*.md; do
+                [ -f "${rule_file}" ] || continue
+                cp "${rule_file}" "${CLINE_RULES_DIR}/"
+            done
+            # Replace placeholders
+            for rule_file in "${CLINE_RULES_DIR}"/hotl-*.md; do
+                [ -f "${rule_file}" ] || continue
+                replace_cline_placeholders "${rule_file}"
+            done
+            RULE_COUNT=$(find "${CLINE_RULES_DIR}" -maxdepth 1 -name 'hotl-*.md' | wc -l | tr -d ' ')
+            echo "  ${RULE_COUNT} rule files updated."
+        fi
     fi
 
     # Refresh global scripts
@@ -208,7 +277,7 @@ if is_git_work_tree "${CLINE_HOTL_DIR}"; then
     fi
 
     UPDATED=$((UPDATED + 1))
-    echo "  Cline plugin updated."
+    echo "  Cline plugin updated (mode: ${CLINE_MODE})."
     echo ""
 fi
 

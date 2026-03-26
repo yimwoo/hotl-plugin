@@ -4,7 +4,8 @@
 
 param(
     [switch]$ForceCodex,
-    [switch]$Check
+    [switch]$Check,
+    [switch]$NativeSkills
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,6 +33,8 @@ $CodexHotlDir = Join-Path $env:USERPROFILE ".codex\hotl"
 $ClineHotlDir = Join-Path $env:USERPROFILE ".cline\hotl"
 $ClineRulesDir = Join-Path $env:USERPROFILE "Documents\Cline\Rules"
 $ClineScriptsDir = Join-Path $env:USERPROFILE "Documents\Cline\Scripts"
+$ClineSkillsDir = Join-Path $env:USERPROFILE ".cline\skills\hotl"
+$ClineModeFile = Join-Path $ClineHotlDir ".cline-install-mode"
 
 $Found = 0
 $Updated = 0
@@ -155,25 +158,85 @@ if (Test-GitWorkTree $ClineHotlDir) {
     Write-Host "Updating Cline plugin at $ClineHotlDir..."
     git -C $ClineHotlDir pull
 
-    # Refresh global rules
+    # Determine Cline install mode
+    $ClineMode = "legacy-rules"
+    if ($NativeSkills) {
+        $ClineMode = "native-skills"
+        Set-Content -Path $ClineModeFile -Value $ClineMode -NoNewline
+        Write-Host "  Switching Cline install mode to native-skills."
+    } elseif (Test-Path $ClineModeFile) {
+        $ClineMode = (Get-Content $ClineModeFile -Raw).Trim()
+    }
+
+    # Skill and rule name lists
+    $NativeSkillNames = @("brainstorming", "writing-plans", "document-review", "executing-plans", "subagent-execution", "tdd", "systematic-debugging", "code-review", "pr-reviewing", "loop-execution")
+    $LegacyWorkflowRules = @("hotl-brainstorming.md", "hotl-planning.md", "hotl-execution.md", "hotl-document-review.md", "hotl-subagent-execution.md", "hotl-tdd.md", "hotl-debugging.md", "hotl-code-review.md", "hotl-pr-review.md")
+
+    $HotlHomePath = Join-Path $env:USERPROFILE ".cline\hotl"
+
+    function Replace-ClinePlaceholders {
+        param([string]$FilePath)
+        $Content = Get-Content $FilePath -Raw
+        $Content = $Content -replace '__HOTL_HOME__', $HotlHomePath
+        $Content = $Content -replace '__SCRIPTS_HOME__', $ClineScriptsDir
+        Set-Content -Path $FilePath -Value $Content -NoNewline
+    }
+
+    if (-not (Test-Path $ClineRulesDir)) {
+        New-Item -ItemType Directory -Force -Path $ClineRulesDir | Out-Null
+    }
+
     $ClineRulesSrc = Join-Path $ClineHotlDir "cline\rules"
-    if ((Test-Path $ClineRulesDir) -and (Test-Path $ClineRulesSrc)) {
-        Write-Host "Refreshing Cline global rules at $ClineRulesDir..."
-        $RuleCount = 0
-        Get-ChildItem -Path $ClineRulesSrc -Filter "hotl-*.md" | ForEach-Object {
-            Copy-Item -Force -Path $_.FullName -Destination $ClineRulesDir
-            $RuleCount++
+
+    if ($ClineMode -eq "native-skills") {
+        Write-Host "  Refreshing Cline in native-skills mode..."
+
+        # Refresh operating model rule only
+        $OpModelSrc = Join-Path $ClineRulesSrc "hotl-operating-model.md"
+        if (Test-Path $OpModelSrc) {
+            Copy-Item -Force -Path $OpModelSrc -Destination $ClineRulesDir
+            Replace-ClinePlaceholders (Join-Path $ClineRulesDir "hotl-operating-model.md")
         }
 
-        # Replace path placeholders with Windows paths in installed rule copies
-        Get-ChildItem -Path $ClineRulesDir -Filter "hotl-*.md" | ForEach-Object {
-            $Content = Get-Content $_.FullName -Raw
-            $Content = $Content -replace '__HOTL_HOME__', (Join-Path $env:USERPROFILE ".cline\hotl")
-            $Content = $Content -replace '__SCRIPTS_HOME__', $ClineScriptsDir
-            Set-Content -Path $_.FullName -Value $Content -NoNewline
+        # Remove legacy workflow rules
+        foreach ($RuleName in $LegacyWorkflowRules) {
+            $RulePath = Join-Path $ClineRulesDir $RuleName
+            if (Test-Path $RulePath) { Remove-Item -Force $RulePath }
         }
 
-        Write-Host "  $RuleCount rule files updated."
+        # Refresh native skills via copy
+        if (-not (Test-Path $ClineSkillsDir)) {
+            New-Item -ItemType Directory -Force -Path $ClineSkillsDir | Out-Null
+        }
+        foreach ($SkillName in $NativeSkillNames) {
+            $SkillSrc = Join-Path $ClineHotlDir "skills\$SkillName"
+            $SkillDst = Join-Path $ClineSkillsDir $SkillName
+            if (Test-Path $SkillSrc) {
+                if (Test-Path $SkillDst) { Remove-Item -Recurse -Force $SkillDst }
+                Copy-Item -Recurse -Force -Path $SkillSrc -Destination $SkillDst
+            }
+        }
+        Write-Host "  1 rule + 10 native skills refreshed."
+    } else {
+        Write-Host "  Refreshing Cline in legacy-rules mode..."
+
+        # Remove native skills if they exist
+        if (Test-Path $ClineSkillsDir) {
+            Remove-Item -Recurse -Force $ClineSkillsDir
+        }
+
+        # Refresh all rules
+        if (Test-Path $ClineRulesSrc) {
+            $RuleCount = 0
+            Get-ChildItem -Path $ClineRulesSrc -Filter "hotl-*.md" | ForEach-Object {
+                Copy-Item -Force -Path $_.FullName -Destination $ClineRulesDir
+                $RuleCount++
+            }
+            Get-ChildItem -Path $ClineRulesDir -Filter "hotl-*.md" | ForEach-Object {
+                Replace-ClinePlaceholders $_.FullName
+            }
+            Write-Host "  $RuleCount rule files updated."
+        }
     }
 
     # Refresh global scripts
@@ -199,7 +262,7 @@ if (Test-GitWorkTree $ClineHotlDir) {
     }
 
     $Updated++
-    Write-Host "  Cline plugin updated."
+    Write-Host "  Cline plugin updated (mode: $ClineMode)."
     Write-Host ""
 }
 
