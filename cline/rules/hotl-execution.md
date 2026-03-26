@@ -88,7 +88,19 @@ Execution supports an optional delegation mode where eligible steps run in fresh
 
 **Live step visibility:** Cline must use per-step one-line chat logs during execution. The user must see which step is running.
 
-**Final summary:** must use a markdown table at the end of every run. Strict column rules:
+**Final summary — preferred path:** After all steps complete, run the deterministic renderer:
+
+```bash
+bash __SCRIPTS_HOME__/render-execution-summary.sh --platform cline <summary-json-file>
+```
+
+Emit the renderer output directly as visible chat text. Do not paraphrase or replace it.
+
+**Final summary — fallback:** If the renderer cannot be run (jq missing, no terminal access, script not found), emit the markdown table directly using the template below. Do not substitute a prose summary for the fallback.
+
+**Do not end a run with prose-only output.**
+
+**Column rules** (apply to both renderer output and fallback table):
 - **Step** — number only
 - **Name** — step name
 - **Status** — outcome + details: `✓ Done`, `✓ Done (N tests)`, `⚡ Auto-approved`, `✓ Approved`, `✗ Failed`, `✗ Blocked`
@@ -106,3 +118,25 @@ Show the final summary table. Then run a final verification:
 - Show evidence — NEVER claim success without proof
 
 **ONLY THEN mark the task as complete.**
+
+### Final Summary Hard Gate
+
+<HARD-GATE>
+Do not end a run with prose-only output.
+
+Preferred: run `bash __SCRIPTS_HOME__/render-execution-summary.sh --platform cline <summary-json>`
+
+Fallback: if the renderer cannot be run, emit this table directly:
+
+## Execution Summary
+
+| Step | Name | Status | Iterations |
+|------|------|--------|------------|
+| 1 | [step name] | [status] | [iterations] |
+
+- `Status` must be one of: `✓ Done`, `✓ Done (N tests)`, `⚡ Auto-approved`, `✓ Approved`, `✗ Failed`, `✗ Blocked`
+- `Iterations` must be attempt count only, or `-` for gates
+- One row per step. Every step must appear.
+
+Only after the table may you add a short prose note.
+</HARD-GATE>
