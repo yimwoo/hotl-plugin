@@ -77,9 +77,11 @@ Save the complete design to `docs/plans/YYYY-MM-DD-<topic>-design.md`. This file
 
 Before presenting for human approval, review the saved design doc for: missing constraints, vague success criteria, contract mismatches (do verification steps actually test the intent?), risk_level appropriateness, and scope creep. Fix any issues found. Lightweight: 1-2 passes by default, max 3 only if real issues are found. Do not ask the user to review — this is an internal quality pass.
 
-### Step 8: Transition to planning
+### Step 8: Create workflow file
 
 Ask the user: "Design approved. Ready to create the implementation plan?" Then create a `hotl-workflow-<slug>.md` following the planning rules.
+
+### Step 9: Present execution options
 
 After the workflow file is created, present these execution options:
 
@@ -91,6 +93,12 @@ After the workflow file is created, present these execution options:
 Do NOT auto-execute. Wait for the user to choose.
 
 **ONLY NOW is the brainstorming task complete.**
+
+<HARD-GATE>
+Do NOT mark task complete after creating the workflow file.
+You MUST present execution options and wait for the user to choose.
+The brainstorming task is NOT complete until the user selects an execution mode.
+</HARD-GATE>
 
 ### Rules
 

@@ -67,6 +67,21 @@ After saving the workflow file, run a self-check before offering execution optio
 
 If issues are found, fix them and re-check until clean. This is an internal quality pass — do not ask the user to review.
 
-### After Saving the Plan
+### Present Execution Options
 
-Offer loop, manual, or subagent execution. Do NOT auto-execute. Wait for explicit approval.
+After the self-check passes, present these execution options:
+
+"Plan saved. How would you like to execute?"
+1. **Loop execution** — autonomous execution with auto-approve for low-risk steps
+2. **Checkpoint execution** — linear execution with human review every 3 steps
+3. **Subagent execution** — delegated execution with parallel subagents
+
+Do NOT auto-execute. Wait for the user to choose.
+
+**ONLY NOW is the planning task complete.**
+
+<HARD-GATE>
+Do NOT mark task complete after saving the workflow file.
+You MUST present execution options and wait for the user to choose.
+The planning task is NOT complete until the user selects an execution mode.
+</HARD-GATE>
