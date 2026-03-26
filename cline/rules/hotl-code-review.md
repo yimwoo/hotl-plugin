@@ -2,7 +2,7 @@
 
 **When to use:** After completing implementation, before merging or claiming done. Also triggered automatically at executor review checkpoints.
 
-**Full skill:** Read `~/.cline/hotl/skills/code-review/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
+**Full skill:** Read `__HOTL_HOME__/skills/code-review/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 
 ### How It Works
 

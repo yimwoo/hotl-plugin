@@ -2,7 +2,7 @@
 
 **When to use:** When encountering any bug, test failure, or unexpected behavior.
 
-**Full skill:** Read `~/.cline/hotl/skills/systematic-debugging/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
+**Full skill:** Read `__HOTL_HOME__/skills/systematic-debugging/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 
 ### MANDATORY RULE
 

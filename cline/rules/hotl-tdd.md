@@ -2,7 +2,7 @@
 
 **When to use:** Before writing any implementation code.
 
-**Full skill:** Read `~/.cline/hotl/skills/tdd/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
+**Full skill:** Read `__HOTL_HOME__/skills/tdd/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 
 ### MANDATORY RULE
 

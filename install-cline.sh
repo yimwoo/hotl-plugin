@@ -42,6 +42,16 @@ if [ "${COPIED}" -eq 0 ]; then
     exit 1
 fi
 
+# Replace path placeholders with Unix paths in installed rule copies
+for rule_file in "${GLOBAL_RULES_DIR}"/hotl-*.md; do
+    [ -f "${rule_file}" ] || continue
+    sed -i.bak \
+        -e "s|__HOTL_HOME__|~/.cline/hotl|g" \
+        -e "s|__SCRIPTS_HOME__|~/Documents/Cline/Scripts|g" \
+        "${rule_file}"
+    rm -f "${rule_file}.bak"
+done
+
 # ── Step 3: Install scripts globally to ~/Documents/Cline/Scripts/ ───────────
 
 mkdir -p "${GLOBAL_SCRIPTS_DIR}"

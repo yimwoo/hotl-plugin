@@ -2,6 +2,19 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.9.6] - 2026-03-25
+
+### Added
+- Native Windows (PowerShell) support — `install.ps1`, `install-cline.ps1`, `update.ps1` for installing, updating, and running HOTL on Windows without bash/WSL
+- `hooks/session-start.ps1` — native PowerShell session-start hook, no Git Bash dependency
+- `hooks/run-hook.cmd` now tries PowerShell first on Windows, with clear error message if neither PowerShell nor bash is available (no more silent failure)
+- Cline rule path templating — rules use `__HOTL_HOME__` and `__SCRIPTS_HOME__` placeholders, replaced with OS-appropriate paths at install time
+- Windows sections in `.codex/INSTALL.md`, `docs/README.codex.md`, and `docs/README.cline.md`
+
+### Changed
+- `install-cline.sh` now replaces path placeholders with Unix paths after copying rules
+- `hooks/run-hook.cmd` exits with error code 1 and diagnostic message instead of silent `exit /b 0` when no hook runner is found
+
 ## [2.9.5] - 2026-03-24
 
 ### Improved

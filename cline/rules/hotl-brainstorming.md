@@ -2,7 +2,7 @@
 
 **When to use:** Before any feature work. Design with intent before writing code.
 
-**Full skill:** Read `~/.cline/hotl/skills/brainstorming/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
+**Full skill:** Read `__HOTL_HOME__/skills/brainstorming/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 
 ### MANDATORY — DO NOT SKIP ANY STEP
 

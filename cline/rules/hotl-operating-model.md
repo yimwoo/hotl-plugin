@@ -49,13 +49,13 @@ When the user triggers a workflow, read the full skill file from disk for detail
 |---|---|
 | "explain", "where is", "how does", "walk me through", "what does this error mean" | No skill needed — just answer the question directly |
 | "fix this typo", "update the config", obvious one-line correction | No skill needed — fix, verify, report back |
-| "debug", "investigate", "why is this failing" | `~/.cline/hotl/skills/systematic-debugging/SKILL.md` |
-| "brainstorm", "design this", "let's think about" | `~/.cline/hotl/skills/brainstorming/SKILL.md` |
-| "plan", "write a plan", "create workflow" | `~/.cline/hotl/skills/writing-plans/SKILL.md` |
-| "execute", "run the plan", "implement" | `~/.cline/hotl/skills/executing-plans/SKILL.md` |
-| "loop", "run autonomously" | `~/.cline/hotl/skills/loop-execution/SKILL.md` |
-| "tdd", "test first", "red green refactor" | `~/.cline/hotl/skills/tdd/SKILL.md` |
-| "review", "code review" | `~/.cline/hotl/skills/code-review/SKILL.md` |
+| "debug", "investigate", "why is this failing" | `__HOTL_HOME__/skills/systematic-debugging/SKILL.md` |
+| "brainstorm", "design this", "let's think about" | `__HOTL_HOME__/skills/brainstorming/SKILL.md` |
+| "plan", "write a plan", "create workflow" | `__HOTL_HOME__/skills/writing-plans/SKILL.md` |
+| "execute", "run the plan", "implement" | `__HOTL_HOME__/skills/executing-plans/SKILL.md` |
+| "loop", "run autonomously" | `__HOTL_HOME__/skills/loop-execution/SKILL.md` |
+| "tdd", "test first", "red green refactor" | `__HOTL_HOME__/skills/tdd/SKILL.md` |
+| "review", "code review" | `__HOTL_HOME__/skills/code-review/SKILL.md` |
 
 ### Workflow Files
 

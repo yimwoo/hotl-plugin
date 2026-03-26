@@ -11,6 +11,13 @@ if "%~1"=="" (
 
 set "HOOK_DIR=%~dp0"
 
+REM Try native PowerShell first (no bash dependency)
+if exist "%HOOK_DIR%%~1.ps1" (
+    powershell -ExecutionPolicy Bypass -File "%HOOK_DIR%%~1.ps1" %2 %3 %4 %5 %6 %7 %8 %9
+    exit /b %ERRORLEVEL%
+)
+
+REM Fall back to Git Bash if available
 if exist "C:\Program Files\Git\bin\bash.exe" (
     "C:\Program Files\Git\bin\bash.exe" "%HOOK_DIR%%~1" %2 %3 %4 %5 %6 %7 %8 %9
     exit /b %ERRORLEVEL%
@@ -26,7 +33,8 @@ if %ERRORLEVEL% equ 0 (
     exit /b %ERRORLEVEL%
 )
 
-exit /b 0
+echo run-hook.cmd: ERROR - Could not find PowerShell script "%HOOK_DIR%%~1.ps1" or bash to run "%HOOK_DIR%%~1". Install Git for Windows or ensure the .ps1 hook exists. >&2
+exit /b 1
 CMDBLOCK
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

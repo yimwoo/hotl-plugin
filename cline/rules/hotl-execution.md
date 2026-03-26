@@ -2,7 +2,7 @@
 
 **When to use:** When you have a `hotl-workflow-<slug>.md` to execute.
 
-**Full skills:** Read `~/.cline/hotl/skills/executing-plans/SKILL.md` (linear), `~/.cline/hotl/skills/loop-execution/SKILL.md` (autonomous), or `~/.cline/hotl/skills/subagent-execution/SKILL.md` (delegated same-session execution) for complete processes. If unavailable, follow the condensed version below.
+**Full skills:** Read `__HOTL_HOME__/skills/executing-plans/SKILL.md` (linear), `__HOTL_HOME__/skills/loop-execution/SKILL.md` (autonomous), or `__HOTL_HOME__/skills/subagent-execution/SKILL.md` (delegated same-session execution) for complete processes. If unavailable, follow the condensed version below.
 
 ### MANDATORY RULES
 
@@ -30,7 +30,7 @@ For non-HOTL dirty files: if `dirty_worktree: allow` is set in the workflow fron
 After resolving the workflow file, run HOTL structural lint automatically before any git mutation or step execution:
 
 ```bash
-bash ~/Documents/Cline/Scripts/document-lint.sh <workflow-file>
+bash __SCRIPTS_HOME__/document-lint.sh <workflow-file>
 ```
 
 If lint **fails:** STOP. Show all errors. The workflow must be fixed before execution can proceed.
