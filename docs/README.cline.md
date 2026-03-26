@@ -4,61 +4,6 @@ HOTL is a Human-on-the-Loop AI coding workflow for Cline. It adds structured bra
 
 Works with **any API provider** — Oracle Code Assist (OCA), OpenAI (GPT-4, GPT-5), Anthropic (Claude), Google (Gemini), local models, and more.
 
-## Windows Quick Start (Fresh Machine)
-
-If you're setting up a fresh Windows machine from scratch, follow these steps. macOS/Linux users can skip to [Install](#install-one-command).
-
-**Step 1: Install Git** (includes bash, which HOTL runtime scripts need)
-
-```powershell
-winget install Git.Git
-```
-
-Close and reopen your terminal after installing.
-
-**Step 2: Install VS Code**
-
-```powershell
-winget install Microsoft.VisualStudioCode
-```
-
-**Step 3: Install the Cline extension**
-
-Open VS Code, go to Extensions (Ctrl+Shift+X), search for "Cline", and install it. Then configure your API provider (Anthropic, OpenAI, OCA, etc.) in Cline's settings.
-
-**Step 4: Install HOTL**
-
-```powershell
-git clone https://github.com/yimwoo/hotl-plugin.git "$env:USERPROFILE\.cline\hotl"
-powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.cline\hotl\install-cline.ps1"
-```
-
-For native skills mode (Cline 3.48.0+, see [Native Skills Mode](#native-skills-mode-cline-3480)):
-
-```powershell
-powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.cline\hotl\install-cline.ps1" -NativeSkills
-```
-
-**Step 5 (optional): Install jq** for full state persistence and durable execution reports
-
-```powershell
-winget install jqlang.jq
-```
-
-Without jq, HOTL still works but runs without state files or durable reports.
-
-**Verify:**
-
-```powershell
-git --version          # 2.x+
-bash --version         # should work via Git Bash
-jq --version           # optional — only if you installed it
-```
-
-**Using Cline with WSL?** If VS Code is connected to WSL (you see "WSL: Ubuntu" in the bottom-left), use the macOS/Linux bash installer from your WSL terminal — not the PowerShell installer. Cline reads files from the WSL filesystem when running in WSL mode.
-
-**Note:** Node.js, Python, and other language runtimes are project-specific — install whatever your project needs. HOTL itself only requires Git.
-
 ## Install (One Command)
 
 ### macOS / Linux
