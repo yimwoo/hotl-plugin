@@ -2,6 +2,15 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.10.2] - 2026-03-27
+
+### Fixed
+- Codex plugin cache refresh — installer and updater now sync source checkout into `~/.codex/plugins/cache/codex-plugins/hotl/` so Codex loads updated skills immediately after restart
+- Marketplace path uses relative `./` prefix for Codex plugin discovery (absolute paths prevented Codex from finding the plugin)
+- `BASH_SOURCE` unbound variable error when running `update.sh` via `curl | bash`
+- Plugin metadata: added `interface` block with `displayName`, `shortDescription`, `capabilities`, and `websiteURL` for Codex plugin UI
+- Old copied-bundle detection prints migration guidance with skip count in updater output
+
 ## [2.10.1] - 2026-03-27
 
 ### Changed
