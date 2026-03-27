@@ -6,7 +6,9 @@ param(
     [switch]$ForceCodex,
     [switch]$Check,
     [switch]$NativeSkills,
-    [switch]$Status
+    [switch]$Status,
+    [switch]$CodexPlugin,
+    [switch]$ForceCodexPlugin
 )
 
 $ErrorActionPreference = "Stop"
@@ -138,6 +140,20 @@ if ($Status) {
         Write-Host "Codex plugin:    not found"
     }
 
+    # Show source checkout health
+    $CodexSource = Join-Path $env:USERPROFILE ".codex\plugins\hotl-source"
+    if ($PluginFound) {
+        if (Test-Path (Join-Path $CodexSource ".git")) {
+            $SrcRev = try { (git -C $CodexSource rev-parse --short HEAD 2>$null) } catch { "unknown" }
+            Write-Host "                 source checkout (rev $SrcRev) at $CodexSource"
+        } else {
+            Write-Host "                 WARNING: source checkout not found at $CodexSource"
+        }
+    } elseif (Test-Path (Join-Path $CodexSource ".git")) {
+        $SrcRev = try { (git -C $CodexSource rev-parse --short HEAD 2>$null) } catch { "unknown" }
+        Write-Host "Codex plugin:    source checkout (rev $SrcRev) at $CodexSource (no marketplace entry)"
+    }
+
     # Warn if both Codex modes are present
     if ($CodexNativeFound -and $PluginFound) {
         Write-Host ""
@@ -157,6 +173,50 @@ if ($Status) {
         Write-Host "Cline:           not found"
     }
 
+    exit 0
+}
+
+# -CodexPlugin: update the plugin source checkout, then exit
+if ($CodexPlugin) {
+    $CodexPluginSource = Join-Path $env:USERPROFILE ".codex\plugins\hotl-source"
+
+    if (-not (Test-Path (Join-Path $CodexPluginSource ".git"))) {
+        Write-Host "No HOTL plugin source checkout found at $CodexPluginSource."
+        Write-Host "Run install.sh --codex-plugin first."
+        $NativeSkillsDir = Join-Path $env:USERPROFILE ".codex\hotl"
+        if (Test-Path $NativeSkillsDir) {
+            Write-Host ""
+            Write-Host "Hint: a native-skills install exists at $NativeSkillsDir."
+            Write-Host "Use update.ps1 (without -CodexPlugin) to update that instead."
+        }
+        exit 1
+    }
+
+    Write-Host "Updating Codex plugin source checkout at $CodexPluginSource..."
+
+    if (Test-HasLocalChanges $CodexPluginSource) {
+        if ($ForceCodexPlugin) {
+            Write-Host "Source checkout has local changes; -ForceCodexPlugin set, skipping backup."
+        } else {
+            $BackupRoot = Join-Path $env:USERPROFILE ".codex\backups\hotl-plugin"
+            $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+            $BackupDir = Join-Path $BackupRoot $Timestamp
+            New-Item -ItemType Directory -Force -Path (Join-Path $BackupDir "worktree") | Out-Null
+            git -C $CodexPluginSource status --short --branch > (Join-Path $BackupDir "git-status.txt") 2>$null
+            Copy-Item -Recurse -Force -Path (Join-Path $CodexPluginSource "*") -Destination (Join-Path $BackupDir "worktree") -Exclude ".git"
+            Write-Host "Source checkout has local changes; backed them up to $BackupDir."
+        }
+    }
+
+    git -C $CodexPluginSource fetch origin main
+    git -C $CodexPluginSource reset --hard origin/main
+    git -C $CodexPluginSource clean -fd
+
+    $VerFile = Join-Path $CodexPluginSource "VERSION"
+    $Ver = if (Test-Path $VerFile) { (Get-Content $VerFile -Raw).Trim() } else { "unknown" }
+    Write-Host "  Updated to version $Ver."
+    Write-Host ""
+    Write-Host "Restart Codex to pick up the updated plugin."
     exit 0
 }
 
@@ -207,19 +267,35 @@ if (Test-GitWorkTree $ClaudePluginDir) {
 
 # -- Codex -------------------------------------------------------------------------
 
-# Detect if HOTL is registered as a Codex plugin (user-global or repo-local)
-$CodexPluginRegistered = $false
-foreach ($CodexMarketplace in @($CodexMarketplaceUser, $CodexMarketplaceLocal)) {
-    if (Test-HotlInMarketplace $CodexMarketplace) {
-        $CodexPluginRegistered = $true
-        $PluginVer = Get-HotlMarketplaceVersion $CodexMarketplace
-        if (-not $PluginVer) { $PluginVer = "unknown" }
-        Write-Host "Note: HOTL is also registered as a Codex plugin (v$PluginVer) in"
-        Write-Host "  $CodexMarketplace"
-        Write-Host "Plugin updates are managed through Codex's plugin UI; this updater only"
-        Write-Host "updates the $CodexHotlDir native-skills install."
-        Write-Host ""
+# Update Codex plugin source checkout if it exists
+$CodexPluginSource = Join-Path $env:USERPROFILE ".codex\plugins\hotl-source"
+if (Test-Path (Join-Path $CodexPluginSource ".git")) {
+    $Found++
+    Write-Host "Updating Codex plugin source checkout at $CodexPluginSource..."
+
+    if (Test-HasLocalChanges $CodexPluginSource) {
+        if ($ForceCodexPlugin) {
+            Write-Host "  Source checkout has local changes; -ForceCodexPlugin set, skipping backup."
+        } else {
+            $BackupRoot = Join-Path $env:USERPROFILE ".codex\backups\hotl-plugin"
+            $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+            $BackupDir = Join-Path $BackupRoot $Timestamp
+            New-Item -ItemType Directory -Force -Path (Join-Path $BackupDir "worktree") | Out-Null
+            git -C $CodexPluginSource status --short --branch > (Join-Path $BackupDir "git-status.txt") 2>$null
+            Copy-Item -Recurse -Force -Path (Join-Path $CodexPluginSource "*") -Destination (Join-Path $BackupDir "worktree") -Exclude ".git"
+            Write-Host "  Source checkout has local changes; backed them up to $BackupDir."
+        }
     }
+
+    git -C $CodexPluginSource fetch origin main
+    git -C $CodexPluginSource reset --hard origin/main
+    git -C $CodexPluginSource clean -fd
+
+    $VerFile = Join-Path $CodexPluginSource "VERSION"
+    $Ver = if (Test-Path $VerFile) { (Get-Content $VerFile -Raw).Trim() } else { "unknown" }
+    $Updated++
+    Write-Host "  Codex plugin source updated (v$Ver)."
+    Write-Host ""
 }
 
 if (Test-GitWorkTree $CodexHotlDir) {

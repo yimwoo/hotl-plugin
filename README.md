@@ -151,7 +151,7 @@ Want to create or modify HOTL skills? See [Authoring Skills vs Agents](docs/auth
 curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
 ```
 
-Covers Claude Code, native-skills Codex installs, and Cline, and skips tools that are not installed. Codex plugin installs are updated through Codex's plugin lifecycle instead. In Claude Code, you can also run `/hotl:check-update`. For backup behavior, manual checks, and `--force-codex`, see [Updating HOTL](docs/updating.md).
+Covers Claude Code, Codex (both native-skills and plugin source checkout), and Cline. Skips tools that are not installed. In Claude Code, you can also run `/hotl:check-update`. For backup behavior, manual checks, and `--force-codex`, see [Updating HOTL](docs/updating.md).
 
 ## Supported Tools
 

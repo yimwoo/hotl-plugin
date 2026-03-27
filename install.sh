@@ -40,37 +40,49 @@ if [ "$CODEX_PLUGIN" = true ]; then
         exit 1
     fi
 
+    GIT_REPO_URL="https://github.com/yimwoo/hotl-plugin.git"
+
     if [ "$LOCAL" = true ]; then
-        INSTALL_ROOT="${SCRIPT_DIR}"
-        MARKETPLACE_DIR="${INSTALL_ROOT}/.agents/plugins"
+        # Local/contributor mode: point marketplace at the current checkout
+        MARKETPLACE_DIR="${SCRIPT_DIR}/.agents/plugins"
         MARKETPLACE_FILE="${MARKETPLACE_DIR}/marketplace.json"
-        PLUGIN_ROOT="${INSTALL_ROOT}/.codex/plugins/${PLUGIN_NAME}"
-        PLUGIN_SOURCE_PATH="./.codex/plugins/${PLUGIN_NAME}"
-        echo "Installing HOTL in repo-local Codex plugin directory: ${PLUGIN_ROOT}"
+        PLUGIN_SOURCE_PATH="${SCRIPT_DIR}"
         echo "Registering HOTL in repo-local Codex marketplace: ${MARKETPLACE_FILE}"
+        echo "Plugin source: current checkout at ${SCRIPT_DIR}"
     else
-        INSTALL_ROOT="${HOME}"
+        # User-global mode: clone source checkout
         MARKETPLACE_DIR="${HOME}/.agents/plugins"
         MARKETPLACE_FILE="${MARKETPLACE_DIR}/marketplace.json"
-        PLUGIN_ROOT="${HOME}/.codex/plugins/${PLUGIN_NAME}"
-        PLUGIN_SOURCE_PATH="./.codex/plugins/${PLUGIN_NAME}"
-        echo "Installing HOTL in user-global Codex plugin directory: ${PLUGIN_ROOT}"
-        echo "Registering HOTL in user-global Codex marketplace: ${MARKETPLACE_FILE}"
+        PLUGIN_SOURCE_PATH="${HOME}/.codex/plugins/hotl-source"
+
+        if [ -d "${PLUGIN_SOURCE_PATH}/.git" ]; then
+            echo "Updating existing source checkout at ${PLUGIN_SOURCE_PATH}..."
+            git -C "${PLUGIN_SOURCE_PATH}" fetch origin main
+            git -C "${PLUGIN_SOURCE_PATH}" reset --hard origin/main
+        else
+            echo "Cloning HOTL to ${PLUGIN_SOURCE_PATH}..."
+            mkdir -p "$(dirname "${PLUGIN_SOURCE_PATH}")"
+            git clone "${GIT_REPO_URL}" "${PLUGIN_SOURCE_PATH}"
+        fi
+
+        # Migration: remove old copied-bundle install if present
+        OLD_BUNDLE="${HOME}/.codex/plugins/hotl"
+        if [ -d "${OLD_BUNDLE}" ] && [ ! -d "${OLD_BUNDLE}/.git" ]; then
+            echo ""
+            echo "Migrating from copied-bundle plugin install at ${OLD_BUNDLE}"
+            echo "to source checkout at ${PLUGIN_SOURCE_PATH}..."
+            rm -rf "${OLD_BUNDLE}"
+            echo "Old bundle removed."
+        fi
     fi
 
-    PLUGIN_MANIFEST="${SCRIPT_DIR}/.codex-plugin/plugin.json"
+    PLUGIN_MANIFEST="${PLUGIN_SOURCE_PATH}/.codex-plugin/plugin.json"
     if [ ! -f "$PLUGIN_MANIFEST" ]; then
         echo "Error: ${PLUGIN_MANIFEST} not found." >&2
-        echo "Are you running install.sh from the hotl-plugin repository?" >&2
         exit 1
     fi
 
-    mkdir -p "$MARKETPLACE_DIR" "$(dirname "${PLUGIN_ROOT}")"
-    rsync -a --delete \
-        --exclude '.git' \
-        --exclude '.codex/plugins' \
-        --exclude '.agents/plugins' \
-        "${SCRIPT_DIR}/" "${PLUGIN_ROOT}/"
+    mkdir -p "$MARKETPLACE_DIR"
 
     python3 -c "
 import json, sys, os
@@ -82,20 +94,6 @@ owner_name = os.environ.get('USER', 'unknown')
 
 with open(manifest_path) as f:
     manifest = json.load(f)
-
-manifest.setdefault('interface', {
-    'displayName': 'HOTL',
-    'shortDescription': 'Human-on-the-Loop workflows for structured AI development',
-    'longDescription': 'Use HOTL to brainstorm, plan, execute, review, and verify software changes with explicit human-on-the-loop contracts.',
-    'developerName': owner_name,
-    'category': 'Productivity',
-    'capabilities': ['Interactive', 'Read', 'Write'],
-    'defaultPrompt': 'Plan, execute, review, and verify coding tasks with HOTL workflows'
-})
-
-with open(manifest_path, 'w') as f:
-    json.dump(manifest, f, indent=2)
-    f.write('\n')
 
 hotl_entry = {
     'name': manifest['name'],
@@ -112,6 +110,9 @@ hotl_entry = {
     },
     'category': 'Productivity',
 }
+
+if manifest.get('interface'):
+    hotl_entry['interface'] = manifest['interface']
 
 # Read or create the destination marketplace file
 if os.path.exists(dest_path):
@@ -148,7 +149,7 @@ with open(dest_path, 'w') as f:
 
 action = 'Updated' if updated else 'Added'
 print(f'{action} HOTL plugin entry (version {hotl_entry[\"version\"]})')
-" "$PLUGIN_ROOT/.codex-plugin/plugin.json" "$MARKETPLACE_FILE" "$PLUGIN_SOURCE_PATH"
+" "$PLUGIN_MANIFEST" "$MARKETPLACE_FILE" "$PLUGIN_SOURCE_PATH"
 
     # Warn if an existing native-skills install is detected
     if [ -L "${HOME}/.agents/skills/hotl" ] || [ -d "${HOME}/.codex/hotl" ]; then
@@ -169,12 +170,12 @@ print(f'{action} HOTL plugin entry (version {hotl_entry[\"version\"]})')
     fi
 
     echo ""
-    echo "HOTL Codex plugin prepared. Next steps:"
+    echo "HOTL Codex plugin registered. Next steps:"
     echo "  1. Restart Codex to discover the plugin"
     echo "  2. Open the Codex plugin directory, switch to Local Plugins,"
     echo "     and click Add to Codex for HOTL"
     echo ""
-    echo "To update later, use Codex's plugin refresh flow."
+    echo "To update later, run: update.sh (updates all installs) or update.sh --codex-plugin (plugin only)"
     echo "For native skills install (dev/iteration), see docs/README.codex.md"
     exit 0
 fi
