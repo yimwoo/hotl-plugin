@@ -47,6 +47,7 @@ if [ "$CODEX_PLUGIN" = true ]; then
         MARKETPLACE_DIR="${SCRIPT_DIR}/.agents/plugins"
         MARKETPLACE_FILE="${MARKETPLACE_DIR}/marketplace.json"
         PLUGIN_SOURCE_PATH="${SCRIPT_DIR}"
+        MARKETPLACE_PLUGIN_PATH="${SCRIPT_DIR}"
         echo "Registering HOTL in repo-local Codex marketplace: ${MARKETPLACE_FILE}"
         echo "Plugin source: current checkout at ${SCRIPT_DIR}"
     else
@@ -54,6 +55,8 @@ if [ "$CODEX_PLUGIN" = true ]; then
         MARKETPLACE_DIR="${HOME}/.agents/plugins"
         MARKETPLACE_FILE="${MARKETPLACE_DIR}/marketplace.json"
         PLUGIN_SOURCE_PATH="${HOME}/.codex/plugins/hotl-source"
+        # Codex resolves paths relative to $HOME; use ./ prefix
+        MARKETPLACE_PLUGIN_PATH="./.codex/plugins/hotl-source"
 
         if [ -d "${PLUGIN_SOURCE_PATH}/.git" ]; then
             echo "Updating existing source checkout at ${PLUGIN_SOURCE_PATH}..."
@@ -149,7 +152,7 @@ with open(dest_path, 'w') as f:
 
 action = 'Updated' if updated else 'Added'
 print(f'{action} HOTL plugin entry (version {hotl_entry[\"version\"]})')
-" "$PLUGIN_MANIFEST" "$MARKETPLACE_FILE" "$PLUGIN_SOURCE_PATH"
+" "$PLUGIN_MANIFEST" "$MARKETPLACE_FILE" "$MARKETPLACE_PLUGIN_PATH"
 
     # Warn if an existing native-skills install is detected
     if [ -L "${HOME}/.agents/skills/hotl" ] || [ -d "${HOME}/.codex/hotl" ]; then
