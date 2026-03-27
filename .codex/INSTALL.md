@@ -74,6 +74,16 @@ ones coming from `~/.agents/skills/hotl`.
 - `tdd` — RED-GREEN-REFACTOR cycle
 - `systematic-debugging` — 4-phase root cause process
 
+## Running A Saved Plan In Codex
+
+Codex does not use Claude-style `/hotl:*` slash commands. After HOTL writes a
+workflow file, continue with the matching skill name instead:
+
+- Requests like `Use $loop-execution to run hotl-workflow-<slug>.md` for autonomous execution
+- Requests like `Use $executing-plans to run hotl-workflow-<slug>.md` for manual checkpoints
+- Requests like `Use $subagent-execution to run hotl-workflow-<slug>.md` for delegated execution
+- Requests like `Use $resuming to continue hotl-workflow-<slug>.md` for interrupted runs
+
 ## Updating
 
 **macOS / Linux:**

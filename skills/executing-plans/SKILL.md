@@ -82,7 +82,9 @@ All state persistence is handled by the `hotl-rt` shared runtime (`runtime/hotl-
 
 The runtime owns `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md`. Agents do not manage these files directly. Runtime calls happen before the corresponding chat or progress UI update.
 
-To resume an interrupted executing-plans run, use `/hotl:resume`.
+To resume an interrupted executing-plans run, use the host tool's native resume entry point.
+- **Codex:** ask me to use `$resuming` on the workflow file
+- **Claude Code:** `/hotl:resume <workflow-file>`
 
 ## Process
 

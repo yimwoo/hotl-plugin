@@ -184,9 +184,18 @@ Please use HOTL to compare OAuth and API-key auth before writing code.
 
 Use `$writing-plans` to create `hotl-workflow-add-rate-limiting.md`.
 
+After a plan is saved, use `$loop-execution`, `$executing-plans`, `$subagent-execution`,
+or `$resuming` with the workflow filename instead of Claude-style `/hotl:*` commands.
+
 Review `hotl-workflow-add-rate-limiting.md` with HOTL and tell me if it is ready to execute.
 
 Use `$subagent-execution` to execute `hotl-workflow-add-rate-limiting.md` in this session.
+
+Use `$loop-execution` to execute `hotl-workflow-add-rate-limiting.md` in this session.
+
+Use `$executing-plans` to execute `hotl-workflow-add-rate-limiting.md` with manual checkpoints.
+
+Use `$resuming` to continue `hotl-workflow-add-rate-limiting.md`.
 
 Use `$pr-reviewing` to review https://github.com/org/repo/pull/123.
 

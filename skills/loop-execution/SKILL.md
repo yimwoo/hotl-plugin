@@ -15,7 +15,7 @@ Execute a `hotl-workflow-<slug>.md` file autonomously. Loop on steps with succes
 
 Resolve which workflow file to execute:
 
-1. If the user specified a filename (e.g., `/hotl:loop hotl-workflow-add-auth.md`) → use that file
+1. If the user specified a filename (e.g., `Use $loop-execution to run hotl-workflow-add-auth.md` or `/hotl:loop hotl-workflow-add-auth.md`) → use that file
 2. Else, glob for `hotl-workflow*.md` in project root:
    - **One match** → use it automatically
    - **Multiple matches** → list them and ask the user to pick
@@ -328,5 +328,5 @@ Include short result details only when useful (test counts on completed steps, a
 
 If no `hotl-workflow*.md` found in project root:
 "No workflow file found. Would you like to:
-1. Create one from a template (`/hotl:write-plan`)
+1. Create one from a template (`$writing-plans` in Codex, `/hotl:write-plan` in Claude Code)
 2. Use a workflow template from the plugin (`workflows/feature.md`, `workflows/bugfix.md`, `workflows/refactor.md`)"
