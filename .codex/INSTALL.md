@@ -2,6 +2,9 @@
 
 Install HOTL in Codex via native skill discovery. HOTL is a Human-on-the-Loop AI coding workflow that adds structured planning, execution, review, and verification skills to Codex.
 
+If you want the recommended Codex plugin install with UI screenshots, use
+[`docs/README.codex.md`](../docs/README.codex.md).
+
 ## Prerequisites
 
 - Git

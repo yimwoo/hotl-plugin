@@ -32,8 +32,21 @@ entry with `"source": "local"` pointing at that checkout.
 
 3. Restart Codex.
 
-4. Open the Codex plugin directory, switch the source to **Local Plugins**, and
-   click **Add to Codex** for HOTL.
+4. Open the Codex plugin directory and finish the install in the UI:
+
+   1. Switch the source filter to **Local Plugins**.
+
+      ![Codex plugin source set to Local Plugins](assets/codex/plugin-install-step-1-local-plugins.svg)
+
+   2. Find **HOTL** in the list and click the `+` button to open the install dialog.
+
+      ![HOTL plugin card in the Local Plugins list](assets/codex/plugin-install-step-2-pick-hotl.svg)
+
+   3. Review the plugin details and click **Install HOTL**.
+
+      ![HOTL install dialog in Codex](assets/codex/plugin-install-step-3-confirm.svg)
+
+   If the plugin list is long, use the search box to filter for `HOTL`.
 
 **For contributors** testing the plugin from a working copy, use `--local`
 to point the marketplace at your current checkout without cloning:

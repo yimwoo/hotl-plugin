@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="420" viewBox="0 0 960 420" role="img" aria-labelledby="title desc">
+  <title id="title">Select HOTL from the Local Plugins list</title>
+  <desc id="desc">Illustration of the Codex Local Plugins list showing the HOTL card and the install button.</desc>
+  <rect width="960" height="420" fill="#f7f6f2"/>
+  <text x="480" y="64" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#151515">Make Codex work your way</text>
+  <rect x="32" y="112" width="634" height="38" rx="12" fill="#ffffff" stroke="#d9d5cf"/>
+  <circle cx="52" cy="131" r="8" fill="none" stroke="#8f8a83" stroke-width="2"/>
+  <line x1="58" y1="137" x2="64" y2="143" stroke="#8f8a83" stroke-width="2"/>
+  <text x="70" y="137" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#8f8a83">Search plugins</text>
+  <rect x="680" y="110" width="182" height="42" rx="14" fill="#f1efeb" stroke="#d9d5cf"/>
+  <text x="705" y="137" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#151515">Local Plugins</text>
+  <path d="M839 127 l8 8 l8 -8" fill="none" stroke="#66615b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="874" y="110" width="54" height="42" rx="14" fill="#f1efeb" stroke="#d9d5cf"/>
+  <text x="891" y="137" font-family="Arial, Helvetica, sans-serif" font-size="16" fill="#151515">All</text>
+  <path d="M914 127 l6 6 l6 -6" fill="none" stroke="#66615b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="32" y="210" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#252525">Productivity</text>
+  <line x1="32" y1="226" x2="928" y2="226" stroke="#e3ded7"/>
+  <rect x="32" y="256" width="428" height="84" rx="20" fill="#ece9e3" stroke="#ded8cf"/>
+  <rect x="50" y="272" width="50" height="50" rx="13" fill="#ffffff" stroke="#d6d0c7"/>
+  <circle cx="64" cy="286" r="6" fill="none" stroke="#6b6b6b" stroke-width="3"/>
+  <circle cx="86" cy="286" r="6" fill="none" stroke="#6b6b6b" stroke-width="3"/>
+  <circle cx="64" cy="308" r="6" fill="none" stroke="#6b6b6b" stroke-width="3"/>
+  <circle cx="86" cy="308" r="6" fill="none" stroke="#6b6b6b" stroke-width="3"/>
+  <text x="116" y="289" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" fill="#151515">HOTL</text>
+  <text x="178" y="289" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#7b756d">codex-plugins</text>
+  <text x="116" y="322" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#55514b">Human-on-the-Loop workflows for structured AI development</text>
+  <rect x="405" y="271" width="37" height="37" rx="12" fill="#e5e2dc" stroke="#cfc8be"/>
+  <line x1="423.5" y1="281" x2="423.5" y2="299" stroke="#59544e" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="414.5" y1="290" x2="432.5" y2="290" stroke="#59544e" stroke-width="2.5" stroke-linecap="round"/>
+  <rect x="26" y="250" width="440" height="96" rx="24" fill="none" stroke="#0f766e" stroke-width="4"/>
+  <rect x="358" y="240" width="132" height="38" rx="14" fill="#ffffff" stroke="#dad4cc"/>
+  <text x="371" y="264" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#151515">Click the + button</text>
+  <text x="32" y="382" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#252525">Step 2</text>
+  <text x="32" y="406" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#151515">Find HOTL in the Local Plugins list and open its install flow</text>
+</svg>

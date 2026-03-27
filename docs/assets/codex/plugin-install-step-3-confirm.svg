@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="920" viewBox="0 0 960 920" role="img" aria-labelledby="title desc">
+  <title id="title">Confirm the HOTL install dialog</title>
+  <desc id="desc">Illustration of the HOTL install dialog in Codex, with the final Install HOTL button highlighted.</desc>
+  <rect width="960" height="920" fill="#d8d6d3"/>
+  <text x="480" y="46" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#151515">Make Codex work your way</text>
+  <rect x="18" y="82" width="620" height="790" rx="28" fill="#fbfaf8" stroke="#d9d5cf"/>
+  <rect x="238" y="112" width="58" height="58" rx="14" fill="#0f1115"/>
+  <path d="M267 128 c-10 0 -18 8 -18 18 c0 9 7 17 16 18 c-2 -4 -3 -8 -3 -12 c0 -15 12 -27 27 -27 c4 0 8 1 11 3 c-3 -6 -10 -10 -18 -10 z" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="342" y="112" width="58" height="58" rx="14" fill="#ffffff" stroke="#d6d0c7"/>
+  <circle cx="360" cy="130" r="7" fill="none" stroke="#686868" stroke-width="3"/>
+  <circle cx="382" cy="130" r="7" fill="none" stroke="#686868" stroke-width="3"/>
+  <circle cx="360" cy="152" r="7" fill="none" stroke="#686868" stroke-width="3"/>
+  <circle cx="382" cy="152" r="7" fill="none" stroke="#686868" stroke-width="3"/>
+  <circle cx="315" cy="141" r="3" fill="#d4d0ca"/>
+  <circle cx="325" cy="141" r="3" fill="#d4d0ca"/>
+  <circle cx="335" cy="141" r="3" fill="#d4d0ca"/>
+  <text x="605" y="118" font-family="Arial, Helvetica, sans-serif" font-size="28" fill="#6f6a63">×</text>
+  <text x="320" y="210" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#151515">Install HOTL</text>
+  <text x="320" y="238" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#6a655d">Developed by Yiming Wu</text>
+  <rect x="44" y="272" width="568" height="540" rx="18" fill="#ffffff" stroke="#ddd7cf"/>
+  <text x="66" y="314" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#151515">HOTL</text>
+  <rect x="132" y="288" width="96" height="28" rx="12" fill="#f2f0ec" stroke="#ddd7cf"/>
+  <text x="146" y="307" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#625d56">codex-plugins</text>
+  <text x="66" y="350" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4c4843">By Yiming Wu</text>
+  <text x="66" y="378" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#4c4843">Category: Productivity</text>
+  <line x1="66" y1="398" x2="594" y2="398" stroke="#e4dfd8"/>
+  <text x="66" y="432" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#151515">About</text>
+  <text x="66" y="465" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#4c4843">Use HOTL to brainstorm, plan, execute, review, and verify</text>
+  <text x="66" y="490" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#4c4843">software changes with explicit human-on-the-loop contracts.</text>
+  <line x1="66" y1="516" x2="594" y2="516" stroke="#e4dfd8"/>
+  <text x="66" y="550" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#151515">Includes</text>
+  <text x="66" y="578" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="700" fill="#7a746d">SKILLS</text>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#55514b">
+    <rect x="66" y="592" width="118" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="78" y="611">Brainstorming</text>
+    <rect x="194" y="592" width="118" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="206" y="611">Code Review</text>
+    <rect x="322" y="592" width="130" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="334" y="611">Dispatch Agents</text>
+    <rect x="462" y="592" width="126" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="474" y="611">Document Review</text>
+    <rect x="66" y="630" width="132" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="78" y="649">Executing Plans</text>
+    <rect x="208" y="630" width="126" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="220" y="649">Loop Execution</text>
+    <rect x="344" y="630" width="108" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="356" y="649">PR Reviewing</text>
+    <rect x="66" y="668" width="164" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="78" y="687">Verification Before</text>
+    <rect x="240" y="668" width="98" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="252" y="687">Completion</text>
+  </g>
+  <line x1="66" y1="724" x2="594" y2="724" stroke="#e4dfd8"/>
+  <text x="66" y="758" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#151515">Capabilities</text>
+  <g font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#55514b">
+    <rect x="66" y="774" width="92" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="78" y="793">Interactive</text>
+    <rect x="168" y="774" width="60" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="187" y="793">Read</text>
+    <rect x="238" y="774" width="64" height="28" rx="12" fill="#faf8f5" stroke="#ddd7cf"/><text x="257" y="793">Write</text>
+  </g>
+  <rect x="44" y="816" width="568" height="46" rx="22" fill="#111111"/>
+  <text x="328" y="846" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#ffffff">Install HOTL</text>
+  <rect x="38" y="810" width="580" height="58" rx="28" fill="none" stroke="#0f766e" stroke-width="4"/>
+  <text x="674" y="732" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#252525">Step 3</text>
+  <text x="674" y="760" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#151515">Review the plugin details</text>
+  <text x="674" y="794" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#44403c">Then click Install HOTL to finish the Codex-side install.</text>
+  <path d="M676 830 C720 836 760 840 812 840" fill="none" stroke="#0f766e" stroke-width="4" stroke-linecap="round"/>
+  <polygon points="805,832 824,840 805,848" fill="#0f766e"/>
+</svg>
