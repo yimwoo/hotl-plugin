@@ -296,6 +296,16 @@ if (Test-Path (Join-Path $CodexPluginSource ".git")) {
     $Updated++
     Write-Host "  Codex plugin source updated (v$Ver)."
     Write-Host ""
+} elseif ((Test-Path (Join-Path $env:USERPROFILE ".codex\plugins\hotl")) -and -not (Test-Path (Join-Path $CodexPluginSource ".git"))) {
+    # Old copied-bundle install detected, no source checkout yet
+    Write-Host "Note: HOTL is installed as a Codex plugin via copied bundle at ~/.codex/plugins/hotl."
+    Write-Host "This install cannot be updated by this script. To enable updates, migrate to the"
+    Write-Host "source checkout model by running:"
+    Write-Host ""
+    Write-Host "  bash install.sh --codex-plugin"
+    Write-Host ""
+    Write-Host "This will clone to ~/.codex/plugins/hotl-source/ and remove the old bundle."
+    Write-Host ""
 }
 
 if (Test-GitWorkTree $CodexHotlDir) {
@@ -468,5 +478,4 @@ if ($Found -eq 0) {
 }
 
 Write-Host "Done. $Updated installation(s) updated."
-Write-Host "Restart Codex to re-discover updated native skills."
 Write-Host "Restart your Claude Code session or start a new Cline task to use the latest version."

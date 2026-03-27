@@ -599,7 +599,7 @@ print(match.group(1) if match else '')
     [ ! -d "$tmp_home/.codex/backups/hotl" ]
 }
 
-@test "update.sh reminds Codex users to restart after an update" {
+@test "update.sh reminds users to restart after an update" {
     tmp_home="$(mktemp -d)"
     fake_bin="$tmp_home/bin"
     fake_log="$tmp_home/git.log"
@@ -612,5 +612,5 @@ print(match.group(1) if match else '')
     run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh"
 
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Restart Codex"* ]]
+    [[ "$output" == *"Restart"* ]]
 }

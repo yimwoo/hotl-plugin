@@ -41,16 +41,28 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-# --check: just report whether an update is available, then exit
-if [ "$CHECK_ONLY" -eq 1 ]; then
+# Resolve script directory (BASH_SOURCE is empty when piped via curl | bash)
+if [ -n "${BASH_SOURCE[0]:-}" ]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    bash "${SCRIPT_DIR}/scripts/check-update.sh" || true
-    exit 0
+else
+    SCRIPT_DIR=""
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# --check: just report whether an update is available, then exit
+if [ "$CHECK_ONLY" -eq 1 ]; then
+    if [ -n "${SCRIPT_DIR}" ]; then
+        bash "${SCRIPT_DIR}/scripts/check-update.sh" || true
+    else
+        echo "Error: --check requires running from a local script, not curl | bash." >&2
+        exit 1
+    fi
+    exit 0
+fi
 CODEX_MARKETPLACE_USER="${HOME}/.agents/plugins/marketplace.json"
-CODEX_MARKETPLACE_LOCAL="${SCRIPT_DIR}/.agents/plugins/marketplace.json"
+CODEX_MARKETPLACE_LOCAL=""
+if [ -n "${SCRIPT_DIR}" ]; then
+    CODEX_MARKETPLACE_LOCAL="${SCRIPT_DIR}/.agents/plugins/marketplace.json"
+fi
 
 # Check if a marketplace JSON file contains a hotl plugin entry.
 # Returns 0 (true) if found, 1 (false) otherwise.
@@ -342,6 +354,16 @@ if [ -d "${CODEX_PLUGIN_SOURCE}/.git" ]; then
     UPDATED=$((UPDATED + 1))
     echo "  Codex plugin source updated (v${_ver:-unknown})."
     echo ""
+elif [ -d "${HOME}/.codex/plugins/hotl" ] && [ ! -d "${CODEX_PLUGIN_SOURCE}/.git" ]; then
+    # Old copied-bundle install detected, no source checkout yet
+    echo "Note: HOTL is installed as a Codex plugin via copied bundle at ~/.codex/plugins/hotl."
+    echo "This install cannot be updated by update.sh. To enable updates, migrate to the"
+    echo "source checkout model by running:"
+    echo ""
+    echo "  bash install.sh --codex-plugin"
+    echo ""
+    echo "This will clone to ~/.codex/plugins/hotl-source/ and remove the old bundle."
+    echo ""
 fi
 
 if is_git_work_tree "${CODEX_HOTL_DIR}"; then
@@ -504,5 +526,4 @@ echo "Done. ${UPDATED} installation(s) updated."
 if [ "$SKIPPED" -gt 0 ]; then
     echo "${SKIPPED} installation(s) skipped."
 fi
-echo "Restart Codex to re-discover updated native skills."
 echo "Restart your Claude Code session or start a new Cline task to use the latest version."
