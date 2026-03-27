@@ -5,6 +5,7 @@
 hotl-workflow*.md
 docs/plans/
 .hotl/
+.agents/
 CLAUDE.md
 AGENTS.md
 
