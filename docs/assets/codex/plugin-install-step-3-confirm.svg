@@ -54,6 +54,6 @@
   <text x="674" y="732" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="700" fill="#252525">Step 3</text>
   <text x="674" y="760" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" fill="#151515">Review the plugin details</text>
   <text x="674" y="794" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#44403c">Then click Install HOTL to finish the Codex-side install.</text>
-  <path d="M676 830 C720 836 760 840 812 840" fill="none" stroke="#0f766e" stroke-width="4" stroke-linecap="round"/>
-  <polygon points="805,832 824,840 805,848" fill="#0f766e"/>
+  <path d="M674 820 C632 824 608 828 582 834" fill="none" stroke="#0f766e" stroke-width="4" stroke-linecap="round"/>
+  <polygon points="592,824 568,837 595,844" fill="#0f766e"/>
 </svg>

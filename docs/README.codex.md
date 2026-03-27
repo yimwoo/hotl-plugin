@@ -46,6 +46,10 @@ entry with `"source": "local"` pointing at that checkout.
 
       ![HOTL install dialog in Codex](assets/codex/plugin-install-step-3-confirm.svg)
 
+   4. After installation, confirm the HOTL plugin page opens and shows **Try in chat**.
+
+      ![HOTL plugin page after installation](assets/codex/plugin-install-step-4-installed.svg)
+
    If the plugin list is long, use the search box to filter for `HOTL`.
 
 **For contributors** testing the plugin from a working copy, use `--local`

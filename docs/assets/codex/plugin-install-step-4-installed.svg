@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="1265" viewBox="0 0 960 1265" role="img" aria-labelledby="title desc">
+  <title id="title">HOTL plugin page after installation</title>
+  <desc id="desc">Illustration of the HOTL plugin page in Codex after installation.</desc>
+  <rect width="960" height="1265" fill="#fbfaf8"/>
+
+  <rect x="8" y="18" width="42" height="42" rx="14" fill="#ffffff" stroke="#dad4cc"/>
+  <circle cx="22" cy="32" r="6" fill="none" stroke="#666666" stroke-width="2.5"/>
+  <circle cx="38" cy="32" r="6" fill="none" stroke="#666666" stroke-width="2.5"/>
+  <circle cx="22" cy="48" r="6" fill="none" stroke="#666666" stroke-width="2.5"/>
+  <circle cx="38" cy="48" r="6" fill="none" stroke="#666666" stroke-width="2.5"/>
+
+  <text x="8" y="128" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="700" fill="#151515">HOTL</text>
+  <text x="8" y="174" font-family="Arial, Helvetica, sans-serif" font-size="27" fill="#5f5b56">Human-on-the-Loop workflows for structured AI development</text>
+
+  <rect x="575" y="105" width="204" height="42" rx="15" fill="#f5f2ed" stroke="#ddd7cf"/>
+  <text x="593" y="132" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#151515">Remove from Codex</text>
+  <rect x="795" y="102" width="154" height="46" rx="16" fill="#111111"/>
+  <circle cx="814" cy="125" r="9" fill="none" stroke="#ffffff" stroke-width="2"/>
+  <path d="M820 119 l7 0 l0 7" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
+  <text x="833" y="132" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#ffffff">Try in chat</text>
+
+  <defs>
+    <linearGradient id="hero" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#b8c9ff"/>
+      <stop offset="58%" stop-color="#c8c0ff"/>
+      <stop offset="100%" stop-color="#e8e0fd"/>
+    </linearGradient>
+    <radialGradient id="heroGlow" cx="18%" cy="25%" r="80%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.65"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="8" y="226" width="940" height="206" rx="24" fill="url(#hero)"/>
+  <rect x="8" y="226" width="940" height="206" rx="24" fill="url(#heroGlow)"/>
+  <rect x="160" y="287" width="630" height="84" rx="20" fill="#ffffff" stroke="#d3ccef"/>
+  <text x="176" y="325" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#8a45ff">⌘ HOTL</text>
+  <text x="260" y="325" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#151515">Plan, execute, review, and verify coding tasks with HOTL</text>
+  <text x="168" y="355" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#151515">workflows</text>
+
+  <text x="18" y="528" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#151515">Use HOTL to brainstorm, plan, execute, review, and verify software changes with explicit human-</text>
+  <text x="18" y="558" font-family="Arial, Helvetica, sans-serif" font-size="21" fill="#151515">on-the-loop contracts.</text>
+
+  <text x="18" y="630" font-family="Arial, Helvetica, sans-serif" font-size="21" font-weight="700" fill="#151515">Includes</text>
+
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="8" y="672" width="940" height="82" rx="20" fill="#ffffff" stroke="#e1dbd3"/>
+    <circle cx="48" cy="713" r="24" fill="#ffffff" stroke="#e1dbd3"/>
+    <rect x="41" y="704" width="13" height="17" rx="3" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <path d="M44 704 l4 -5 l4 5" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <text x="88" y="707" font-size="21" font-weight="700" fill="#151515">Brainstorming</text>
+    <text x="236" y="707" font-size="18" fill="#716d68">Skill</text>
+    <text x="88" y="742" font-size="17" fill="#5f5b56">Use before any feature work — explores intent, requirements, and design. Produc...</text>
+    <rect x="890" y="697" width="40" height="28" rx="14" fill="#0b66d3"/>
+    <circle cx="914" cy="711" r="11" fill="#ffffff"/>
+
+    <rect x="8" y="754" width="940" height="82" rx="20" fill="#ffffff" stroke="#e1dbd3"/>
+    <circle cx="48" cy="795" r="24" fill="#ffffff" stroke="#e1dbd3"/>
+    <rect x="41" y="786" width="13" height="17" rx="3" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <path d="M44 786 l4 -5 l4 5" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <text x="88" y="789" font-size="21" font-weight="700" fill="#151515">Code Review</text>
+    <text x="241" y="789" font-size="18" fill="#716d68">Skill</text>
+    <text x="88" y="824" font-size="17" fill="#5f5b56">Use after completing implementation steps and before merging — reviews against...</text>
+    <rect x="890" y="779" width="40" height="28" rx="14" fill="#0b66d3"/>
+    <circle cx="914" cy="793" r="11" fill="#ffffff"/>
+
+    <rect x="8" y="836" width="940" height="82" rx="20" fill="#ffffff" stroke="#e1dbd3"/>
+    <circle cx="48" cy="877" r="24" fill="#ffffff" stroke="#e1dbd3"/>
+    <rect x="41" y="868" width="13" height="17" rx="3" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <path d="M44 868 l4 -5 l4 5" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <text x="88" y="871" font-size="21" font-weight="700" fill="#151515">Dispatch Agents</text>
+    <text x="255" y="871" font-size="18" fill="#716d68">Skill</text>
+    <text x="88" y="906" font-size="17" fill="#5f5b56">Use when you have 2+ independent tasks with no shared state — dispatches...</text>
+    <rect x="890" y="861" width="40" height="28" rx="14" fill="#0b66d3"/>
+    <circle cx="914" cy="875" r="11" fill="#ffffff"/>
+
+    <rect x="8" y="918" width="940" height="82" rx="20" fill="#ffffff" stroke="#e1dbd3"/>
+    <circle cx="48" cy="959" r="24" fill="#ffffff" stroke="#e1dbd3"/>
+    <rect x="41" y="950" width="13" height="17" rx="3" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <path d="M44 950 l4 -5 l4 5" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <text x="88" y="953" font-size="21" font-weight="700" fill="#151515">Document Review</text>
+    <text x="274" y="953" font-size="18" fill="#716d68">Skill</text>
+    <text x="88" y="988" font-family="Arial, Helvetica, sans-serif" font-size="17" fill="#5f5b56">Optional utility for reviewing existing docs, external specs, hand-authored plans, o...</text>
+    <rect x="890" y="943" width="40" height="28" rx="14" fill="#0b66d3"/>
+    <circle cx="914" cy="957" r="11" fill="#ffffff"/>
+
+    <rect x="8" y="1000" width="940" height="82" rx="20" fill="#ffffff" stroke="#e1dbd3"/>
+    <circle cx="48" cy="1041" r="24" fill="#ffffff" stroke="#e1dbd3"/>
+    <rect x="41" y="1032" width="13" height="17" rx="3" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <path d="M44 1032 l4 -5 l4 5" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <text x="88" y="1035" font-size="21" font-weight="700" fill="#151515">Executing Plans</text>
+    <text x="268" y="1035" font-size="18" fill="#716d68">Skill</text>
+    <text x="88" y="1070" font-size="17" fill="#5f5b56">Use when executing an implementation plan linearly with explicit human...</text>
+    <rect x="890" y="1025" width="40" height="28" rx="14" fill="#0b66d3"/>
+    <circle cx="914" cy="1039" r="11" fill="#ffffff"/>
+
+    <rect x="8" y="1082" width="940" height="82" rx="20" fill="#ffffff" stroke="#e1dbd3"/>
+    <circle cx="48" cy="1123" r="24" fill="#ffffff" stroke="#e1dbd3"/>
+    <rect x="41" y="1114" width="13" height="17" rx="3" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <path d="M44 1114 l4 -5 l4 5" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <text x="88" y="1117" font-size="21" font-weight="700" fill="#151515">Loop Execution</text>
+    <text x="234" y="1117" font-size="18" fill="#716d68">Skill</text>
+    <text x="88" y="1152" font-size="17" fill="#5f5b56">Use when executing a hotl-workflow-*.md — reads steps, loops until success...</text>
+    <rect x="890" y="1107" width="40" height="28" rx="14" fill="#0b66d3"/>
+    <circle cx="914" cy="1121" r="11" fill="#ffffff"/>
+
+    <rect x="8" y="1164" width="940" height="82" rx="20" fill="#ffffff" stroke="#e1dbd3"/>
+    <circle cx="48" cy="1205" r="24" fill="#ffffff" stroke="#e1dbd3"/>
+    <rect x="41" y="1196" width="13" height="17" rx="3" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <path d="M44 1196 l4 -5 l4 5" fill="none" stroke="#7a7670" stroke-width="2"/>
+    <text x="88" y="1199" font-size="21" font-weight="700" fill="#151515">PR Reviewing</text>
+    <text x="244" y="1199" font-size="18" fill="#716d68">Skill</text>
+    <text x="88" y="1234" font-size="17" fill="#5f5b56">Review a PR across multiple dimensions — description, code changes, code scan,...</text>
+    <rect x="890" y="1189" width="40" height="28" rx="14" fill="#0b66d3"/>
+    <circle cx="914" cy="1203" r="11" fill="#ffffff"/>
+  </g>
+</svg>
