@@ -7,6 +7,7 @@ set -euo pipefail
 FORCE_CODEX=0
 CHECK_ONLY=0
 SWITCH_NATIVE_SKILLS=0
+STATUS_ONLY=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -19,9 +20,12 @@ while [ $# -gt 0 ]; do
         --native-skills)
             SWITCH_NATIVE_SKILLS=1
             ;;
+        --status)
+            STATUS_ONLY=1
+            ;;
         *)
             echo "Unknown option: $1" >&2
-            echo "Usage: bash update.sh [--check] [--force-codex] [--native-skills]" >&2
+            echo "Usage: bash update.sh [--check] [--force-codex] [--native-skills] [--status]" >&2
             exit 1
             ;;
     esac
@@ -32,6 +36,115 @@ done
 if [ "$CHECK_ONLY" -eq 1 ]; then
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     bash "${SCRIPT_DIR}/scripts/check-update.sh" || true
+    exit 0
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CODEX_MARKETPLACE_USER="${HOME}/.agents/plugins/marketplace.json"
+CODEX_MARKETPLACE_LOCAL="${SCRIPT_DIR}/.agents/plugins/marketplace.json"
+
+# Check if a marketplace JSON file contains a hotl plugin entry.
+# Returns 0 (true) if found, 1 (false) otherwise.
+# Usage: hotl_in_marketplace "/path/to/marketplace.json"
+hotl_in_marketplace() {
+    local mkt_path="$1"
+    [ -f "${mkt_path}" ] || return 1
+    command -v python3 &>/dev/null || return 1
+    python3 -c "
+import json, sys
+try:
+    data = json.load(open(sys.argv[1]))
+    plugins = data.get('plugins', [])
+    sys.exit(0 if any(p.get('name') == 'hotl' for p in plugins) else 1)
+except Exception:
+    sys.exit(1)
+" "${mkt_path}" 2>/dev/null
+}
+
+# Extract the version of the hotl entry from a marketplace file.
+# Prints the version string or exits non-zero.
+hotl_marketplace_version() {
+    local mkt_path="$1"
+    [ -f "${mkt_path}" ] || return 1
+    command -v python3 &>/dev/null || return 1
+    python3 -c "
+import json, sys
+try:
+    data = json.load(open(sys.argv[1]))
+    for p in data.get('plugins', []):
+        if p.get('name') == 'hotl':
+            print(p.get('version', 'unknown'))
+            sys.exit(0)
+    sys.exit(1)
+except Exception:
+    sys.exit(1)
+" "${mkt_path}" 2>/dev/null
+}
+
+# --status: read-only report of all HOTL install modes, then exit
+if [ "$STATUS_ONLY" -eq 1 ]; then
+    echo "HOTL Installation Status"
+    echo ""
+
+    # Claude Code
+    _claude_dir="${HOME}/.claude/plugins/hotl"
+    if [ -d "${_claude_dir}" ] && git -C "${_claude_dir}" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+        _claude_ver="$(cat "${_claude_dir}/VERSION" 2>/dev/null | tr -d '[:space:]')"
+        echo "Claude Code:     installed (v${_claude_ver:-unknown}) at ${_claude_dir}"
+    else
+        echo "Claude Code:     not found"
+    fi
+
+    # Codex native-skills
+    _codex_native_found=0
+    _codex_dir="${HOME}/.codex/hotl"
+    if [ -d "${_codex_dir}" ] && git -C "${_codex_dir}" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+        _codex_rev="$(git -C "${_codex_dir}" rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+        echo "Codex native:    installed (rev ${_codex_rev}) at ${_codex_dir}"
+        _codex_native_found=1
+    else
+        echo "Codex native:    not found"
+    fi
+
+    # Codex plugin (check both user-global and repo-local marketplaces)
+    _codex_plugin_found=0
+    _codex_plugin_reported=0
+    for _codex_mkt in "${CODEX_MARKETPLACE_USER}" "${CODEX_MARKETPLACE_LOCAL}"; do
+        if hotl_in_marketplace "${_codex_mkt}"; then
+            _plugin_ver="$(hotl_marketplace_version "${_codex_mkt}")"
+            if [ "${_codex_plugin_reported}" -eq 0 ]; then
+                echo "Codex plugin:    registered (v${_plugin_ver}) in ${_codex_mkt}"
+                _codex_plugin_reported=1
+            else
+                echo "                 also registered (v${_plugin_ver}) in ${_codex_mkt}"
+            fi
+            _codex_plugin_found=1
+        fi
+    done
+    if [ "${_codex_plugin_found}" -eq 0 ]; then
+        echo "Codex plugin:    not found"
+    fi
+
+    # Warn if both Codex modes are present
+    if [ "${_codex_native_found}" -eq 1 ] && [ "${_codex_plugin_found}" -eq 1 ]; then
+        echo ""
+        echo "Warning: both Codex install modes are present. HOTL cannot guarantee which"
+        echo "source Codex will use when duplicate skill names exist."
+        echo "Recommendation: keep only one active Codex install mode at a time."
+    fi
+
+    # Cline
+    echo ""
+    _cline_dir="${HOME}/.cline/hotl"
+    if [ -d "${_cline_dir}" ] && git -C "${_cline_dir}" rev-parse --is-inside-work-tree > /dev/null 2>&1; then
+        _cline_mode_file="${_cline_dir}/.cline-install-mode"
+        _cline_mode="legacy-rules"
+        [ -f "${_cline_mode_file}" ] && _cline_mode="$(cat "${_cline_mode_file}" | tr -d '[:space:]')"
+        echo "Cline:           installed (${_cline_mode}) at ${_cline_dir}"
+    else
+        echo "Cline:           not found"
+    fi
+
     exit 0
 fi
 
@@ -136,6 +249,20 @@ fi
 
 # ── Codex ─────────────────────────────────────────────────────────────────────
 
+# Detect if HOTL is registered as a Codex plugin (user-global or repo-local)
+CODEX_PLUGIN_REGISTERED=0
+for CODEX_MARKETPLACE in "${CODEX_MARKETPLACE_USER}" "${CODEX_MARKETPLACE_LOCAL}"; do
+    if hotl_in_marketplace "${CODEX_MARKETPLACE}"; then
+        CODEX_PLUGIN_REGISTERED=1
+        _plugin_ver="$(hotl_marketplace_version "${CODEX_MARKETPLACE}")"
+        echo "Note: HOTL is also registered as a Codex plugin (v${_plugin_ver}) in"
+        echo "  ${CODEX_MARKETPLACE}"
+        echo "Plugin updates are managed through Codex's plugin UI; update.sh only"
+        echo "updates the ${CODEX_HOTL_DIR} native-skills install."
+        echo ""
+    fi
+done
+
 if is_git_work_tree "${CODEX_HOTL_DIR}"; then
     FOUND=$((FOUND + 1))
     CODEX_BRANCH="$(current_branch "${CODEX_HOTL_DIR}")"
@@ -146,14 +273,14 @@ if is_git_work_tree "${CODEX_HOTL_DIR}"; then
         CODEX_DIRTY=1
     fi
 
-    echo "Updating Codex plugin at ${CODEX_HOTL_DIR}..."
+    echo "Updating Codex native-skills install at ${CODEX_HOTL_DIR}..."
 
     if [ "${CODEX_DIRTY}" -eq 1 ] && [ "${FORCE_CODEX}" -eq 0 ]; then
         CODEX_BACKUP_DIR="$(backup_codex_install "${CODEX_HOTL_DIR}")"
-        echo "Codex install has local changes; backed them up to ${CODEX_BACKUP_DIR} before updating."
+        echo "Codex native-skills install has local changes; backed them up to ${CODEX_BACKUP_DIR} before updating."
         echo ""
     elif [ "${CODEX_DIRTY}" -eq 1 ]; then
-        echo "Codex install has local changes; --force-codex set, skipping backup and resetting to origin/main."
+        echo "Codex native-skills install has local changes; --force-codex set, skipping backup and resetting to origin/main."
         echo ""
     fi
 
@@ -172,7 +299,7 @@ if is_git_work_tree "${CODEX_HOTL_DIR}"; then
     fi
 
     UPDATED=$((UPDATED + 1))
-    echo "  Codex plugin updated."
+    echo "  Codex native-skills install updated."
     echo ""
 fi
 
@@ -287,7 +414,7 @@ if [ "$FOUND" -eq 0 ]; then
     echo "No HOTL installations found."
     echo ""
     echo "Install for Claude Code:  bash install.sh"
-    echo "Install for Codex:        see .codex/INSTALL.md"
+    echo "Install for Codex:        see docs/README.codex.md"
     echo "Install for Cline:        bash install-cline.sh"
     exit 1
 fi
@@ -296,5 +423,5 @@ echo "Done. ${UPDATED} installation(s) updated."
 if [ "$SKIPPED" -gt 0 ]; then
     echo "${SKIPPED} installation(s) skipped."
 fi
-echo "Restart Codex to re-discover updated HOTL skills."
+echo "Restart Codex to re-discover updated native skills."
 echo "Restart your Claude Code session or start a new Cline task to use the latest version."
