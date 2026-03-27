@@ -1,10 +1,51 @@
 # HOTL Plugin for Codex
 
-HOTL is a Human-on-the-Loop AI coding workflow for Codex. This repo installs HOTL as native Codex skills so you can brainstorm, plan, execute, review, and verify changes with more structure.
+HOTL for Codex can be installed either as a native Codex plugin or as native skills. Plugin install is the recommended path for reusable, versioned team setup; native skills remain the lightweight option for local development and older Codex builds. Both modes give you the same HOTL skills to brainstorm, plan, execute, review, and verify changes with more structure.
 
 ## Installation
 
-### macOS / Linux
+| Mode | Best for | Updates managed by |
+|---|---|---|
+| **Plugin Install** (recommended) | Stable versioned team installs | Codex plugin lifecycle |
+| **Native Skills Install** (fallback / development) | Fast iteration, contributors, older Codex | `update.sh` |
+
+### Plugin Install (Recommended)
+
+Requires a Codex version with plugin support. Register HOTL as a Codex plugin for
+stable, versioned team distribution. Codex manages the plugin cache and lifecycle —
+no manual symlinks needed.
+
+1. Clone the repo (or use an existing checkout):
+
+```bash
+git clone https://github.com/yimwoo/hotl-plugin /tmp/hotl-plugin
+```
+
+2. Run the installer with the `--codex-plugin` flag:
+
+```bash
+bash /tmp/hotl-plugin/install.sh --codex-plugin
+```
+
+This merges the HOTL plugin entry into `~/.agents/plugins/marketplace.json`.
+
+3. Restart Codex and install/enable HOTL from the plugin list.
+
+**For contributors** testing the plugin packaging from a repo checkout, use `--local`
+to write to the repo-local marketplace instead of your user-global config:
+
+```bash
+bash install.sh --codex-plugin --local
+```
+
+Plugin updates are handled through Codex's plugin refresh flow, not `update.sh`.
+
+### Native Skills Install (Fallback / Development)
+
+Works with all Codex versions. Clone the repo and symlink the skills directory.
+This gives you direct access to skill files for fast iteration and development.
+
+#### macOS / Linux
 
 1. Clone the repo:
 
@@ -25,7 +66,7 @@ ln -s ~/.codex/hotl/skills ~/.agents/skills/hotl
 
 3. Restart Codex.
 
-### Windows (PowerShell)
+#### Windows (PowerShell)
 
 1. Clone the repo:
 
@@ -48,23 +89,34 @@ cmd /c mklink /J "$env:USERPROFILE\.agents\skills\hotl" "$env:USERPROFILE\.codex
 
 ## Stable Channel
 
-`~/.codex/hotl` is the HOTL stable channel and should track `origin/main`.
-Do not do feature work inside that directory. If you want to develop HOTL itself,
-use a separate clone or worktree somewhere else and keep `~/.codex/hotl` for the
-version Codex discovers.
+For the **Native Skills Install**, `~/.codex/hotl` is the HOTL stable channel and
+should track `origin/main`. Do not do feature work inside that directory. If you
+want to develop HOTL itself, use a separate clone or worktree somewhere else and
+keep `~/.codex/hotl` for the version Codex discovers.
+
+For the **Plugin Install**, Codex manages the cached copy. Updates come through
+Codex's plugin lifecycle.
 
 ## How It Works
 
-Codex discovers skills in `~/.agents/skills/` at startup. The `using-hotl` skill
-provides the HOTL skill index and routing guidance for the rest of the skill set.
-Codex uses the skill files directly. Claude-style slash commands such as
-`/hotl:pr-review` are not part of the Codex integration.
-If you were searching for a "HOTL plugin for Codex," this is the Codex install path:
-the `hotl-plugin` repo is exposed to Codex through native skill discovery.
-Codex discovers every entry under `~/.agents/skills/`, so the Installed skills
-screen mixes HOTL with any other installed skill packs. HOTL skills are the ones
-coming from `~/.agents/skills/hotl`.
-There is no `/hotl:brainstorm` or `/hotl:pr-review` command syntax in Codex. In Codex, either describe the task in natural language and let HOTL route it, or explicitly mention an installed skill such as `$brainstorming`, `$writing-plans`, or `$pr-reviewing`.
+Both install modes expose the same HOTL skills to Codex. The difference is how
+Codex discovers them:
+
+- **Plugin Install:** Codex installs HOTL from the marketplace entry and caches
+  the plugin under `~/.codex/plugins/cache/`. Skills are discovered from the
+  plugin's skill directory.
+- **Native Skills Install:** Codex discovers skills in `~/.agents/skills/` at
+  startup. The symlink at `~/.agents/skills/hotl` points to the canonical skill
+  files. Codex discovers every entry under `~/.agents/skills/`, so the Installed
+  skills screen mixes HOTL with any other installed skill packs.
+
+In both cases, the `using-hotl` skill provides the HOTL skill index and routing
+guidance for the rest of the skill set. Codex uses the skill files directly.
+
+There is no `/hotl:brainstorm` or `/hotl:pr-review` command syntax in Codex.
+Instead, describe the task in natural language and let HOTL route it, or
+explicitly mention an installed skill such as `$brainstorming`, `$writing-plans`,
+or `$pr-reviewing`.
 
 ## How To Invoke HOTL Skills In Codex
 
@@ -138,13 +190,23 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 
 ## Updating
 
-### macOS / Linux
+### Native Skills Install
+
+Use `update.sh` to update the native skills install at `~/.codex/hotl`.
+
+**macOS / Linux:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
 ```
 
-### Windows (PowerShell)
+Or if already cloned:
+
+```bash
+bash ~/.codex/hotl/update.sh
+```
+
+**Windows (PowerShell):**
 
 ```powershell
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.ps1" -OutFile "$env:TEMP\hotl-update.ps1"; powershell -ExecutionPolicy Bypass -File "$env:TEMP\hotl-update.ps1"
@@ -158,8 +220,8 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hotl\update.ps
 
 ---
 
-This is the recommended Codex update path because it fetches the latest updater
-script first, then refreshes the stable install at `~/.codex/hotl` (macOS/Linux) or `%USERPROFILE%\.codex\hotl` (Windows).
+The updater fetches the latest script first, then refreshes the stable install at
+`~/.codex/hotl` (macOS/Linux) or `%USERPROFILE%\.codex\hotl` (Windows).
 
 If the install drifted onto another branch, the updater switches it back to
 the stable `main` branch before syncing.
@@ -173,6 +235,7 @@ backup, run:
 ```bash
 bash ~/.codex/hotl/update.sh --force-codex        # macOS/Linux
 ```
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hotl\update.ps1" -ForceCodex   # Windows
 ```
@@ -182,16 +245,22 @@ To check if an update is available without updating:
 ```bash
 bash ~/.codex/hotl/update.sh --check               # macOS/Linux
 ```
+
 ```powershell
 powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hotl\update.ps1" -Check        # Windows
 ```
 
-Codex currently discovers HOTL through `~/.agents/skills/hotl`. It does not
-have a guaranteed HOTL startup-notice path, so do not rely on a SessionStart
-update banner in the app. Use the manual check command above when you want to
-verify whether `~/.codex/hotl` is behind.
+Codex does not have a guaranteed HOTL startup-notice path for native skills
+installs, so do not rely on a SessionStart update banner. Use the manual check
+command above when you want to verify whether `~/.codex/hotl` is behind.
 
 Restart Codex after updating so it re-discovers the latest skill files.
+
+### Plugin Install
+
+Plugin updates are managed through Codex's plugin lifecycle. When a new HOTL
+version is available, refresh or reinstall the plugin through Codex's plugin UI.
+`update.sh` does not apply to plugin installs.
 
 ## Codex Manual Canary
 
@@ -230,14 +299,26 @@ When the repo includes `scripts/render-execution-summary.sh`, use it as the sour
 
 ## Uninstalling
 
+### Native Skills Install
+
 **macOS / Linux:**
+
 ```bash
 rm ~/.agents/skills/hotl
 rm -rf ~/.codex/hotl
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 Remove-Item "$env:USERPROFILE\.agents\skills\hotl" -Force
 Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\hotl"
 ```
+
+### Plugin Install
+
+Uninstall HOTL through Codex's plugin UI. To also remove the marketplace entry:
+
+**macOS / Linux:** Edit `~/.agents/plugins/marketplace.json` and remove the `hotl` entry.
+
+**Repo-local:** Delete `.agents/plugins/marketplace.json` or remove the `hotl` entry from it.

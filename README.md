@@ -38,14 +38,12 @@ If someone searches for a "HOTL plugin" or a "Human-on-the-Loop AI coding workfl
 
 ### Codex
 
-```bash
-git clone https://github.com/yimwoo/hotl-plugin.git ~/.codex/hotl
-mkdir -p ~/.agents/skills && ln -s ~/.codex/hotl/skills ~/.agents/skills/hotl
-```
+| Mode | Command | Best for |
+|---|---|---|
+| **Plugin** (recommended) | `bash install.sh --codex-plugin` (from repo root) | Stable versioned team installs |
+| **Native Skills** (fallback) | Clone to `~/.codex/hotl` + symlink to `~/.agents/skills/hotl` | Local dev, older Codex |
 
-Restart Codex after install. Full guide: [`.codex/INSTALL.md`](.codex/INSTALL.md)
-
-`~/.codex/hotl` is the HOTL stable channel and should track `origin/main`. Codex discovers HOTL skills from `~/.agents/skills/hotl`.
+For native skills installs, `~/.codex/hotl` is the stable channel and should track `origin/main`. Restart Codex after install. Full guide: [`docs/README.codex.md`](docs/README.codex.md)
 
 ### Cline
 
@@ -147,14 +145,14 @@ Want to create or modify HOTL skills? See [Authoring Skills vs Agents](docs/auth
 curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
 ```
 
-Covers Claude Code, Codex, and Cline, and skips tools that are not installed. In Claude Code, you can also run `/hotl:check-update`. For backup behavior, manual checks, and `--force-codex`, see [Updating HOTL](docs/updating.md).
+Covers Claude Code, native-skills Codex installs, and Cline, and skips tools that are not installed. Codex plugin installs are updated through Codex's plugin lifecycle instead. In Claude Code, you can also run `/hotl:check-update`. For backup behavior, manual checks, and `--force-codex`, see [Updating HOTL](docs/updating.md).
 
 ## Supported Tools
 
 | Tool | Integration |
 | --- | --- |
 | Claude Code | Plugin — commands, skills, and hooks |
-| Codex | Native skill discovery with HOTL skills |
+| Codex | Plugin install (recommended) or native skill discovery |
 | Cline | Global rules plus local HOTL skill files |
 | Cursor | Adapter templates via `/hotl:setup` |
 | GitHub Copilot | Adapter templates via `/hotl:setup` |
