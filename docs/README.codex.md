@@ -27,12 +27,17 @@ git clone https://github.com/yimwoo/hotl-plugin /tmp/hotl-plugin
 bash /tmp/hotl-plugin/install.sh --codex-plugin
 ```
 
-This merges the HOTL plugin entry into `~/.agents/plugins/marketplace.json`.
+This copies the HOTL plugin bundle into `~/.codex/plugins/hotl` and registers it
+in `~/.agents/plugins/marketplace.json` as a local Codex plugin.
 
-3. Restart Codex and install/enable HOTL from the plugin list.
+3. Restart Codex.
+
+4. Open the Codex plugin directory, switch the source to **Local Plugins**, and
+   click **Add to Codex** for HOTL.
 
 **For contributors** testing the plugin packaging from a repo checkout, use `--local`
-to write to the repo-local marketplace instead of your user-global config:
+to install the plugin under the repo and write to the repo-local marketplace
+instead of your user-global config:
 
 ```bash
 bash install.sh --codex-plugin --local

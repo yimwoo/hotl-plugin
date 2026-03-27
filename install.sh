@@ -18,7 +18,7 @@ while [ $# -gt 0 ]; do
             echo ""
             echo "Options:"
             echo "  (no flags)       Install HOTL as a Claude Code plugin (default)"
-            echo "  --codex-plugin   Register HOTL in the Codex plugin marketplace"
+            echo "  --codex-plugin   Install HOTL as a local Codex plugin and register it"
             echo "  --local          With --codex-plugin: write to repo-local marketplace"
             echo "                   instead of user-global (~/.agents/plugins/marketplace.json)"
             echo "  --help, -h       Show this help"
@@ -35,41 +35,83 @@ done
 # ── Codex plugin install ─────────────────────────────────────────────────────
 
 if [ "$CODEX_PLUGIN" = true ]; then
-    if [ "$LOCAL" = true ]; then
-        MARKETPLACE_DIR=".agents/plugins"
-        MARKETPLACE_FILE="${MARKETPLACE_DIR}/marketplace.json"
-        echo "Registering HOTL in repo-local Codex marketplace: ${MARKETPLACE_FILE}"
-    else
-        MARKETPLACE_DIR="${HOME}/.agents/plugins"
-        MARKETPLACE_FILE="${MARKETPLACE_DIR}/marketplace.json"
-        echo "Registering HOTL in user-global Codex marketplace: ${MARKETPLACE_FILE}"
-    fi
-
-    SOURCE_FILE="${SCRIPT_DIR}/.codex-plugin/marketplace.json"
-    if [ ! -f "$SOURCE_FILE" ]; then
-        echo "Error: ${SOURCE_FILE} not found." >&2
-        echo "Are you running install.sh from the hotl-plugin repository?" >&2
-        exit 1
-    fi
-
-    # Extract the HOTL plugin entry from the source marketplace template
     if ! command -v python3 &>/dev/null; then
         echo "Error: python3 is required for Codex plugin install." >&2
         exit 1
     fi
 
-    mkdir -p "$MARKETPLACE_DIR"
+    if [ "$LOCAL" = true ]; then
+        INSTALL_ROOT="${SCRIPT_DIR}"
+        MARKETPLACE_DIR="${INSTALL_ROOT}/.agents/plugins"
+        MARKETPLACE_FILE="${MARKETPLACE_DIR}/marketplace.json"
+        PLUGIN_ROOT="${INSTALL_ROOT}/.codex/plugins/${PLUGIN_NAME}"
+        PLUGIN_SOURCE_PATH="./.codex/plugins/${PLUGIN_NAME}"
+        echo "Installing HOTL in repo-local Codex plugin directory: ${PLUGIN_ROOT}"
+        echo "Registering HOTL in repo-local Codex marketplace: ${MARKETPLACE_FILE}"
+    else
+        INSTALL_ROOT="${HOME}"
+        MARKETPLACE_DIR="${HOME}/.agents/plugins"
+        MARKETPLACE_FILE="${MARKETPLACE_DIR}/marketplace.json"
+        PLUGIN_ROOT="${HOME}/.codex/plugins/${PLUGIN_NAME}"
+        PLUGIN_SOURCE_PATH="./.codex/plugins/${PLUGIN_NAME}"
+        echo "Installing HOTL in user-global Codex plugin directory: ${PLUGIN_ROOT}"
+        echo "Registering HOTL in user-global Codex marketplace: ${MARKETPLACE_FILE}"
+    fi
+
+    PLUGIN_MANIFEST="${SCRIPT_DIR}/.codex-plugin/plugin.json"
+    if [ ! -f "$PLUGIN_MANIFEST" ]; then
+        echo "Error: ${PLUGIN_MANIFEST} not found." >&2
+        echo "Are you running install.sh from the hotl-plugin repository?" >&2
+        exit 1
+    fi
+
+    mkdir -p "$MARKETPLACE_DIR" "$(dirname "${PLUGIN_ROOT}")"
+    rsync -a --delete \
+        --exclude '.git' \
+        --exclude '.codex/plugins' \
+        --exclude '.agents/plugins' \
+        "${SCRIPT_DIR}/" "${PLUGIN_ROOT}/"
 
     python3 -c "
 import json, sys, os
 
-source_path = sys.argv[1]
+manifest_path = sys.argv[1]
 dest_path = sys.argv[2]
+plugin_source_path = sys.argv[3]
+owner_name = os.environ.get('USER', 'unknown')
 
-# Read the HOTL plugin entry from the source template
-with open(source_path) as f:
-    source = json.load(f)
-hotl_entry = source['plugins'][0]
+with open(manifest_path) as f:
+    manifest = json.load(f)
+
+manifest.setdefault('interface', {
+    'displayName': 'HOTL',
+    'shortDescription': 'Human-on-the-Loop workflows for structured AI development',
+    'longDescription': 'Use HOTL to brainstorm, plan, execute, review, and verify software changes with explicit human-on-the-loop contracts.',
+    'developerName': owner_name,
+    'category': 'Productivity',
+    'capabilities': ['Interactive', 'Read', 'Write'],
+    'defaultPrompt': 'Plan, execute, review, and verify coding tasks with HOTL workflows'
+})
+
+with open(manifest_path, 'w') as f:
+    json.dump(manifest, f, indent=2)
+    f.write('\n')
+
+hotl_entry = {
+    'name': manifest['name'],
+    'description': manifest['description'],
+    'version': manifest['version'],
+    'author': manifest.get('author', {'name': owner_name}),
+    'source': {
+        'source': 'local',
+        'path': plugin_source_path,
+    },
+    'policy': {
+        'installation': 'AVAILABLE',
+        'authentication': 'ON_INSTALL',
+    },
+    'category': 'Productivity',
+}
 
 # Read or create the destination marketplace file
 if os.path.exists(dest_path):
@@ -79,9 +121,16 @@ else:
     dest = {
         'name': 'codex-plugins',
         'description': 'Codex plugin marketplace',
-        'owner': {'name': os.environ.get('USER', 'unknown')},
+        'owner': {'name': owner_name},
+        'interface': {'displayName': 'Local Plugins'},
         'plugins': []
     }
+
+dest.setdefault('name', 'codex-plugins')
+dest.setdefault('description', 'Codex plugin marketplace')
+dest.setdefault('owner', {'name': owner_name})
+dest.setdefault('interface', {'displayName': 'Local Plugins'})
+dest.setdefault('plugins', [])
 
 # Merge: update existing hotl entry or append
 updated = False
@@ -99,7 +148,7 @@ with open(dest_path, 'w') as f:
 
 action = 'Updated' if updated else 'Added'
 print(f'{action} HOTL plugin entry (version {hotl_entry[\"version\"]})')
-" "$SOURCE_FILE" "$MARKETPLACE_FILE"
+" "$PLUGIN_ROOT/.codex-plugin/plugin.json" "$MARKETPLACE_FILE" "$PLUGIN_SOURCE_PATH"
 
     # Warn if an existing native-skills install is detected
     if [ -L "${HOME}/.agents/skills/hotl" ] || [ -d "${HOME}/.codex/hotl" ]; then
@@ -120,9 +169,10 @@ print(f'{action} HOTL plugin entry (version {hotl_entry[\"version\"]})')
     fi
 
     echo ""
-    echo "HOTL Codex plugin registered. Next steps:"
+    echo "HOTL Codex plugin prepared. Next steps:"
     echo "  1. Restart Codex to discover the plugin"
-    echo "  2. Install/enable HOTL from the Codex plugin list"
+    echo "  2. Open the Codex plugin directory, switch to Local Plugins,"
+    echo "     and click Add to Codex for HOTL"
     echo ""
     echo "To update later, use Codex's plugin refresh flow."
     echo "For native skills install (dev/iteration), see docs/README.codex.md"

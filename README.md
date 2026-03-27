@@ -43,6 +43,8 @@ If someone searches for a "HOTL plugin" or a "Human-on-the-Loop AI coding workfl
 | **Plugin** (recommended) | `bash install.sh --codex-plugin` (from repo root) | Stable versioned team installs |
 | **Native Skills** (fallback) | Clone to `~/.codex/hotl` + symlink to `~/.agents/skills/hotl` | Local dev, older Codex |
 
+After plugin install, restart Codex, switch the plugin directory to **Local Plugins**, and click **Add to Codex** for HOTL.
+
 Plugin install does not automatically remove an older native-skills install. If both are present, Codex may discover duplicate HOTL sources. See [`docs/README.codex.md`](docs/README.codex.md) for the recommended migration path.
 
 For native skills installs, `~/.codex/hotl` is the stable channel and should track `origin/main`. Restart Codex after install. Full guide: [`docs/README.codex.md`](docs/README.codex.md)

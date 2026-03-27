@@ -9,5 +9,14 @@
   "repository": "https://github.com/yimwoo/hotl-plugin",
   "license": "MIT",
   "keywords": ["hotl", "human-on-the-loop", "ai-native", "workflows", "skills"],
-  "skills": "../skills/"
+  "skills": "../skills/",
+  "interface": {
+    "displayName": "HOTL",
+    "shortDescription": "Human-on-the-Loop workflows for structured AI development",
+    "longDescription": "Use HOTL to brainstorm, plan, execute, review, and verify software changes with explicit human-on-the-loop contracts.",
+    "developerName": "yimwoo",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "defaultPrompt": "Plan, execute, review, and verify coding tasks with HOTL workflows"
+  }
 }
