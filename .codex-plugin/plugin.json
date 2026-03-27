@@ -14,9 +14,10 @@
     "displayName": "HOTL",
     "shortDescription": "Human-on-the-Loop workflows for structured AI development",
     "longDescription": "Use HOTL to brainstorm, plan, execute, review, and verify software changes with explicit human-on-the-loop contracts.",
-    "developerName": "yimwoo",
+    "developerName": "Yiming Wu",
     "category": "Productivity",
     "capabilities": ["Interactive", "Read", "Write"],
-    "defaultPrompt": "Plan, execute, review, and verify coding tasks with HOTL workflows"
+    "defaultPrompt": "Plan, execute, review, and verify coding tasks with HOTL workflows",
+    "websiteURL": "https://github.com/yimwoo/hotl-plugin"
   }
 }
