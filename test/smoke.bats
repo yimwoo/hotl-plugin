@@ -527,8 +527,8 @@ print(match.group(1) if match else '')
     run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh"
 
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
-    [[ "$output" == *"Codex plugin updated."* ]]
+    [[ "$output" == *"Updating Codex native-skills install at ${tmp_home}/.codex/hotl..."* ]]
+    [[ "$output" == *"Codex native-skills install updated."* ]]
     grep -q "fetch ${tmp_home}/.codex/hotl origin main" "$fake_log"
     grep -q "reset ${tmp_home}/.codex/hotl origin/main" "$fake_log"
 }
@@ -547,7 +547,7 @@ print(match.group(1) if match else '')
 
     [ "$status" -eq 0 ]
     [[ "$output" == *"Codex install is on branch feature/hotl-test; switching back to stable branch main."* ]]
-    [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
+    [[ "$output" == *"Updating Codex native-skills install at ${tmp_home}/.codex/hotl..."* ]]
     grep -q "switch ${tmp_home}/.codex/hotl main" "$fake_log"
     grep -q "fetch ${tmp_home}/.codex/hotl origin main" "$fake_log"
     grep -q "reset ${tmp_home}/.codex/hotl origin/main" "$fake_log"
@@ -567,8 +567,8 @@ print(match.group(1) if match else '')
     run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh"
 
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Codex install has local changes; backed them up to ${tmp_home}/.codex/backups/hotl/"* ]]
-    [[ "$output" == *"Updating Codex plugin at ${tmp_home}/.codex/hotl..."* ]]
+    [[ "$output" == *"Codex native-skills install has local changes; backed them up to ${tmp_home}/.codex/backups/hotl/"* ]]
+    [[ "$output" == *"Updating Codex native-skills install at ${tmp_home}/.codex/hotl..."* ]]
     grep -q "fetch ${tmp_home}/.codex/hotl origin main" "$fake_log"
     grep -q "reset ${tmp_home}/.codex/hotl origin/main" "$fake_log"
     [ -d "$tmp_home/.codex/backups/hotl" ]
