@@ -296,18 +296,20 @@ assert 'sessionStartNotice' not in data.get('hookSpecificOutput', {})
     ver=$(cat "$REPO_ROOT/VERSION" | tr -d '[:space:]')
     [ -n "$ver" ] || { echo "VERSION file is empty"; return 1; }
 
-    local claude_ver cursor_ver market_ver codex_ver codex_market_ver
+    local claude_ver cursor_ver market_ver codex_ver
     claude_ver=$(python3 -c "import json; print(json.load(open('$REPO_ROOT/.claude-plugin/plugin.json'))['version'])")
     cursor_ver=$(python3 -c "import json; print(json.load(open('$REPO_ROOT/.cursor-plugin/plugin.json'))['version'])")
     market_ver=$(python3 -c "import json; print(json.load(open('$REPO_ROOT/.claude-plugin/marketplace.json'))['plugins'][0]['version'])")
     codex_ver=$(python3 -c "import json; print(json.load(open('$REPO_ROOT/.codex-plugin/plugin.json'))['version'])")
-    codex_market_ver=$(python3 -c "import json; print(json.load(open('$REPO_ROOT/.codex-plugin/marketplace.json'))['plugins'][0]['version'])")
 
     [ "$ver" = "$claude_ver" ] || { echo "VERSION ($ver) != .claude-plugin/plugin.json ($claude_ver)"; return 1; }
     [ "$ver" = "$cursor_ver" ] || { echo "VERSION ($ver) != .cursor-plugin/plugin.json ($cursor_ver)"; return 1; }
     [ "$ver" = "$market_ver" ] || { echo "VERSION ($ver) != .claude-plugin/marketplace.json ($market_ver)"; return 1; }
     [ "$ver" = "$codex_ver" ] || { echo "VERSION ($ver) != .codex-plugin/plugin.json ($codex_ver)"; return 1; }
-    [ "$ver" = "$codex_market_ver" ] || { echo "VERSION ($ver) != .codex-plugin/marketplace.json ($codex_market_ver)"; return 1; }
+}
+
+@test ".codex-plugin/marketplace.json does not exist (installer generates entries)" {
+    [ ! -f "$REPO_ROOT/.codex-plugin/marketplace.json" ]
 }
 
 # ── command/skill name collision guard ────────────────────────────────────────

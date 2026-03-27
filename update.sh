@@ -8,6 +8,8 @@ FORCE_CODEX=0
 CHECK_ONLY=0
 SWITCH_NATIVE_SKILLS=0
 STATUS_ONLY=0
+CODEX_PLUGIN=0
+FORCE_CODEX_PLUGIN=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -23,9 +25,16 @@ while [ $# -gt 0 ]; do
         --status)
             STATUS_ONLY=1
             ;;
+        --codex-plugin)
+            CODEX_PLUGIN=1
+            ;;
+        --force-codex-plugin)
+            FORCE_CODEX_PLUGIN=1
+            CODEX_PLUGIN=1
+            ;;
         *)
             echo "Unknown option: $1" >&2
-            echo "Usage: bash update.sh [--check] [--force-codex] [--native-skills] [--status]" >&2
+            echo "Usage: bash update.sh [--check] [--force-codex] [--native-skills] [--status] [--codex-plugin] [--force-codex-plugin]" >&2
             exit 1
             ;;
     esac
@@ -81,6 +90,43 @@ except Exception:
 " "${mkt_path}" 2>/dev/null
 }
 
+is_git_work_tree() {
+    local path="$1"
+    [ -e "${path}" ] && git -C "${path}" rev-parse --is-inside-work-tree > /dev/null 2>&1
+}
+
+current_branch() {
+    git -C "$1" branch --show-current 2>/dev/null || true
+}
+
+has_local_changes() {
+    local path="$1"
+    [ -n "$(git -C "${path}" status --short --untracked-files=all 2>/dev/null)" ]
+}
+
+resolve_path() {
+    local path="$1"
+    (
+        cd "${path}" > /dev/null 2>&1 && pwd -P
+    )
+}
+
+backup_codex_install() {
+    local path="$1"
+    local real_path backup_root timestamp backup_dir
+
+    real_path="$(resolve_path "${path}")"
+    backup_root="${HOME}/.codex/backups/hotl"
+    timestamp="$(date +"%Y%m%d-%H%M%S")"
+    backup_dir="${backup_root}/${timestamp}"
+
+    mkdir -p "${backup_dir}/worktree"
+    git -C "${path}" status --short --branch > "${backup_dir}/git-status.txt" 2>/dev/null || true
+    rsync -a --exclude '.git' "${real_path}/" "${backup_dir}/worktree/"
+
+    printf '%s\n' "${backup_dir}"
+}
+
 # --status: read-only report of all HOTL install modes, then exit
 if [ "$STATUS_ONLY" -eq 1 ]; then
     echo "HOTL Installation Status"
@@ -125,6 +171,20 @@ if [ "$STATUS_ONLY" -eq 1 ]; then
         echo "Codex plugin:    not found"
     fi
 
+    # Show source checkout health
+    _codex_source="${HOME}/.codex/plugins/hotl-source"
+    if [ "${_codex_plugin_found}" -eq 1 ]; then
+        if [ -d "${_codex_source}/.git" ]; then
+            _src_rev="$(git -C "${_codex_source}" rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+            echo "                 source checkout (rev ${_src_rev}) at ${_codex_source}"
+        else
+            echo "                 WARNING: source checkout not found at ${_codex_source}"
+        fi
+    elif [ -d "${_codex_source}/.git" ]; then
+        _src_rev="$(git -C "${_codex_source}" rev-parse --short HEAD 2>/dev/null || echo "unknown")"
+        echo "Codex plugin:    source checkout (rev ${_src_rev}) at ${_codex_source} (no marketplace entry)"
+    fi
+
     # Warn if both Codex modes are present
     if [ "${_codex_native_found}" -eq 1 ] && [ "${_codex_plugin_found}" -eq 1 ]; then
         echo ""
@@ -148,6 +208,48 @@ if [ "$STATUS_ONLY" -eq 1 ]; then
     exit 0
 fi
 
+# --codex-plugin: update the plugin source checkout, then exit
+if [ "$CODEX_PLUGIN" -eq 1 ]; then
+    CODEX_PLUGIN_SOURCE="${HOME}/.codex/plugins/hotl-source"
+
+    if [ ! -d "${CODEX_PLUGIN_SOURCE}/.git" ]; then
+        echo "No HOTL plugin source checkout found at ${CODEX_PLUGIN_SOURCE}."
+        echo "Run install.sh --codex-plugin first."
+        if [ -d "${HOME}/.codex/hotl" ]; then
+            echo ""
+            echo "Hint: a native-skills install exists at ~/.codex/hotl."
+            echo "Use update.sh (without --codex-plugin) to update that instead."
+        fi
+        exit 1
+    fi
+
+    echo "Updating Codex plugin source checkout at ${CODEX_PLUGIN_SOURCE}..."
+
+    if has_local_changes "${CODEX_PLUGIN_SOURCE}"; then
+        if [ "${FORCE_CODEX_PLUGIN}" -eq 1 ]; then
+            echo "Source checkout has local changes; --force-codex-plugin set, skipping backup."
+        else
+            _backup_root="${HOME}/.codex/backups/hotl-plugin"
+            _timestamp="$(date +"%Y%m%d-%H%M%S")"
+            _backup_dir="${_backup_root}/${_timestamp}"
+            mkdir -p "${_backup_dir}/worktree"
+            git -C "${CODEX_PLUGIN_SOURCE}" status --short --branch > "${_backup_dir}/git-status.txt" 2>/dev/null || true
+            rsync -a --exclude '.git' "${CODEX_PLUGIN_SOURCE}/" "${_backup_dir}/worktree/"
+            echo "Source checkout has local changes; backed them up to ${_backup_dir}."
+        fi
+    fi
+
+    git -C "${CODEX_PLUGIN_SOURCE}" fetch origin main
+    git -C "${CODEX_PLUGIN_SOURCE}" reset --hard origin/main
+    git -C "${CODEX_PLUGIN_SOURCE}" clean -fd
+
+    _ver="$(cat "${CODEX_PLUGIN_SOURCE}/VERSION" 2>/dev/null | tr -d '[:space:]')"
+    echo "  Updated to version ${_ver:-unknown}."
+    echo ""
+    echo "Restart Codex to pick up the updated plugin."
+    exit 0
+fi
+
 CLAUDE_PLUGIN_DIR="${HOME}/.claude/plugins/hotl"
 CLAUDE_CACHE_DIR="${HOME}/.claude/plugins/cache/hotl-plugin/hotl"
 CODEX_HOTL_DIR="${HOME}/.codex/hotl"
@@ -160,43 +262,6 @@ CLINE_MODE_FILE="${CLINE_HOTL_DIR}/.cline-install-mode"
 FOUND=0
 UPDATED=0
 SKIPPED=0
-
-is_git_work_tree() {
-    local path="$1"
-    [ -e "${path}" ] && git -C "${path}" rev-parse --is-inside-work-tree > /dev/null 2>&1
-}
-
-current_branch() {
-    git -C "$1" branch --show-current 2>/dev/null || true
-}
-
-has_local_changes() {
-    local path="$1"
-    [ -n "$(git -C "${path}" status --short --untracked-files=all 2>/dev/null)" ]
-}
-
-resolve_path() {
-    local path="$1"
-    (
-        cd "${path}" > /dev/null 2>&1 && pwd -P
-    )
-}
-
-backup_codex_install() {
-    local path="$1"
-    local real_path backup_root timestamp backup_dir
-
-    real_path="$(resolve_path "${path}")"
-    backup_root="${HOME}/.codex/backups/hotl"
-    timestamp="$(date +"%Y%m%d-%H%M%S")"
-    backup_dir="${backup_root}/${timestamp}"
-
-    mkdir -p "${backup_dir}/worktree"
-    git -C "${path}" status --short --branch > "${backup_dir}/git-status.txt" 2>/dev/null || true
-    rsync -a --exclude '.git' "${real_path}/" "${backup_dir}/worktree/"
-
-    printf '%s\n' "${backup_dir}"
-}
 
 # ── Claude Code ───────────────────────────────────────────────────────────────
 
@@ -249,19 +314,35 @@ fi
 
 # ── Codex ─────────────────────────────────────────────────────────────────────
 
-# Detect if HOTL is registered as a Codex plugin (user-global or repo-local)
-CODEX_PLUGIN_REGISTERED=0
-for CODEX_MARKETPLACE in "${CODEX_MARKETPLACE_USER}" "${CODEX_MARKETPLACE_LOCAL}"; do
-    if hotl_in_marketplace "${CODEX_MARKETPLACE}"; then
-        CODEX_PLUGIN_REGISTERED=1
-        _plugin_ver="$(hotl_marketplace_version "${CODEX_MARKETPLACE}")"
-        echo "Note: HOTL is also registered as a Codex plugin (v${_plugin_ver}) in"
-        echo "  ${CODEX_MARKETPLACE}"
-        echo "Plugin updates are managed through Codex's plugin UI; update.sh only"
-        echo "updates the ${CODEX_HOTL_DIR} native-skills install."
-        echo ""
+# Update Codex plugin source checkout if it exists
+CODEX_PLUGIN_SOURCE="${HOME}/.codex/plugins/hotl-source"
+if [ -d "${CODEX_PLUGIN_SOURCE}/.git" ]; then
+    FOUND=$((FOUND + 1))
+    echo "Updating Codex plugin source checkout at ${CODEX_PLUGIN_SOURCE}..."
+
+    if has_local_changes "${CODEX_PLUGIN_SOURCE}"; then
+        if [ "${FORCE_CODEX_PLUGIN}" -eq 1 ]; then
+            echo "  Source checkout has local changes; --force-codex-plugin set, skipping backup."
+        else
+            _backup_root="${HOME}/.codex/backups/hotl-plugin"
+            _timestamp="$(date +"%Y%m%d-%H%M%S")"
+            _backup_dir="${_backup_root}/${_timestamp}"
+            mkdir -p "${_backup_dir}/worktree"
+            git -C "${CODEX_PLUGIN_SOURCE}" status --short --branch > "${_backup_dir}/git-status.txt" 2>/dev/null || true
+            rsync -a --exclude '.git' "${CODEX_PLUGIN_SOURCE}/" "${_backup_dir}/worktree/"
+            echo "  Source checkout has local changes; backed them up to ${_backup_dir}."
+        fi
     fi
-done
+
+    git -C "${CODEX_PLUGIN_SOURCE}" fetch origin main
+    git -C "${CODEX_PLUGIN_SOURCE}" reset --hard origin/main
+    git -C "${CODEX_PLUGIN_SOURCE}" clean -fd
+
+    _ver="$(cat "${CODEX_PLUGIN_SOURCE}/VERSION" 2>/dev/null | tr -d '[:space:]')"
+    UPDATED=$((UPDATED + 1))
+    echo "  Codex plugin source updated (v${_ver:-unknown})."
+    echo ""
+fi
 
 if is_git_work_tree "${CODEX_HOTL_DIR}"; then
     FOUND=$((FOUND + 1))

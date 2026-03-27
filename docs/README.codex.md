@@ -11,9 +11,9 @@ HOTL for Codex can be installed either as a native Codex plugin or as native ski
 
 ### Plugin Install (Recommended)
 
-Requires a Codex version with plugin support. Register HOTL as a Codex plugin for
-stable, versioned team distribution. Codex manages the plugin cache and lifecycle —
-no manual symlinks needed.
+Requires a Codex version with plugin support. The installer clones the HOTL repo
+to a source checkout at `~/.codex/plugins/hotl-source/` and registers it in
+`~/.agents/plugins/marketplace.json` as a local Codex plugin.
 
 1. Clone the repo (or use an existing checkout):
 
@@ -27,23 +27,42 @@ git clone https://github.com/yimwoo/hotl-plugin /tmp/hotl-plugin
 bash /tmp/hotl-plugin/install.sh --codex-plugin
 ```
 
-This copies the HOTL plugin bundle into `~/.codex/plugins/hotl` and registers it
-in `~/.agents/plugins/marketplace.json` as a local Codex plugin.
+This clones HOTL to `~/.codex/plugins/hotl-source/` and writes a marketplace
+entry with `"source": "local"` pointing at that checkout.
 
 3. Restart Codex.
 
 4. Open the Codex plugin directory, switch the source to **Local Plugins**, and
    click **Add to Codex** for HOTL.
 
-**For contributors** testing the plugin packaging from a repo checkout, use `--local`
-to install the plugin under the repo and write to the repo-local marketplace
-instead of your user-global config:
+**For contributors** testing the plugin from a working copy, use `--local`
+to point the marketplace at your current checkout without cloning:
 
 ```bash
 bash install.sh --codex-plugin --local
 ```
 
-Plugin updates are handled through Codex's plugin refresh flow, not `update.sh`.
+This writes a repo-local marketplace entry at `.agents/plugins/marketplace.json`
+pointing at your checkout directory.
+
+**Generated marketplace entry shape:**
+
+```json
+{
+  "name": "hotl",
+  "source": {
+    "source": "local",
+    "path": "~/.codex/plugins/hotl-source"
+  },
+  "policy": {
+    "installation": "AVAILABLE",
+    "authentication": "ON_INSTALL"
+  },
+  "category": "Productivity"
+}
+```
+
+Plugin updates are handled via `update.sh --codex-plugin` (see Updating below).
 
 ### Native Skills Install (Fallback / Development)
 
@@ -284,9 +303,23 @@ Restart Codex after updating so it re-discovers the latest skill files.
 
 ### Plugin Install
 
-Plugin updates are managed through Codex's plugin lifecycle. When a new HOTL
-version is available, refresh or reinstall the plugin through Codex's plugin UI.
-`update.sh` does not apply to plugin installs.
+The standard curl one-liner also updates the plugin source checkout if it exists:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
+```
+
+Or update only the plugin checkout:
+
+```bash
+bash ~/.codex/plugins/hotl-source/update.sh --codex-plugin
+```
+
+If the source checkout has local changes, they are backed up to
+`~/.codex/backups/hotl-plugin/<timestamp>/` before resetting.
+Use `--force-codex-plugin` to skip the backup.
+
+Restart Codex after updating so it picks up the new plugin files.
 
 ## Codex Manual Canary
 
@@ -343,8 +376,13 @@ Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\hotl"
 
 ### Plugin Install
 
-Uninstall HOTL through Codex's plugin UI. To also remove the marketplace entry:
+Remove the source checkout and marketplace entry:
 
-**macOS / Linux:** Edit `~/.agents/plugins/marketplace.json` and remove the `hotl` entry.
+**macOS / Linux:**
+
+```bash
+rm -rf ~/.codex/plugins/hotl-source
+# Edit ~/.agents/plugins/marketplace.json and remove the hotl entry
+```
 
 **Repo-local:** Delete `.agents/plugins/marketplace.json` or remove the `hotl` entry from it.
