@@ -2,6 +2,20 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.10.1] - 2026-03-27
+
+### Changed
+- `install.sh --codex-plugin` now clones a source checkout to `~/.codex/plugins/hotl-source/` instead of rsyncing a copied bundle — enables `git pull` updates
+- `install.sh --codex-plugin --local` points marketplace at current checkout instead of creating a nested clone
+- `update.sh --codex-plugin` / `update.ps1 -CodexPlugin` updates the plugin source checkout with dirty-tree backup protection
+- `update.sh` (no flags) now auto-detects and updates the plugin source checkout alongside Claude Code, native-skills Codex, and Cline — the curl one-liner covers all install modes
+- `--status` reports both marketplace registration and source checkout health with git rev
+- Migrates old copied-bundle installs at `~/.codex/plugins/hotl/` to the new source checkout on re-install
+
+### Removed
+- `.codex-plugin/marketplace.json` — installer generates marketplace entries from `plugin.json`; template used undocumented `"source": "url"` and was drift-prone
+- Version parity reduced from 6 to 5 locations (CLAUDE.md, smoke tests updated)
+
 ## [2.10.0] - 2026-03-26
 
 ### Added
