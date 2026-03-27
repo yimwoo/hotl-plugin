@@ -2,6 +2,23 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.10.0] - 2026-03-26
+
+### Added
+- Codex plugin packaging — `.codex-plugin/plugin.json` and `.codex-plugin/marketplace.json` let HOTL be installed as a native Codex plugin for stable, versioned team distribution
+- `install.sh --codex-plugin` registers HOTL in the user-global Codex marketplace (`~/.agents/plugins/marketplace.json`)
+- `install.sh --codex-plugin --local` registers in the repo-local marketplace for contributors testing plugin packaging
+- `update.sh --status` / `update.ps1 -Status` — read-only report of all HOTL install modes with paths and versions
+- Plugin detection in `update.sh` and `update.ps1` — warns when HOTL is registered as a Codex plugin and directs to Codex's plugin UI for updates
+- Coexistence warnings in installer, updaters, and docs when both Codex install modes are present
+- `docs/README.codex.md` "Coexisting With Native Skills" section with recommended migration path
+
+### Changed
+- Codex documentation is now plugin-first: Plugin Install (recommended) before Native Skills Install (fallback/development)
+- `update.sh` and `update.ps1` Codex messaging renamed from "plugin" to "native-skills install"
+- `CLAUDE.md` version file list expanded from 3 to 6 locations (adds `VERSION`, `.codex-plugin/plugin.json`, `.codex-plugin/marketplace.json`)
+- Smoke tests extended to validate `.codex-plugin/` manifest versions against `VERSION`
+
 ## [2.9.7] - 2026-03-25
 
 ### Added
