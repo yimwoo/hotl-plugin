@@ -36,7 +36,16 @@ For HOTL documents only, run the deterministic lint script:
 bash scripts/document-lint.sh <file>
 ```
 
-If the script is not found at `scripts/document-lint.sh`, check `~/.cline/hotl/scripts/document-lint.sh` or `~/.claude/plugins/hotl/scripts/document-lint.sh`.
+Resolve `document-lint.sh` in this order:
+
+1. If you are working in the `hotl-plugin` repo itself, use `scripts/document-lint.sh`
+2. Codex native-skills install: `~/.codex/hotl/scripts/document-lint.sh`
+3. Codex plugin install: `~/.codex/plugins/hotl-source/scripts/document-lint.sh`
+4. Codex plugin cache fallback: `~/.codex/plugins/cache/codex-plugins/hotl/*/scripts/document-lint.sh`
+5. Cline install fallback: `~/.cline/hotl/scripts/document-lint.sh`
+6. Claude Code plugin fallback: `~/.claude/plugins/hotl/scripts/document-lint.sh`
+
+Do not assume `scripts/document-lint.sh` exists in the repo being reviewed. The lint script lives in the HOTL install, not in arbitrary user projects.
 
 **If lint FAILS:** STOP. Show all errors. The author MUST fix structural issues before AI review runs. Do not proceed.
 

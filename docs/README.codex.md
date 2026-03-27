@@ -175,6 +175,15 @@ Codex discovers them:
 In both cases, the `using-hotl` skill provides the HOTL skill index and routing
 guidance for the rest of the skill set. Codex uses the skill files directly.
 
+When a HOTL skill needs a bundled helper such as `document-lint.sh`,
+`render-execution-summary.sh`, or `runtime/hotl-rt`, resolve it from the HOTL
+install rather than from the repo being worked on. In Codex, the relevant
+install roots are:
+
+- Native skills: `~/.codex/hotl/`
+- Plugin source checkout: `~/.codex/plugins/hotl-source/`
+- Plugin cache fallback: `~/.codex/plugins/cache/codex-plugins/hotl/*/`
+
 There is no `/hotl:brainstorm` or `/hotl:pr-review` command syntax in Codex.
 Instead, describe the task in natural language and let HOTL route it, or
 explicitly mention an installed skill such as `$brainstorming`, `$writing-plans`,

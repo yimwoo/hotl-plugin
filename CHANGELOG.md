@@ -2,6 +2,15 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.10.3] - 2026-03-27
+
+### Fixed
+- Codex `document-review` now resolves `document-lint.sh` from Codex-native HOTL install roots before falling back to Cline or Claude paths
+- Codex execution path guidance now covers plugin source and plugin cache locations for `hotl-rt` and bundled helper scripts
+
+### Added
+- Smoke coverage for Codex helper path resolution and Codex plugin cache propagation of bundled scripts during install and update
+
 ## [2.10.2] - 2026-03-27
 
 ### Fixed

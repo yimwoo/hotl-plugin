@@ -107,9 +107,14 @@ make_fake_codex_plugin_source() {
     local home_dir="$1"
     local source_dir="$home_dir/.codex/plugins/hotl-source"
 
-    mkdir -p "$source_dir/.git" "$source_dir/runtime" "$source_dir/skills"
+    mkdir -p "$source_dir/.git" "$source_dir/runtime" "$source_dir/skills" "$source_dir/scripts"
     printf 'main\n' > "$source_dir/.fake_branch"
     printf 'source runtime\n' > "$source_dir/runtime/hotl-rt"
+    printf 'source document lint\n' > "$source_dir/scripts/document-lint.sh"
+    printf 'source renderer\n' > "$source_dir/scripts/render-execution-summary.sh"
+    printf 'source finalize\n' > "$source_dir/scripts/finalize-codex-summary.sh"
+    printf 'source current step\n' > "$source_dir/scripts/show-codex-current-step.sh"
+    printf 'source update check\n' > "$source_dir/scripts/check-update.sh"
     printf 'source skill\n' > "$source_dir/skills/sample.txt"
     printf '9.9.9\n' > "$source_dir/VERSION"
 }
@@ -362,6 +367,12 @@ assert 'sessionStartNotice' not in data.get('hookSpecificOutput', {})
     grep -q "hotl:resuming" "$REPO_ROOT/skills/using-hotl/SKILL.md"
 }
 
+@test "document-review checks Codex install paths for document-lint" {
+    grep -q '~/.codex/hotl/scripts/document-lint.sh' "$REPO_ROOT/skills/document-review/SKILL.md"
+    grep -q '~/.codex/plugins/hotl-source/scripts/document-lint.sh' "$REPO_ROOT/skills/document-review/SKILL.md"
+    grep -q '~/.codex/plugins/cache/codex-plugins/hotl/.*/scripts/document-lint.sh' "$REPO_ROOT/skills/document-review/SKILL.md"
+}
+
 # ── run-hook.cmd ──────────────────────────────────────────────────────────────
 
 @test "hooks/run-hook.cmd is executable" {
@@ -399,6 +410,11 @@ assert 'sessionStartNotice' not in data.get('hookSpecificOutput', {})
     grep -q "verbose" "$REPO_ROOT/skills/loop-execution/SKILL.md"
     test -f "$REPO_ROOT/docs/contracts/execution-report-output.md"
     grep -q "Iterations" "$REPO_ROOT/docs/contracts/execution-report-output.md"
+}
+
+@test "loop-execution path resolution covers Codex plugin installs" {
+    grep -q '~/.codex/plugins/hotl-source/runtime/hotl-rt' "$REPO_ROOT/skills/loop-execution/SKILL.md"
+    grep -q '~/.codex/plugins/cache/codex-plugins/hotl/.*/runtime/hotl-rt' "$REPO_ROOT/skills/loop-execution/SKILL.md"
 }
 
 # ── typed verification ───────────────────────────────────────────────────────
@@ -637,6 +653,11 @@ print(match.group(1) if match else '')
     [[ "$output" == *"Codex plugin cache refreshed."* ]]
     [ -f "$cache_dir/.codex-plugin/plugin.json" ]
     [ -f "$cache_dir/runtime/hotl-rt" ]
+    [ -f "$cache_dir/scripts/document-lint.sh" ]
+    [ -f "$cache_dir/scripts/render-execution-summary.sh" ]
+    [ -f "$cache_dir/scripts/finalize-codex-summary.sh" ]
+    [ -f "$cache_dir/scripts/show-codex-current-step.sh" ]
+    [ -f "$cache_dir/scripts/check-update.sh" ]
 }
 
 @test "update.sh --codex-plugin refreshes Codex plugin cache from source checkout" {
@@ -648,8 +669,9 @@ print(match.group(1) if match else '')
     : > "$fake_log"
     make_fake_git "$fake_bin" "$fake_log"
     make_fake_codex_plugin_source "$tmp_home"
-    mkdir -p "$cache_dir/runtime"
+    mkdir -p "$cache_dir/runtime" "$cache_dir/scripts"
     printf 'stale runtime\n' > "$cache_dir/runtime/hotl-rt"
+    printf 'stale renderer\n' > "$cache_dir/scripts/render-execution-summary.sh"
 
     run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh" --codex-plugin
 
@@ -659,4 +681,9 @@ print(match.group(1) if match else '')
     grep -q "fetch ${tmp_home}/.codex/plugins/hotl-source origin main" "$fake_log"
     grep -q "reset ${tmp_home}/.codex/plugins/hotl-source origin/main" "$fake_log"
     [ "$(cat "$cache_dir/runtime/hotl-rt")" = "source runtime" ]
+    [ "$(cat "$cache_dir/scripts/document-lint.sh")" = "source document lint" ]
+    [ "$(cat "$cache_dir/scripts/render-execution-summary.sh")" = "source renderer" ]
+    [ "$(cat "$cache_dir/scripts/finalize-codex-summary.sh")" = "source finalize" ]
+    [ "$(cat "$cache_dir/scripts/show-codex-current-step.sh")" = "source current step" ]
+    [ "$(cat "$cache_dir/scripts/check-update.sh")" = "source update check" ]
 }

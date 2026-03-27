@@ -170,9 +170,11 @@ See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection,
 To find `hotl-rt` and HOTL scripts (`document-lint.sh`, `render-execution-summary.sh`, etc.), resolve in this order:
 
 1. **Session context (Claude Code):** the session-start hook injects the plugin base path — use it to construct full paths like `bash <plugin-path>/runtime/hotl-rt init <workflow-file>`
-2. **Codex:** resolve from `~/.codex/hotl/runtime/hotl-rt` and `~/.codex/hotl/scripts/`
-3. **Cline:** resolve from `~/Documents/Cline/Scripts/hotl-rt` and `~/Documents/Cline/Scripts/`
-4. **Working in the hotl-plugin repo itself:** use `./runtime/hotl-rt` and `./scripts/`
+2. **Codex native-skills install:** resolve from `~/.codex/hotl/runtime/hotl-rt` and `~/.codex/hotl/scripts/`
+3. **Codex plugin install:** resolve from `~/.codex/plugins/hotl-source/runtime/hotl-rt` and `~/.codex/plugins/hotl-source/scripts/`
+4. **Codex plugin cache fallback:** resolve from `~/.codex/plugins/cache/codex-plugins/hotl/*/runtime/hotl-rt` and `~/.codex/plugins/cache/codex-plugins/hotl/*/scripts/`
+5. **Cline:** resolve from `~/Documents/Cline/Scripts/hotl-rt` and `~/Documents/Cline/Scripts/`
+6. **Working in the hotl-plugin repo itself:** use `./runtime/hotl-rt` and `./scripts/`
 
 The same resolution applies to all HOTL scripts under `scripts/`.
 
