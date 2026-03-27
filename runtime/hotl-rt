@@ -410,6 +410,16 @@ run_single_verify_check() {
                     ;;
             esac
             ;;
+        human-review)
+            local prompt
+            prompt=$(echo "$check_json" | jq -r '.prompt // ""')
+            if [ -n "$prompt" ] && [ "$prompt" != "null" ]; then
+                VERIFY_BLOCK_REASON="human review required: $prompt"
+            else
+                VERIFY_BLOCK_REASON="human review required"
+            fi
+            return 200
+            ;;
         *)
             VERIFY_BLOCK_REASON="unsupported verify type: $verify_type"
             return 200
@@ -1028,6 +1038,51 @@ cmd_gate() {
 
     local step_name
     step_name=$(jq -r ".steps[$((step_num - 1))].name" "$state_file")
+    local current_status
+    current_status=$(jq -r ".steps[$((step_num - 1))].status" "$state_file")
+    local block_reason
+    block_reason=$(jq -r ".steps[$((step_num - 1))].block_reason // \"\"" "$state_file")
+
+    if [ "$current_status" = "blocked" ] && printf '%s' "$block_reason" | grep -q '^human review required'; then
+        local updated review_note status_text
+
+        if [ "$decision" = "approved" ]; then
+            review_note="human review approved"
+            updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" --arg gate_mode "$gate_mode" --arg note "$review_note" '
+                .last_update = $ts |
+                .steps[$num - 1].status = "done" |
+                .steps[$num - 1].completed_at = $ts |
+                .steps[$num - 1].block_reason = null |
+                .steps[$num - 1].gate_result = $decision |
+                .steps[$num - 1].gate_mode = $gate_mode |
+                .steps[$num - 1].verify.passed = true |
+                .steps[$num - 1].verify.stdout = $note |
+                .steps[$num - 1].verify.stderr = null
+            ' "$state_file")
+            status_text="✓ Approved"
+        else
+            review_note="human review rejected"
+            updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" --arg gate_mode "$gate_mode" --arg reason "$review_note" '
+                .last_update = $ts |
+                .steps[$num - 1].status = "blocked" |
+                .steps[$num - 1].block_reason = $reason |
+                .steps[$num - 1].gate_result = $decision |
+                .steps[$num - 1].gate_mode = $gate_mode |
+                .steps[$num - 1].verify.passed = false |
+                .steps[$num - 1].verify.stdout = null |
+                .steps[$num - 1].verify.stderr = $reason
+            ' "$state_file")
+            status_text="✗ Rejected"
+        fi
+
+        state_write "$state_file" "$updated"
+        report_update_step_row "$report" "$step_num" "$status_text" "-"
+        report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+        report_append_event "$report" "**[$time_short]** Human review for Step $step_num: $decision (${gate_mode})"
+
+        echo "human-review $step_num: $decision (${gate_mode})"
+        return
+    fi
 
     local updated
     updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" --arg gate_mode "$gate_mode" '

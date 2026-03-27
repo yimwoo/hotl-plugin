@@ -94,6 +94,45 @@ function Get-HotlMarketplaceVersion {
     }
 }
 
+function Sync-CodexPluginCache {
+    param([string]$SourceDir)
+
+    if (-not (Test-Path $SourceDir)) { return }
+
+    $CacheRoot = Join-Path $env:USERPROFILE ".codex\plugins\cache\codex-plugins\hotl"
+    $Refreshed = $false
+
+    if (Test-Path $CacheRoot) {
+        Get-ChildItem -Path $CacheRoot -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            $CacheDir = $_.FullName
+            Write-Host "Refreshing Codex plugin cache at $CacheDir..."
+            if (-not (Test-Path $CacheDir)) {
+                New-Item -ItemType Directory -Force -Path $CacheDir | Out-Null
+            }
+            Get-ChildItem -Force -Path $CacheDir -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne ".git" } | Remove-Item -Recurse -Force
+            Get-ChildItem -Force -Path $SourceDir | Where-Object { $_.Name -ne ".git" } | ForEach-Object {
+                Copy-Item -Recurse -Force -Path $_.FullName -Destination $CacheDir
+            }
+            $Refreshed = $true
+        }
+    }
+
+    if (-not $Refreshed) {
+        $SeedDir = Join-Path $CacheRoot "local"
+        Write-Host "Seeding Codex plugin cache at $SeedDir..."
+        New-Item -ItemType Directory -Force -Path $SeedDir | Out-Null
+        Get-ChildItem -Force -Path $SeedDir -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne ".git" } | Remove-Item -Recurse -Force
+        Get-ChildItem -Force -Path $SourceDir | Where-Object { $_.Name -ne ".git" } | ForEach-Object {
+            Copy-Item -Recurse -Force -Path $_.FullName -Destination $SeedDir
+        }
+        $Refreshed = $true
+    }
+
+    if ($Refreshed) {
+        Write-Host "  Codex plugin cache refreshed."
+    }
+}
+
 # -Status: read-only report of all HOTL install modes, then exit
 if ($Status) {
     Write-Host "HOTL Installation Status"
@@ -214,6 +253,7 @@ if ($CodexPlugin) {
 
     $VerFile = Join-Path $CodexPluginSource "VERSION"
     $Ver = if (Test-Path $VerFile) { (Get-Content $VerFile -Raw).Trim() } else { "unknown" }
+    Sync-CodexPluginCache $CodexPluginSource
     Write-Host "  Updated to version $Ver."
     Write-Host ""
     Write-Host "Restart Codex to pick up the updated plugin."
@@ -231,6 +271,7 @@ $ClineModeFile = Join-Path $ClineHotlDir ".cline-install-mode"
 
 $Found = 0
 $Updated = 0
+$Skipped = 0
 
 # -- Claude Code -------------------------------------------------------------------
 
@@ -293,19 +334,24 @@ if (Test-Path (Join-Path $CodexPluginSource ".git")) {
 
     $VerFile = Join-Path $CodexPluginSource "VERSION"
     $Ver = if (Test-Path $VerFile) { (Get-Content $VerFile -Raw).Trim() } else { "unknown" }
+    Sync-CodexPluginCache $CodexPluginSource
     $Updated++
     Write-Host "  Codex plugin source updated (v$Ver)."
     Write-Host ""
 } elseif ((Test-Path (Join-Path $env:USERPROFILE ".codex\plugins\hotl")) -and -not (Test-Path (Join-Path $CodexPluginSource ".git"))) {
     # Old copied-bundle install detected, no source checkout yet
     Write-Host "Note: HOTL is installed as a Codex plugin via copied bundle at ~/.codex/plugins/hotl."
-    Write-Host "This install cannot be updated by this script. To enable updates, migrate to the"
+    Write-Host "This install is reported but skipped by update.ps1."
+    Write-Host "The updater can refresh multiple HOTL installs in one run, but it does not"
+    Write-Host "update this copied bundle from GitHub directly."
+    Write-Host "To enable Codex plugin updates, migrate to the"
     Write-Host "source checkout model by running:"
     Write-Host ""
     Write-Host "  bash install.sh --codex-plugin"
     Write-Host ""
     Write-Host "This will clone to ~/.codex/plugins/hotl-source/ and remove the old bundle."
     Write-Host ""
+    $Skipped++
 }
 
 if (Test-GitWorkTree $CodexHotlDir) {
@@ -477,5 +523,8 @@ if ($Found -eq 0) {
     exit 1
 }
 
-Write-Host "Done. $Updated installation(s) updated."
+Write-Host "Done. $Updated installation(s) updated in this run."
+if ($Skipped -gt 0) {
+    Write-Host "$Skipped installation(s) skipped."
+}
 Write-Host "Restart your Claude Code session or start a new Cline task to use the latest version."

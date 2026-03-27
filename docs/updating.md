@@ -16,7 +16,25 @@ If you already have a fresh local clone of this repo, you can also run:
 bash update.sh
 ```
 
-The updater covers Claude Code, Codex, and Cline, and skips tools that are not installed.
+The updater scans for supported HOTL installs and updates every one it finds in the
+same run. That means a single command can refresh Claude Code, Codex, and Cline
+sequentially when you have more than one installed. Tools that are not installed
+are skipped automatically.
+
+Supported update targets:
+
+- Claude Code plugin checkout at `~/.claude/plugins/hotl` plus its plugin cache
+- Codex native-skills checkout at `~/.codex/hotl`
+- Codex plugin source checkout at `~/.codex/plugins/hotl-source` plus the local Codex plugin cache
+- Cline checkout at `~/.cline/hotl` plus its synced rules/skills/scripts/runtime
+
+Not supported by `update.sh`:
+
+- Old Codex copied-bundle installs at `~/.codex/plugins/hotl`
+
+If you still have the old copied-bundle Codex plugin install, the updater reports
+it and skips it. Migrate with `bash install.sh --codex-plugin` so future updates
+can refresh the source checkout instead.
 
 ## Manual Update Checks
 
@@ -55,3 +73,11 @@ bash ~/.codex/hotl/update.sh --force-codex
 ```
 
 Restart Codex after updating so it re-discovers the latest skill files.
+
+## Codex Plugin Install Notes
+
+For Codex plugin installs, `update.sh --codex-plugin` updates the source checkout
+at `~/.codex/plugins/hotl-source` and refreshes the local Codex plugin cache
+under `~/.codex/plugins/cache/codex-plugins/hotl/` when present. On a fresh
+plugin install, HOTL seeds the `local/` cache directory so the cached bundle is
+already aligned with the source checkout before restart.

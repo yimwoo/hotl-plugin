@@ -103,6 +103,17 @@ make_fake_codex_install() {
     ln -s "$home_dir/.codex/hotl/skills" "$home_dir/.agents/skills/hotl"
 }
 
+make_fake_codex_plugin_source() {
+    local home_dir="$1"
+    local source_dir="$home_dir/.codex/plugins/hotl-source"
+
+    mkdir -p "$source_dir/.git" "$source_dir/runtime" "$source_dir/skills"
+    printf 'main\n' > "$source_dir/.fake_branch"
+    printf 'source runtime\n' > "$source_dir/runtime/hotl-rt"
+    printf 'source skill\n' > "$source_dir/skills/sample.txt"
+    printf '9.9.9\n' > "$source_dir/VERSION"
+}
+
 mark_fake_codex_dirty() {
     local target_dir="$1"
 
@@ -613,4 +624,39 @@ print(match.group(1) if match else '')
 
     [ "$status" -eq 0 ]
     [[ "$output" == *"Restart"* ]]
+}
+
+@test "install.sh --codex-plugin --local seeds Codex plugin cache" {
+    tmp_home="$(mktemp -d)"
+    cache_dir="$tmp_home/.codex/plugins/cache/codex-plugins/hotl/local"
+
+    run env HOME="$tmp_home" bash "$REPO_ROOT/install.sh" --codex-plugin --local
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Seeding Codex plugin cache at ${cache_dir}..."* ]]
+    [[ "$output" == *"Codex plugin cache refreshed."* ]]
+    [ -f "$cache_dir/.codex-plugin/plugin.json" ]
+    [ -f "$cache_dir/runtime/hotl-rt" ]
+}
+
+@test "update.sh --codex-plugin refreshes Codex plugin cache from source checkout" {
+    tmp_home="$(mktemp -d)"
+    fake_bin="$tmp_home/bin"
+    fake_log="$tmp_home/git.log"
+    cache_dir="$tmp_home/.codex/plugins/cache/codex-plugins/hotl/local"
+
+    : > "$fake_log"
+    make_fake_git "$fake_bin" "$fake_log"
+    make_fake_codex_plugin_source "$tmp_home"
+    mkdir -p "$cache_dir/runtime"
+    printf 'stale runtime\n' > "$cache_dir/runtime/hotl-rt"
+
+    run env HOME="$tmp_home" PATH="$fake_bin:$PATH" FAKE_GIT_LOG="$fake_log" bash "$REPO_ROOT/update.sh" --codex-plugin
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Refreshing Codex plugin cache at ${cache_dir}/..."* ]]
+    [[ "$output" == *"Codex plugin cache refreshed."* ]]
+    grep -q "fetch ${tmp_home}/.codex/plugins/hotl-source origin main" "$fake_log"
+    grep -q "reset ${tmp_home}/.codex/plugins/hotl-source origin/main" "$fake_log"
+    [ "$(cat "$cache_dir/runtime/hotl-rt")" = "source runtime" ]
 }

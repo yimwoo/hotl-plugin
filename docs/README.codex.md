@@ -274,7 +274,12 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.codex\hotl\update.ps
 
 ---
 
-The updater fetches the latest script first, then refreshes the stable install at
+The updater fetches the latest script first, then scans for all supported HOTL
+installs and refreshes every one it finds in the same run. If you have Claude
+Code, Codex, and Cline installs side by side, one updater run will process them
+sequentially.
+
+For the native-skills Codex install, the updater refreshes the stable install at
 `~/.codex/hotl` (macOS/Linux) or `%USERPROFILE%\.codex\hotl` (Windows).
 
 If the install drifted onto another branch, the updater switches it back to
@@ -327,6 +332,13 @@ bash ~/.codex/plugins/hotl-source/update.sh --codex-plugin
 If the source checkout has local changes, they are backed up to
 `~/.codex/backups/hotl-plugin/<timestamp>/` before resetting.
 Use `--force-codex-plugin` to skip the backup.
+
+Important:
+
+- `update.sh --codex-plugin` updates `~/.codex/plugins/hotl-source`
+- It also refreshes the local Codex plugin cache at `~/.codex/plugins/cache/codex-plugins/hotl/` when present
+- If you still have the old copied-bundle install at `~/.codex/plugins/hotl`,
+  the updater reports it and skips it; migrate with `bash install.sh --codex-plugin`
 
 Restart Codex after updating so it picks up the new plugin files.
 

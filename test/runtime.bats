@@ -202,6 +202,17 @@ teardown() {
     jq -r '.steps[0].block_reason' "$STATE" | grep -q 'unsupported verify type'
 }
 
+@test "step verify blocks with human-review prompt" {
+    RUN_ID=$("$HOTL_RT" init fixtures/human-review-runtime-sample.md)
+    "$HOTL_RT" step 1 start
+    run "$HOTL_RT" step 1 verify
+    [ "$status" -ne 0 ]
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "blocked" ]
+    [ "$(jq -r '.steps[0].block_reason' "$STATE")" = "human review required: Confirm the output looks correct" ]
+}
+
 @test "step verify updates report to Done on pass" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
     "$HOTL_RT" step 1 start
@@ -406,6 +417,36 @@ teardown() {
     grep -q 'Gate Step 1: approved' "$REPORT"
 }
 
+@test "gate approved clears blocked human-review step" {
+    RUN_ID=$("$HOTL_RT" init fixtures/human-review-runtime-sample.md)
+    "$HOTL_RT" step 1 start
+    run "$HOTL_RT" step 1 verify
+    [ "$status" -ne 0 ]
+
+    "$HOTL_RT" gate 1 approved
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "done" ]
+    [ "$(jq -r '.steps[0].verify.passed' "$STATE")" = "true" ]
+    [ "$(jq -r '.steps[0].gate_result' "$STATE")" = "approved" ]
+    [ "$(jq -r '.steps[0].block_reason' "$STATE")" = "null" ]
+}
+
+@test "gate rejected keeps human-review step blocked" {
+    RUN_ID=$("$HOTL_RT" init fixtures/human-review-runtime-sample.md)
+    "$HOTL_RT" step 1 start
+    run "$HOTL_RT" step 1 verify
+    [ "$status" -ne 0 ]
+
+    "$HOTL_RT" gate 1 rejected
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "blocked" ]
+    [ "$(jq -r '.steps[0].verify.passed' "$STATE")" = "false" ]
+    [ "$(jq -r '.steps[0].gate_result' "$STATE")" = "rejected" ]
+    [ "$(jq -r '.steps[0].block_reason' "$STATE")" = "human review rejected" ]
+}
+
 # ── finalize ────────────────────────────────────────────────────────────────
 
 @test "finalize produces valid JSON summary" {
@@ -451,6 +492,19 @@ teardown() {
     REPORT=".hotl/reports/${RUN_ID}.md"
 
     grep -Fq '**Status:** completed' "$REPORT" || grep -Fq '**Status:** failed' "$REPORT"
+}
+
+@test "finalize completes after approved human-review step" {
+    RUN_ID=$("$HOTL_RT" init fixtures/human-review-runtime-sample.md)
+    "$HOTL_RT" step 1 start
+    run "$HOTL_RT" step 1 verify
+    [ "$status" -ne 0 ]
+    "$HOTL_RT" gate 1 approved
+    SUMMARY=$("$HOTL_RT" finalize --json)
+
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "completed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.completed_steps')" = "1" ]
+    [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "0" ]
 }
 
 # ── summary ─────────────────────────────────────────────────────────────────

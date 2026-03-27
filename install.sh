@@ -3,6 +3,39 @@ set -euo pipefail
 
 PLUGIN_NAME="hotl"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CODEX_PLUGIN_CACHE_ROOT="${HOME}/.codex/plugins/cache/codex-plugins/hotl"
+
+refresh_codex_plugin_cache() {
+    local source_dir="$1"
+    local cache_root="${CODEX_PLUGIN_CACHE_ROOT}"
+    local refreshed=0
+
+    if [ ! -d "${source_dir}" ]; then
+        return 0
+    fi
+
+    if [ -d "${cache_root}" ]; then
+        for cache_dir in "${cache_root}"/*/; do
+            [ -d "${cache_dir}" ] || continue
+            echo "Refreshing Codex plugin cache at ${cache_dir}..."
+            mkdir -p "${cache_dir}"
+            rsync -a --delete --exclude '.git' "${source_dir}/" "${cache_dir}"
+            refreshed=1
+        done
+    fi
+
+    if [ "${refreshed}" -eq 0 ]; then
+        local seed_dir="${cache_root}/local"
+        echo "Seeding Codex plugin cache at ${seed_dir}..."
+        mkdir -p "${seed_dir}"
+        rsync -a --delete --exclude '.git' "${source_dir}/" "${seed_dir}/"
+        refreshed=1
+    fi
+
+    if [ "${refreshed}" -eq 1 ]; then
+        echo "  Codex plugin cache refreshed."
+    fi
+}
 
 # ── flag parsing ─────────────────────────────────────────────────────────────
 
@@ -153,6 +186,8 @@ with open(dest_path, 'w') as f:
 action = 'Updated' if updated else 'Added'
 print(f'{action} HOTL plugin entry (version {hotl_entry[\"version\"]})')
 " "$PLUGIN_MANIFEST" "$MARKETPLACE_FILE" "$MARKETPLACE_PLUGIN_PATH"
+
+    refresh_codex_plugin_cache "${PLUGIN_SOURCE_PATH}"
 
     # Warn if an existing native-skills install is detected
     if [ -L "${HOME}/.agents/skills/hotl" ] || [ -d "${HOME}/.codex/hotl" ]; then

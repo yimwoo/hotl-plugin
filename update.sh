@@ -139,6 +139,36 @@ backup_codex_install() {
     printf '%s\n' "${backup_dir}"
 }
 
+refresh_codex_plugin_cache() {
+    local source_dir="$1"
+    local cache_root="${HOME}/.codex/plugins/cache/codex-plugins/hotl"
+    local refreshed=0
+
+    [ -d "${source_dir}" ] || return 0
+
+    if [ -d "${cache_root}" ]; then
+        for cache_dir in "${cache_root}"/*/; do
+            [ -d "${cache_dir}" ] || continue
+            echo "Refreshing Codex plugin cache at ${cache_dir}..."
+            mkdir -p "${cache_dir}"
+            rsync -a --delete --exclude '.git' "${source_dir}/" "${cache_dir}"
+            refreshed=1
+        done
+    fi
+
+    if [ "${refreshed}" -eq 0 ]; then
+        local seed_dir="${cache_root}/local"
+        echo "Seeding Codex plugin cache at ${seed_dir}..."
+        mkdir -p "${seed_dir}"
+        rsync -a --delete --exclude '.git' "${source_dir}/" "${seed_dir}/"
+        refreshed=1
+    fi
+
+    if [ "${refreshed}" -eq 1 ]; then
+        echo "  Codex plugin cache refreshed."
+    fi
+}
+
 # --status: read-only report of all HOTL install modes, then exit
 if [ "$STATUS_ONLY" -eq 1 ]; then
     echo "HOTL Installation Status"
@@ -256,6 +286,7 @@ if [ "$CODEX_PLUGIN" -eq 1 ]; then
     git -C "${CODEX_PLUGIN_SOURCE}" clean -fd
 
     _ver="$(cat "${CODEX_PLUGIN_SOURCE}/VERSION" 2>/dev/null | tr -d '[:space:]')"
+    refresh_codex_plugin_cache "${CODEX_PLUGIN_SOURCE}"
     echo "  Updated to version ${_ver:-unknown}."
     echo ""
     echo "Restart Codex to pick up the updated plugin."
@@ -351,19 +382,24 @@ if [ -d "${CODEX_PLUGIN_SOURCE}/.git" ]; then
     git -C "${CODEX_PLUGIN_SOURCE}" clean -fd
 
     _ver="$(cat "${CODEX_PLUGIN_SOURCE}/VERSION" 2>/dev/null | tr -d '[:space:]')"
+    refresh_codex_plugin_cache "${CODEX_PLUGIN_SOURCE}"
     UPDATED=$((UPDATED + 1))
     echo "  Codex plugin source updated (v${_ver:-unknown})."
     echo ""
 elif [ -d "${HOME}/.codex/plugins/hotl" ] && [ ! -d "${CODEX_PLUGIN_SOURCE}/.git" ]; then
     # Old copied-bundle install detected, no source checkout yet
-    echo "Note: HOTL is installed as a Codex plugin via copied bundle at ~/.codex/plugins/hotl."
-    echo "This install cannot be updated by update.sh. To enable updates, migrate to the"
+echo "Note: HOTL is installed as a Codex plugin via copied bundle at ~/.codex/plugins/hotl."
+    echo "This install is reported but skipped by update.sh."
+    echo "The updater can refresh multiple HOTL installs in one run, but it does not"
+    echo "update this copied bundle from GitHub directly."
+    echo "To enable Codex plugin updates, migrate to the"
     echo "source checkout model by running:"
     echo ""
     echo "  bash install.sh --codex-plugin"
     echo ""
     echo "This will clone to ~/.codex/plugins/hotl-source/ and remove the old bundle."
     echo ""
+    SKIPPED=$((SKIPPED + 1))
 fi
 
 if is_git_work_tree "${CODEX_HOTL_DIR}"; then
@@ -522,7 +558,7 @@ if [ "$FOUND" -eq 0 ]; then
     exit 1
 fi
 
-echo "Done. ${UPDATED} installation(s) updated."
+echo "Done. ${UPDATED} installation(s) updated in this run."
 if [ "$SKIPPED" -gt 0 ]; then
     echo "${SKIPPED} installation(s) skipped."
 fi
