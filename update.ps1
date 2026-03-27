@@ -5,7 +5,8 @@
 param(
     [switch]$ForceCodex,
     [switch]$Check,
-    [switch]$NativeSkills
+    [switch]$NativeSkills,
+    [switch]$Status
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,17 +28,11 @@ if ($Check) {
     exit 0
 }
 
-$ClaudePluginDir = Join-Path $env:USERPROFILE ".claude\plugins\hotl"
-$ClaudeCacheDir = Join-Path $env:USERPROFILE ".claude\plugins\cache\hotl-plugin\hotl"
-$CodexHotlDir = Join-Path $env:USERPROFILE ".codex\hotl"
-$ClineHotlDir = Join-Path $env:USERPROFILE ".cline\hotl"
-$ClineRulesDir = Join-Path $env:USERPROFILE "Documents\Cline\Rules"
-$ClineScriptsDir = Join-Path $env:USERPROFILE "Documents\Cline\Scripts"
-$ClineSkillsDir = Join-Path $env:USERPROFILE ".cline\skills\hotl"
-$ClineModeFile = Join-Path $ClineHotlDir ".cline-install-mode"
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$CodexMarketplaceUser = Join-Path $env:USERPROFILE ".agents\plugins\marketplace.json"
+$CodexMarketplaceLocal = Join-Path $ScriptDir ".agents\plugins\marketplace.json"
 
-$Found = 0
-$Updated = 0
+# ── Helper functions ─────────────────────────────────────────────────────────
 
 function Test-GitWorkTree {
     param([string]$Path)
@@ -72,6 +67,110 @@ function Sync-Directory {
     }
     Copy-Item -Recurse -Force -Path $Source -Destination $Destination
 }
+
+function Test-HotlInMarketplace {
+    param([string]$MktPath)
+    if (-not (Test-Path $MktPath)) { return $false }
+    try {
+        $data = Get-Content $MktPath -Raw | ConvertFrom-Json
+        $entry = $data.plugins | Where-Object { $_.name -eq "hotl" }
+        return [bool]$entry
+    } catch {
+        return $false
+    }
+}
+
+function Get-HotlMarketplaceVersion {
+    param([string]$MktPath)
+    try {
+        $data = Get-Content $MktPath -Raw | ConvertFrom-Json
+        $entry = $data.plugins | Where-Object { $_.name -eq "hotl" }
+        if ($entry) { return $entry.version }
+        return "unknown"
+    } catch {
+        return "unknown"
+    }
+}
+
+# -Status: read-only report of all HOTL install modes, then exit
+if ($Status) {
+    Write-Host "HOTL Installation Status"
+    Write-Host ""
+
+    # Claude Code
+    $ClaudeDir = Join-Path $env:USERPROFILE ".claude\plugins\hotl"
+    if ((Test-Path $ClaudeDir) -and (Test-GitWorkTree $ClaudeDir)) {
+        $ClaudeVerFile = Join-Path $ClaudeDir "VERSION"
+        $ClaudeVer = if (Test-Path $ClaudeVerFile) { (Get-Content $ClaudeVerFile -Raw).Trim() } else { "unknown" }
+        Write-Host "Claude Code:     installed (v$ClaudeVer) at $ClaudeDir"
+    } else {
+        Write-Host "Claude Code:     not found"
+    }
+
+    # Codex native-skills
+    $CodexNativeFound = $false
+    $CodexDir = Join-Path $env:USERPROFILE ".codex\hotl"
+    if ((Test-Path $CodexDir) -and (Test-GitWorkTree $CodexDir)) {
+        $CodexRev = try { (git -C $CodexDir rev-parse --short HEAD 2>$null) } catch { "unknown" }
+        Write-Host "Codex native:    installed (rev $CodexRev) at $CodexDir"
+        $CodexNativeFound = $true
+    } else {
+        Write-Host "Codex native:    not found"
+    }
+
+    # Codex plugin (check both user-global and repo-local marketplaces)
+    $PluginFound = $false
+    $PluginReported = $false
+    foreach ($CodexMkt in @($CodexMarketplaceUser, $CodexMarketplaceLocal)) {
+        if (Test-HotlInMarketplace $CodexMkt) {
+            $PluginVer = Get-HotlMarketplaceVersion $CodexMkt
+            if (-not $PluginVer) { $PluginVer = "unknown" }
+            if (-not $PluginReported) {
+                Write-Host "Codex plugin:    registered (v$PluginVer) in $CodexMkt"
+                $PluginReported = $true
+            } else {
+                Write-Host "                 also registered (v$PluginVer) in $CodexMkt"
+            }
+            $PluginFound = $true
+        }
+    }
+    if (-not $PluginFound) {
+        Write-Host "Codex plugin:    not found"
+    }
+
+    # Warn if both Codex modes are present
+    if ($CodexNativeFound -and $PluginFound) {
+        Write-Host ""
+        Write-Host "Warning: both Codex install modes are present. HOTL cannot guarantee which"
+        Write-Host "source Codex will use when duplicate skill names exist."
+        Write-Host "Recommendation: keep only one active Codex install mode at a time."
+    }
+
+    # Cline
+    Write-Host ""
+    $ClineDir = Join-Path $env:USERPROFILE ".cline\hotl"
+    if ((Test-Path $ClineDir) -and (Test-GitWorkTree $ClineDir)) {
+        $ClineModeF = Join-Path $ClineDir ".cline-install-mode"
+        $ClineMode = if (Test-Path $ClineModeF) { (Get-Content $ClineModeF -Raw).Trim() } else { "legacy-rules" }
+        Write-Host "Cline:           installed ($ClineMode) at $ClineDir"
+    } else {
+        Write-Host "Cline:           not found"
+    }
+
+    exit 0
+}
+
+$ClaudePluginDir = Join-Path $env:USERPROFILE ".claude\plugins\hotl"
+$ClaudeCacheDir = Join-Path $env:USERPROFILE ".claude\plugins\cache\hotl-plugin\hotl"
+$CodexHotlDir = Join-Path $env:USERPROFILE ".codex\hotl"
+$ClineHotlDir = Join-Path $env:USERPROFILE ".cline\hotl"
+$ClineRulesDir = Join-Path $env:USERPROFILE "Documents\Cline\Rules"
+$ClineScriptsDir = Join-Path $env:USERPROFILE "Documents\Cline\Scripts"
+$ClineSkillsDir = Join-Path $env:USERPROFILE ".cline\skills\hotl"
+$ClineModeFile = Join-Path $ClineHotlDir ".cline-install-mode"
+
+$Found = 0
+$Updated = 0
 
 # -- Claude Code -------------------------------------------------------------------
 
@@ -108,13 +207,28 @@ if (Test-GitWorkTree $ClaudePluginDir) {
 
 # -- Codex -------------------------------------------------------------------------
 
+# Detect if HOTL is registered as a Codex plugin (user-global or repo-local)
+$CodexPluginRegistered = $false
+foreach ($CodexMarketplace in @($CodexMarketplaceUser, $CodexMarketplaceLocal)) {
+    if (Test-HotlInMarketplace $CodexMarketplace) {
+        $CodexPluginRegistered = $true
+        $PluginVer = Get-HotlMarketplaceVersion $CodexMarketplace
+        if (-not $PluginVer) { $PluginVer = "unknown" }
+        Write-Host "Note: HOTL is also registered as a Codex plugin (v$PluginVer) in"
+        Write-Host "  $CodexMarketplace"
+        Write-Host "Plugin updates are managed through Codex's plugin UI; this updater only"
+        Write-Host "updates the $CodexHotlDir native-skills install."
+        Write-Host ""
+    }
+}
+
 if (Test-GitWorkTree $CodexHotlDir) {
     $Found++
     $CodexBranch = Get-CurrentBranch $CodexHotlDir
     if ([string]::IsNullOrEmpty($CodexBranch)) { $CodexBranch = "detached HEAD" }
     $CodexDirty = Test-HasLocalChanges $CodexHotlDir
 
-    Write-Host "Updating Codex plugin at $CodexHotlDir..."
+    Write-Host "Updating Codex native-skills install at $CodexHotlDir..."
 
     if ($CodexDirty -and -not $ForceCodex) {
         # Backup local changes
@@ -124,10 +238,10 @@ if (Test-GitWorkTree $CodexHotlDir) {
         New-Item -ItemType Directory -Force -Path (Join-Path $BackupDir "worktree") | Out-Null
         git -C $CodexHotlDir status --short --branch > (Join-Path $BackupDir "git-status.txt") 2>$null
         Copy-Item -Recurse -Force -Path (Join-Path $CodexHotlDir "*") -Destination (Join-Path $BackupDir "worktree") -Exclude ".git"
-        Write-Host "Codex install has local changes; backed them up to $BackupDir before updating."
+        Write-Host "Codex native-skills install has local changes; backed them up to $BackupDir before updating."
         Write-Host ""
     } elseif ($CodexDirty) {
-        Write-Host "Codex install has local changes; --ForceCodex set, skipping backup and resetting to origin/main."
+        Write-Host "Codex native-skills install has local changes; --ForceCodex set, skipping backup and resetting to origin/main."
         Write-Host ""
     }
 
@@ -147,7 +261,7 @@ if (Test-GitWorkTree $CodexHotlDir) {
     }
 
     $Updated++
-    Write-Host "  Codex plugin updated."
+    Write-Host "  Codex native-skills install updated."
     Write-Host ""
 }
 
@@ -272,11 +386,11 @@ if ($Found -eq 0) {
     Write-Host "No HOTL installations found."
     Write-Host ""
     Write-Host "Install for Claude Code:  powershell -ExecutionPolicy Bypass -File install.ps1"
-    Write-Host "Install for Codex:        see .codex/INSTALL.md"
+    Write-Host "Install for Codex:        see docs/README.codex.md"
     Write-Host "Install for Cline:        powershell -ExecutionPolicy Bypass -File install-cline.ps1"
     exit 1
 }
 
 Write-Host "Done. $Updated installation(s) updated."
-Write-Host "Restart Codex to re-discover updated HOTL skills."
+Write-Host "Restart Codex to re-discover updated native skills."
 Write-Host "Restart your Claude Code session or start a new Cline task to use the latest version."

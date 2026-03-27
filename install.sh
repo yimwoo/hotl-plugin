@@ -101,6 +101,24 @@ action = 'Updated' if updated else 'Added'
 print(f'{action} HOTL plugin entry (version {hotl_entry[\"version\"]})')
 " "$SOURCE_FILE" "$MARKETPLACE_FILE"
 
+    # Warn if an existing native-skills install is detected
+    if [ -L "${HOME}/.agents/skills/hotl" ] || [ -d "${HOME}/.codex/hotl" ]; then
+        echo ""
+        echo "Note: an existing native-skills install was detected at"
+        [ -L "${HOME}/.agents/skills/hotl" ] && echo "  ~/.agents/skills/hotl"
+        [ -d "${HOME}/.codex/hotl" ] && echo "  ~/.codex/hotl"
+        echo ""
+        echo "HOTL plugin install does not remove the native-skills install automatically."
+        echo "If both Codex install modes remain present, Codex may discover more than one"
+        echo "HOTL source and the active source is not guaranteed by HOTL."
+        echo ""
+        echo "Recommended:"
+        echo "  - To use plugin mode as your primary Codex install, remove"
+        echo "    ~/.agents/skills/hotl after confirming the plugin works."
+        echo "  - To keep the fastest local development loop, continue using"
+        echo "    native skills instead of plugin mode."
+    fi
+
     echo ""
     echo "HOTL Codex plugin registered. Next steps:"
     echo "  1. Restart Codex to discover the plugin"

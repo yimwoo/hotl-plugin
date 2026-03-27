@@ -97,6 +97,27 @@ keep `~/.codex/hotl` for the version Codex discovers.
 For the **Plugin Install**, Codex manages the cached copy. Updates come through
 Codex's plugin lifecycle.
 
+### Coexisting With Native Skills
+
+Plugin install does not remove an existing native-skills install at `~/.codex/hotl`
+or the symlink at `~/.agents/skills/hotl`.
+
+If both install modes are present, Codex may discover more than one HOTL source.
+Because both sources expose the same skill names, HOTL does not guarantee which
+source Codex will use.
+
+Recommended migration path:
+
+1. Install HOTL in plugin mode.
+2. Restart Codex and confirm the plugin works.
+3. Remove `~/.agents/skills/hotl` if you want plugin mode to be the only active
+   Codex install.
+4. Optionally remove `~/.codex/hotl` too if you no longer want the native-skills
+   checkout on disk.
+
+If you want the fastest local iteration workflow as a HOTL contributor, keep using
+Native Skills Install instead of plugin mode.
+
 ## How It Works
 
 Both install modes expose the same HOTL skills to Codex. The difference is how
