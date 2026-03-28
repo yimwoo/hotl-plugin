@@ -14,7 +14,7 @@ HOTL uses three distinct vocabularies across its contracts. Do not conflate them
 - Each contract specifies which verdict set applies to its context.
 
 **Execution status** (for step and run states):
-`done | failed | blocked | auto-approved | approved | running | pending | retrying` — these are status labels indicating step/run state, not severity levels.
+`done | failed | blocked | auto-approved | approved | running | pending | retrying | paused | completed` — these are status labels indicating step/run state, not severity levels.
 
 ## Conventions
 

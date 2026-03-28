@@ -3,6 +3,17 @@
 All notable changes to the HOTL plugin will be documented in this file.
 
 ## [2.10.4] - 2026-03-28
+## [2.10.5] - 2026-03-28
+
+### Fixed
+- `verify: human-review` checkpoints now pause HOTL runs as `paused` and require explicit persisted approval before later steps continue
+- `hotl-rt` now restores paused runs to `running` when a human-review approval is recorded and finalizes unsuccessful runs as `blocked` instead of the contract-inconsistent `failed`
+- Loop-execution and executing-plans docs now spell out that a chat `yes` must be persisted with `hotl-rt gate N approved --mode human`
+
+### Added
+- Runtime integration coverage for an end-to-end workflow that includes both `verify: human-review` and `gate: human` approval handling
+
+## [2.10.4] - 2026-03-28
 
 ### Fixed
 - Codex-facing docs now describe the observed invocation forms precisely: use `@hotl` for plugin routing and `$hotl:<skill>` for explicit HOTL skill invocation

@@ -46,7 +46,7 @@ Execution state is persisted at `.hotl/state/<run-id>.json`. This is the **autho
 ### Status Values
 
 - `running` — execution is in progress (or was interrupted)
-- `paused` — stopped at a `gate: human`
+- `paused` — stopped at a `gate: human` or a `verify: human-review` checkpoint awaiting approval
 - `blocked` — stopped due to verify failure at max_iterations
 - `completed` — all steps passed, verification done
 - `abandoned` — user explicitly abandoned the run

@@ -764,6 +764,7 @@ cmd_step() {
             # Update state JSON
             local updated
             updated=$(jq --arg ts "$ts" --argjson num "$step_num" '
+                .status = "running" |
                 .current_step = $num |
                 .last_update = $ts |
                 .steps[$num - 1].status = "in_progress" |
@@ -842,8 +843,15 @@ cmd_step() {
             set -e
 
             if [ "$exit_code" -eq 200 ]; then
+                local run_status
+                run_status="blocked"
+                if printf '%s' "$VERIFY_BLOCK_REASON" | grep -q '^human review required'; then
+                    run_status="paused"
+                fi
+
                 local updated
-                updated=$(jq --arg ts "$ts" --arg reason "$VERIFY_BLOCK_REASON" --argjson num "$step_num" '
+                updated=$(jq --arg ts "$ts" --arg reason "$VERIFY_BLOCK_REASON" --arg status "$run_status" --argjson num "$step_num" '
+                    .status = $status |
                     .last_update = $ts |
                     .steps[$num - 1].status = "blocked" |
                     .steps[$num - 1].block_reason = $reason
@@ -851,6 +859,7 @@ cmd_step() {
                 state_write "$state_file" "$updated"
 
                 report_update_step_row "$report" "$step_num" "✗ Blocked" "-"
+                report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** $run_status"
                 report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
                 report_append_event "$report" "**[$time_short]** ✗ Step $step_num: Blocked ($VERIFY_BLOCK_REASON)"
 
@@ -970,6 +979,7 @@ cmd_step() {
 
             local updated
             updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg reason "$reason" '
+                .status = "blocked" |
                 .last_update = $ts |
                 .steps[$num - 1].status = "blocked" |
                 .steps[$num - 1].block_reason = $reason
@@ -977,6 +987,7 @@ cmd_step() {
             state_write "$state_file" "$updated"
 
             report_update_step_row "$report" "$step_num" "✗ Blocked" "-"
+            report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** blocked"
             report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
             report_append_event "$report" "**[$time_short]** ✗ Step $step_num: Blocked — $reason"
 
@@ -1049,6 +1060,7 @@ cmd_gate() {
         if [ "$decision" = "approved" ]; then
             review_note="human review approved"
             updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" --arg gate_mode "$gate_mode" --arg note "$review_note" '
+                .status = "running" |
                 .last_update = $ts |
                 .steps[$num - 1].status = "done" |
                 .steps[$num - 1].completed_at = $ts |
@@ -1063,6 +1075,7 @@ cmd_gate() {
         else
             review_note="human review rejected"
             updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" --arg gate_mode "$gate_mode" --arg reason "$review_note" '
+                .status = "blocked" |
                 .last_update = $ts |
                 .steps[$num - 1].status = "blocked" |
                 .steps[$num - 1].block_reason = $reason |
@@ -1077,6 +1090,11 @@ cmd_gate() {
 
         state_write "$state_file" "$updated"
         report_update_step_row "$report" "$step_num" "$status_text" "-"
+        if [ "$decision" = "approved" ]; then
+            report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** running"
+        else
+            report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** blocked"
+        fi
         report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
         report_append_event "$report" "**[$time_short]** Human review for Step $step_num: $decision (${gate_mode})"
 
@@ -1086,6 +1104,7 @@ cmd_gate() {
 
     local updated
     updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" --arg gate_mode "$gate_mode" '
+        .status = (if .status == "paused" and $decision == "approved" then "running" elif $decision == "rejected" then "blocked" else .status end) |
         .last_update = $ts |
         .steps[$num - 1].gate_result = $decision |
         .steps[$num - 1].gate_mode = $gate_mode
@@ -1104,6 +1123,11 @@ cmd_gate() {
     fi
 
     report_update_step_row "$report" "$step_num" "$status_text" "-"
+    if [ "$decision" = "approved" ]; then
+        report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** running"
+    else
+        report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** blocked"
+    fi
     report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
     report_append_event "$report" "**[$time_short]** Gate Step $step_num: $decision (${gate_mode})"
 
@@ -1129,7 +1153,7 @@ cmd_finalize() {
 
     local final_status="completed"
     if [ "$has_failed" -gt 0 ] || [ "$has_blocked" -gt 0 ]; then
-        final_status="failed"
+        final_status="blocked"
     fi
 
     local updated

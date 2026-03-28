@@ -102,10 +102,23 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
       - The runtime runs the verify command, captures stdout/stderr, and atomically transitions the step to done or failed
       - If the verify type is unsupported, the runtime blocks the step with a clear reason
       - For type: browser — if browser tooling unavailable, downgrade to type: human-review
-      - For type: human-review — ALWAYS pause for human (never auto-approve)
+      - For type: human-review — the runtime returns a `human review required: ...` block reason and sets the run status to `paused`; ALWAYS pause for human (never auto-approve)
       - For type: artifact — runtime checks path exists and evaluates assert
 
    e. If verify fails (runtime returns non-zero):
+
+      e0. If the runtime output says `blocked: human review required: ...`
+         → PAUSE immediately. Do not start later steps or finalize the run.
+         → Show the review prompt to the human and ask: "Continue? (yes/no/show-details)"
+         → If the human says yes/approve/continue:
+             Run: `hotl-rt gate N approved --mode human`
+             Then continue to the next step
+         → If the human says no/reject:
+             Run: `hotl-rt gate N rejected --mode human`
+             STOP and surface the report path
+         → If the human asks for details:
+             Show the relevant test/report context, then wait again
+         → Never treat the chat reply alone as persisted approval; the approval is only real after the `hotl-rt gate ...` call succeeds
 
       f. If loop: false
          → STOP, report to human
@@ -190,6 +203,8 @@ Execution report output must conform to `docs/contracts/execution-report-output.
 The `hotl-rt` runtime writes the durable report to `.hotl/reports/<run-id>.md` incrementally. The report survives app rendering quirks and provides a reliable post-run artifact for debugging, trust, and resume.
 
 Reference `report_path` in user-facing pause, blocked, resume, and completion responses so the durable report is always discoverable.
+
+When a `verify: human-review` step pauses, the response must include the `report_path` and make it clear that the run is paused pending approval, not failed.
 
 If the workflow sets `report_detail: full`, successful verify output must also be included in the durable report, not only failures.
 

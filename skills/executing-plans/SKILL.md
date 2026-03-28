@@ -66,7 +66,7 @@ The `verify` field supports 4 types. A scalar string is shorthand for `type: she
 
 - **type: shell** — run command, check exit code, capture stdout/stderr
 - **type: browser** — use browser tooling with url+check; if unavailable, downgrade to type: human-review with check text as prompt
-- **type: human-review** — ALWAYS pause for human, show prompt, wait for approval (never auto-approve)
+- **type: human-review** — `hotl-rt step N verify` returns a `human review required: ...` block reason and pauses the run; show the prompt, wait for approval, then persist it with `hotl-rt gate N approved|rejected --mode human` (never auto-approve)
 - **type: artifact** — check path exists, evaluate assert (kind: exists | contains | matches-glob)
 
 ## Execution State Persistence
@@ -97,6 +97,7 @@ To resume an interrupted executing-plans run, use the host tool's native resume 
    - `hotl-rt step N start` before each step
    - Execute the action
    - `hotl-rt step N verify` to run typed verification
+   - If verify reports `human review required: ...`, pause and do not continue until `hotl-rt gate N approved|rejected --mode human` succeeds
    - On failure: `hotl-rt step N retry` or `hotl-rt step N block --reason "..."`
    - On gate: `hotl-rt gate N approved|rejected`
 5. After each batch: run review checkpoint (see below), then show what was done, ask "Continue to next batch?"

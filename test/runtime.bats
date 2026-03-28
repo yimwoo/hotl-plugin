@@ -208,9 +208,12 @@ teardown() {
     run "$HOTL_RT" step 1 verify
     [ "$status" -ne 0 ]
     STATE=".hotl/state/${RUN_ID}.json"
+    REPORT=".hotl/reports/${RUN_ID}.md"
 
     [ "$(jq -r '.steps[0].status' "$STATE")" = "blocked" ]
     [ "$(jq -r '.steps[0].block_reason' "$STATE")" = "human review required: Confirm the output looks correct" ]
+    [ "$(jq -r '.status' "$STATE")" = "paused" ]
+    grep -Fq '**Status:** paused' "$REPORT"
 }
 
 @test "step verify updates report to Done on pass" {
@@ -430,6 +433,7 @@ teardown() {
     [ "$(jq -r '.steps[0].verify.passed' "$STATE")" = "true" ]
     [ "$(jq -r '.steps[0].gate_result' "$STATE")" = "approved" ]
     [ "$(jq -r '.steps[0].block_reason' "$STATE")" = "null" ]
+    [ "$(jq -r '.status' "$STATE")" = "running" ]
 }
 
 @test "gate rejected keeps human-review step blocked" {
@@ -445,6 +449,7 @@ teardown() {
     [ "$(jq -r '.steps[0].verify.passed' "$STATE")" = "false" ]
     [ "$(jq -r '.steps[0].gate_result' "$STATE")" = "rejected" ]
     [ "$(jq -r '.steps[0].block_reason' "$STATE")" = "human review rejected" ]
+    [ "$(jq -r '.status' "$STATE")" = "blocked" ]
 }
 
 # ── finalize ────────────────────────────────────────────────────────────────
@@ -456,7 +461,7 @@ teardown() {
     SUMMARY=$("$HOTL_RT" finalize --json)
 
     echo "$SUMMARY" | jq -r '.run_id' | grep -q "$RUN_ID"
-    echo "$SUMMARY" | jq -r '.status' | grep -qE '^(completed|failed)$'
+    echo "$SUMMARY" | jq -r '.status' | grep -qE '^(completed|blocked)$'
     echo "$SUMMARY" | jq -r '.total_steps' | grep -q '3'
 }
 
@@ -474,13 +479,13 @@ teardown() {
     [ "$(echo "$SUMMARY" | jq -r '.completed_steps')" = "3" ]
 }
 
-@test "finalize sets failed status when steps failed" {
+@test "finalize sets blocked status when steps failed" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
     "$HOTL_RT" step 1 start
     "$HOTL_RT" step 1 block --reason "test"
     SUMMARY=$("$HOTL_RT" finalize --json)
 
-    [ "$(echo "$SUMMARY" | jq -r '.status')" = "failed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "blocked" ]
     [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "1" ]
 }
 
@@ -491,7 +496,7 @@ teardown() {
     "$HOTL_RT" finalize --json > /dev/null
     REPORT=".hotl/reports/${RUN_ID}.md"
 
-    grep -Fq '**Status:** completed' "$REPORT" || grep -Fq '**Status:** failed' "$REPORT"
+    grep -Fq '**Status:** completed' "$REPORT" || grep -Fq '**Status:** blocked' "$REPORT"
 }
 
 @test "finalize completes after approved human-review step" {
@@ -525,7 +530,7 @@ teardown() {
     "$HOTL_RT" finalize --json > /dev/null
     SUMMARY=$("$HOTL_RT" summary "$RUN_ID" --json)
 
-    echo "$SUMMARY" | jq -r '.status' | grep -qE '^(completed|failed)$'
+    echo "$SUMMARY" | jq -r '.status' | grep -qE '^(completed|blocked)$'
 }
 
 @test "summary fails for unknown run-id" {

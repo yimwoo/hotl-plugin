@@ -212,6 +212,12 @@ setup() {
     grep -q "Native progress UI is never a substitute" "$LOOP_SKILL"
 }
 
+@test "loop-execution describes persisted approval flow for human-review verify" {
+    grep -q "human review required" "$LOOP_SKILL"
+    grep -q "Never treat the chat reply alone as persisted approval" "$LOOP_SKILL"
+    grep -q 'hotl-rt gate N approved --mode human' "$LOOP_SKILL"
+}
+
 @test "loop-execution describes report format (table + event log)" {
     grep -qi "Summary table\|summary table" "$LOOP_SKILL"
     grep -qi "Event Log\|event log" "$LOOP_SKILL"

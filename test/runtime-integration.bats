@@ -90,6 +90,50 @@ teardown() {
     grep -q 'Run finalized: completed' "$REPORT"
 }
 
+@test "human-review pause plus explicit human gate flow completes end to end" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-human-review-e2e.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    REPORT=".hotl/reports/${RUN_ID}.md"
+
+    "$HOTL_RT" step 1 start
+    "$HOTL_RT" step 1 verify
+
+    "$HOTL_RT" step 2 start
+    run "$HOTL_RT" step 2 verify
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"human review required"* ]]
+    [ "$(jq -r '.status' "$STATE")" = "paused" ]
+    [ "$(jq -r '.steps[1].status' "$STATE")" = "blocked" ]
+    [ "$(jq -r '.steps[1].block_reason' "$STATE")" = "human review required: Confirm the intermediate output is acceptable before continuing" ]
+    grep -Fq '**Status:** paused' "$REPORT"
+
+    "$HOTL_RT" gate 2 approved --mode human
+    [ "$(jq -r '.status' "$STATE")" = "running" ]
+    [ "$(jq -r '.steps[1].status' "$STATE")" = "done" ]
+    [ "$(jq -r '.steps[1].gate_result' "$STATE")" = "approved" ]
+
+    "$HOTL_RT" step 3 start
+    "$HOTL_RT" step 3 verify
+
+    "$HOTL_RT" step 4 start
+    "$HOTL_RT" step 4 verify
+    "$HOTL_RT" gate 4 approved --mode human
+
+    run "$FINALIZE_CODEX"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Execution Summary"* ]]
+    [[ "$output" == *"Step 1: Run an automated pre-check - Done (1 attempt)"* ]]
+    [[ "$output" == *"Step 2: Pause for manual review - Approved (-)"* ]]
+    [[ "$output" == *"Step 3: Run a post-review check - Done (1 attempt)"* ]]
+    [[ "$output" == *"Step 4: Final human gate - Approved (-)"* ]]
+
+    [ "$(jq -r '.status' "$STATE")" = "completed" ]
+    [ "$(jq -r '[.steps[] | select(.status == "blocked")] | length' "$STATE")" = "0" ]
+    grep -Fq '**Status:** completed' "$REPORT"
+    grep -q 'Human review for Step 2: approved (human)' "$REPORT"
+    grep -q 'Gate Step 4: approved (human)' "$REPORT"
+}
+
 # ── Failure path: verify fails ──────────────────────────────────────────────
 
 @test "failure path: step verify fails, run not auto-completed" {
@@ -119,9 +163,9 @@ teardown() {
     [ "$(jq -r '.steps[0].status' "$STATE")" = "blocked" ]
     [ "$(jq -r '.steps[0].block_reason' "$STATE")" = "agent could not edit file" ]
 
-    # Finalize should mark as failed
+    # Finalize should mark as blocked
     SUMMARY=$("$HOTL_RT" finalize --json)
-    [ "$(echo "$SUMMARY" | jq -r '.status')" = "failed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "blocked" ]
     [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "1" ]
 }
 
@@ -222,7 +266,7 @@ teardown() {
 
     SUMMARY=$("$HOTL_RT" finalize --json)
 
-    [ "$(echo "$SUMMARY" | jq -r '.status')" = "failed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "blocked" ]
     [ "$(echo "$SUMMARY" | jq -r '.completed_steps')" = "1" ]
     [ "$(echo "$SUMMARY" | jq -r '.failed_steps')" = "1" ]
     [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "1" ]
