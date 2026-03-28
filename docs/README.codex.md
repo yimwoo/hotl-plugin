@@ -185,47 +185,51 @@ install roots are:
 - Plugin cache fallback: `~/.codex/plugins/cache/codex-plugins/hotl/*/`
 
 There is no `/hotl:brainstorm` or `/hotl:pr-review` command syntax in Codex.
-Instead, describe the task in natural language and let HOTL route it, or
-explicitly mention an installed skill such as `$brainstorming`, `$writing-plans`,
-or `$pr-reviewing`.
+Instead, either mention the plugin with `@hotl` and describe the task in
+natural language, or explicitly mention an installed skill such as
+`$hotl:brainstorming`, `$hotl:writing-plans`, or `$hotl:pr-reviewing`. Plain
+text like `hotl:brainstorming` is not a reliable user-facing invocation form in
+Codex. In the picker, Codex may display these as title-cased labels like
+`Hotl:brainstorming`.
 
 ## How To Invoke HOTL Skills In Codex
 
 You can invoke HOTL in two ways:
 
-- Describe the task in natural language and let Codex choose the right HOTL skill.
-- Explicitly mention a specific installed skill with a `$` prefix when you want a precise workflow.
+- Mention the plugin with `@hotl` and describe the task in natural language.
+- Explicitly mention a specific installed skill with `$hotl:skill-name` when you want a precise workflow.
 
 If you do not name a skill, Codex can still choose from the installed HOTL skills
-based on your request. Use the `$skill-name` form when you want to force a specific skill.
-Codex may display these skills in the UI as title-cased labels such as `Brainstorming`
-or `Code Review`.
+based on your request. Use the `$hotl:skill-name` form when you want to force a specific skill.
+Codex may display these skills in the UI as title-cased labels such as
+`Hotl:brainstorming` or `Hotl:code-review`.
 
 Examples:
 
 ```text
-Use `$brainstorming` to compare OAuth and API-key auth before writing code.
+Use `@hotl` to compare OAuth and API-key auth before writing code.
 
 Please use HOTL to compare OAuth and API-key auth before writing code.
 
-Use `$writing-plans` to create `hotl-workflow-add-rate-limiting.md`.
+Use `$hotl:writing-plans` to create `hotl-workflow-add-rate-limiting.md`.
 
-After a plan is saved, use `$loop-execution`, `$executing-plans`, `$subagent-execution`,
-or `$resuming` with the workflow filename instead of Claude-style `/hotl:*` commands.
+After a plan is saved, use `$hotl:loop-execution`, `$hotl:executing-plans`,
+`$hotl:subagent-execution`, or `$hotl:resuming` with the workflow filename
+instead of Claude-style `/hotl:*` commands.
 
 Review `hotl-workflow-add-rate-limiting.md` with HOTL and tell me if it is ready to execute.
 
-Use `$subagent-execution` to execute `hotl-workflow-add-rate-limiting.md` in this session.
+Use `$hotl:subagent-execution` to execute `hotl-workflow-add-rate-limiting.md` in this session.
 
-Use `$loop-execution` to execute `hotl-workflow-add-rate-limiting.md` in this session.
+Use `$hotl:loop-execution` to execute `hotl-workflow-add-rate-limiting.md` in this session.
 
-Use `$executing-plans` to execute `hotl-workflow-add-rate-limiting.md` with manual checkpoints.
+Use `$hotl:executing-plans` to execute `hotl-workflow-add-rate-limiting.md` with manual checkpoints.
 
-Use `$resuming` to continue `hotl-workflow-add-rate-limiting.md`.
+Use `$hotl:resuming` to continue `hotl-workflow-add-rate-limiting.md`.
 
-Use `$pr-reviewing` to review https://github.com/org/repo/pull/123.
+Use `$hotl:pr-reviewing` to review https://github.com/org/repo/pull/123.
 
-Before you say this task is done, use `$verification-before-completion`.
+Before you say this task is done, use `$hotl:verification-before-completion`.
 
 Use HOTL for this task and choose the most appropriate skill automatically.
 ```
@@ -234,7 +238,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 
 | Tool | How HOTL is invoked |
 | --- | --- |
-| Codex | Natural-language prompts or explicit skill mentions such as `Use HOTL to plan this` or `$brainstorming` |
+| Codex | Natural-language prompts with `@hotl`, or explicit skill mentions such as `$hotl:brainstorming` |
 | Claude Code | Slash commands such as `/hotl:brainstorm` and `/hotl:pr-review` |
 
 ## Common Skills

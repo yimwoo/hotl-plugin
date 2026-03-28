@@ -129,7 +129,7 @@ HOTL does not force ceremony on every task. It routes by intent:
 
 ### Codex
 
-There is no `/hotl:brainstorm` or `/hotl:pr-review` syntax in Codex. Instead, describe the task in natural language and let HOTL route it, or mention a skill explicitly with `$brainstorming`, `$writing-plans`, or `$pr-reviewing`. For setup and prompt examples, see [`.codex/INSTALL.md`](.codex/INSTALL.md) and [`docs/README.codex.md`](docs/README.codex.md).
+There is no `/hotl:*` command syntax in Codex. Instead, describe the task in natural language with `@hotl`, or force a specific skill with `$hotl:brainstorming`, `$hotl:writing-plans`, or `$hotl:pr-reviewing`. Plain text like `hotl:brainstorming` is not a reliable user-facing invocation form in Codex. In the picker, Codex may display these skills as `Hotl:brainstorming`-style labels. For setup and prompt examples, see [`.codex/INSTALL.md`](.codex/INSTALL.md) and [`docs/README.codex.md`](docs/README.codex.md).
 
 ## Skills Overview
 

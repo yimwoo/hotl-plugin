@@ -1,7 +1,7 @@
 {
   "name": "hotl",
   "description": "Structured guardrails for AI coding: brainstorm, plan, execute, review, and verify.",
-  "version": "2.10.3",
+  "version": "2.10.4",
   "author": {
     "name": "Yiming Wu"
   },
@@ -33,9 +33,9 @@
     "category": "Productivity",
     "capabilities": ["Interactive", "Read", "Write"],
     "defaultPrompt": [
-      "Use HOTL to design and plan this feature before coding",
-      "Use $pr-reviewing to review this pull request",
-      "Use $loop-execution to run this hotl-workflow file"
+      "Use $hotl:brainstorming to design and plan this feature before coding",
+      "Use $hotl:pr-reviewing to review this pull request",
+      "Use $hotl:loop-execution to run this hotl-workflow file"
     ],
     "websiteURL": "https://github.com/yimwoo/hotl-plugin",
     "brandColor": "#0F6E56",

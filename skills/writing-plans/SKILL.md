@@ -117,17 +117,17 @@ Present the three execution modes using the current host tool's native invocatio
 Use these mappings:
 
 1. **Loop execution (this session)** — runs steps autonomously with auto-approve
-   - **Codex:** ask me to use `$loop-execution` on `hotl-workflow-<slug>.md`
+   - **Codex:** ask me to use `$hotl:loop-execution` on `hotl-workflow-<slug>.md`
    - **Claude Code:** `/hotl:loop hotl-workflow-<slug>.md`
 2. **Manual execution** — linear execution with explicit checkpoints
-   - **Codex:** ask me to use `$executing-plans` on `hotl-workflow-<slug>.md`
+   - **Codex:** ask me to use `$hotl:executing-plans` on `hotl-workflow-<slug>.md`
    - **Claude Code:** `/hotl:execute-plan hotl-workflow-<slug>.md`
 3. **Subagent execution (this session)** — delegates implementation-friendly steps to fresh subagents while the controller keeps gates and verification
-   - **Codex:** ask me to use `$subagent-execution` on `hotl-workflow-<slug>.md`
+   - **Codex:** ask me to use `$hotl:subagent-execution` on `hotl-workflow-<slug>.md`
    - **Claude Code:** `/hotl:subagent-execute hotl-workflow-<slug>.md`
 
 If a previous run was interrupted, point the user to the host tool's native resume entry point.
-- **Codex:** ask me to use `$resuming` on `hotl-workflow-<slug>.md`
+- **Codex:** ask me to use `$hotl:resuming` on `hotl-workflow-<slug>.md`
 - **Claude Code:** `/hotl:resume hotl-workflow-<slug>.md`
 - **Other agents:** use that agent's native skill/command invocation instead of inventing Claude-style slash commands
 

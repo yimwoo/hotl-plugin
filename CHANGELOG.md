@@ -2,6 +2,16 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [2.10.4] - 2026-03-28
+
+### Fixed
+- Codex-facing docs now describe the observed invocation forms precisely: use `@hotl` for plugin routing and `$hotl:<skill>` for explicit HOTL skill invocation
+- Codex plugin marketplace prompts now use the same `$hotl:<skill>` examples shown by the actual plugin runtime
+- HOTL execution skill docs now use the corrected Codex invocation examples so plan handoff guidance stays consistent
+
+### Added
+- Smoke coverage for the corrected Codex invocation syntax in README and Codex install docs
+
 ## [2.10.3] - 2026-03-27
 
 ### Fixed
