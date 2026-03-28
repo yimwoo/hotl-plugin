@@ -183,6 +183,15 @@ assert_codex_prompt_resolves() {
     python3 -m json.tool "$REPO_ROOT/.claude-plugin/plugin.json" > /dev/null
 }
 
+@test "Codex plugin manifest points skills at plugin-root-relative path" {
+    skills_path=$(python3 -c "import json; print(json.load(open('$REPO_ROOT/.codex-plugin/plugin.json'))['skills'])")
+
+    [ "$skills_path" = "./skills/" ] || {
+        echo "Expected .codex-plugin/plugin.json skills path to be ./skills/, got: $skills_path"
+        return 1
+    }
+}
+
 @test "hooks/hooks.json is valid JSON" {
     python3 -m json.tool "$REPO_ROOT/hooks/hooks.json" > /dev/null
 }
