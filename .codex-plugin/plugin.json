@@ -33,9 +33,9 @@
     "category": "Productivity",
     "capabilities": ["Interactive", "Read", "Write"],
     "defaultPrompt": [
-      "Use $hotl:brainstorming to design and plan this feature before coding",
-      "Use $hotl:pr-reviewing to review this pull request",
-      "Use $hotl:loop-execution to run this hotl-workflow file"
+      "Design and plan this feature before coding",
+      "Review this pull request",
+      "Run this hotl-workflow file"
     ],
     "websiteURL": "https://github.com/yimwoo/hotl-plugin",
     "brandColor": "#0F6E56",
