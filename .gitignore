@@ -1,9 +1,16 @@
 *.DS_Store
 .env
 
+# Tool-specific local state
+.agenteam/
+.claude/
+.codex/agents/
+
 # HOTL workspace artifacts
 hotl-workflow*.md
 docs/plans/
+docs/research/
+docs/submissions/
 .hotl/
 .agents/
 CLAUDE.md
