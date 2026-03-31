@@ -308,6 +308,40 @@ teardown() {
     [ "$(jq -r '.steps[2].block_reason' "$STATE")" = "artifact assert kind matches-glob requires value" ]
 }
 
+@test "step verify blocks artifact matches-glob when value includes a path segment" {
+    cat > invalid-glob-workflow.md <<'EOF'
+---
+intent: Invalid artifact glob
+success_criteria: Runtime blocks invalid glob shape
+risk_level: low
+auto_approve: true
+---
+
+## Steps
+
+- [ ] **Step 1: Invalid glob**
+action: Confirm invalid glob is rejected
+loop: false
+verify:
+  type: artifact
+  path: .
+  assert:
+    kind: matches-glob
+    value: "artifacts/*"
+EOF
+
+    RUN_ID=$("$HOTL_RT" init invalid-glob-workflow.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    mkdir -p artifacts
+    echo "render ok" > artifacts/output.txt
+
+    "$HOTL_RT" step 1 start
+    run "$HOTL_RT" step 1 verify
+    [ "$status" -ne 0 ]
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "blocked" ]
+    [ "$(jq -r '.steps[0].block_reason' "$STATE")" = "artifact assert kind matches-glob expects a filename glob; put the directory in path" ]
+}
+
 # ── step retry ──────────────────────────────────────────────────────────────
 
 @test "step retry resets failed step to in_progress" {

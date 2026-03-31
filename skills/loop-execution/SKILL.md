@@ -103,7 +103,7 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
       - If the verify type is unsupported, the runtime blocks the step with a clear reason
       - For type: browser — if browser tooling unavailable, downgrade to type: human-review
       - For type: human-review — the runtime returns a `human review required: ...` block reason and sets the run status to `paused`; ALWAYS pause for human (never auto-approve)
-      - For type: artifact — runtime checks path exists and evaluates assert
+      - For type: artifact — runtime checks path exists and evaluates assert; for `matches-glob`, `path` must be the directory and `value` must be a filename glob only, so `src/*` is invalid and should be authored as `path: src`
 
    e. If verify fails (runtime returns non-zero):
 

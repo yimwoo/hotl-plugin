@@ -67,6 +67,13 @@ verify:
     kind: matches-glob
     value: "*.sql"
 
+# Greenfield scaffold check
+verify:
+  type: artifact
+  path: src
+  assert:
+    kind: exists
+
 # Multiple checks per step
 verify:
   - type: shell
@@ -85,6 +92,13 @@ Break work into atomic steps:
 - "Fix lint errors" (loop: until clean, verify: ruff check .)
 - "Verify UI renders correctly" (loop: false, verify: type: browser)
 - "Human review of security logic" (loop: false, gate: human — REQUIRED for risk_level: high)
+
+## Artifact Verification Rules
+
+- Prefer `kind: exists` when the step creates a new file or directory from scratch
+- Use `kind: matches-glob` only when `path` is an existing directory and `value` is a filename glob such as `*.tsx` or `*.md`
+- Do not put directory segments in `value`; write `path: src` with `value: "*.tsx"`, not `path: .` with `value: "src/*.tsx"`
+- For greenfield frontend scaffolds, Step 1 should usually verify `src` or `package.json` with `kind: exists`, not `matches-glob`
 
 ## risk_level Guidelines
 

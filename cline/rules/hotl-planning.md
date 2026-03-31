@@ -41,6 +41,7 @@ Break work into atomic steps (2-5 minutes each). Each step MUST have:
   - **browser** — UI work requiring visual inspection
   - **human-review** — subjective quality checks with no automated signal
   - **artifact** — verify files/outputs exist with structured assert (kind: exists | contains | matches-glob)
+    For `matches-glob`, keep the directory in `path` and use a filename glob in `value`; `src/*` is invalid and should be authored as `path: src`
 - A loop condition (false for one-shot, or "until [condition]" for retry)
 
 Examples:

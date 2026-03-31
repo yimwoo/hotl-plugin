@@ -68,6 +68,7 @@ The `verify` field supports 4 types. A scalar string is shorthand for `type: she
 - **type: browser** — use browser tooling with url+check; if unavailable, downgrade to type: human-review with check text as prompt
 - **type: human-review** — `hotl-rt step N verify` returns a `human review required: ...` block reason and pauses the run; show the prompt, wait for approval, then persist it with `hotl-rt gate N approved|rejected --mode human` (never auto-approve)
 - **type: artifact** — check path exists, evaluate assert (kind: exists | contains | matches-glob)
+  For `matches-glob`, `path` must be the directory and `value` must be a filename glob only; values like `src/*` are invalid and should be authored as `path: src`
 
 ## Execution State Persistence
 

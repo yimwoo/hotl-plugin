@@ -88,6 +88,7 @@ Supported assert kinds:
 - `exists` — file or directory at `path` exists (no `value` needed)
 - `contains` — file at `path` contains the text in `value`
 - `matches-glob` — directory at `path` contains at least one file matching `value` glob
+  Use a filename glob such as `*.sql` or `*.md`; do not include directory segments like `src/*` in `value`
 
 ### Multiple Checks Per Step
 

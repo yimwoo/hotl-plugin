@@ -44,6 +44,7 @@ The `verify` field supports 4 types. Scalar string = type: shell. List = all mus
 - **type: browser** — use browser tooling; if unavailable, downgrade to human-review with check text as prompt
 - **type: human-review** — ALWAYS pause, show prompt (never auto-approve)
 - **type: artifact** — check path exists, evaluate assert (kind: exists | contains | matches-glob)
+  For `matches-glob`, keep the directory in `path` and use a filename glob in `value`; `src/*` is invalid and should be authored as `path: src`
 
 ### Execution Process
 

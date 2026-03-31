@@ -393,6 +393,12 @@ run_single_verify_check() {
                         VERIFY_BLOCK_REASON="artifact assert kind matches-glob requires value"
                         return 200
                     fi
+                    case "$assert_value" in
+                        */*)
+                            VERIFY_BLOCK_REASON="artifact assert kind matches-glob expects a filename glob; put the directory in path"
+                            return 200
+                            ;;
+                    esac
                     if [ ! -d "$path" ]; then
                         VERIFY_STDERR="artifact directory missing: $path"
                         return 1
