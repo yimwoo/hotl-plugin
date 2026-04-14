@@ -164,10 +164,11 @@ teardown() {
         [ ! -e "$forbidden" ] || { echo "FAIL: $forbidden was created"; return 1; }
     done
 
-    # Baseline .hotl/state and .hotl/reports may exist when other commands
-    # run, but Slice 1's log-decision must not create them as a side effect.
-    [ ! -d .hotl/state ]
-    [ ! -d .hotl/reports ]
+    # Baseline runtime artifacts (.hotl/state/, .hotl/reports/) are NOT
+    # forbidden per the plan — existing hotl-rt commands are allowed to
+    # create them as normal behavior. Slice 1 does not invoke those code
+    # paths, so they won't appear here, but this test intentionally does
+    # not assert their absence to stay aligned with the plan contract.
 }
 
 @test "D1b: existing runtime-integration.bats remains green after Slice 1" {

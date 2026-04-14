@@ -29,20 +29,24 @@ if [ -n "${HOTL_INSTALL_OVERRIDE:-}" ]; then
 fi
 
 # 2. Sibling in the same scripts/ directory (in-repo or any flat install).
+#    Functionally equivalent to documented position #1 for in-repo callers.
 candidates+=("$SCRIPT_DIR/hotl-config.sh")
 
-# 3. The six documented install locations — same shape as document-lint.sh.
+# 3. The six documented install locations — order matches
+#    skills/document-review/SKILL.md `hotl-config.sh` resolution block
+#    (positions #2 through #6, since position #1 is the in-repo path above).
 candidates+=(
-    "$HOME/.codex/hotl/scripts/hotl-config.sh"
-    "$HOME/.codex/plugins/hotl-source/scripts/hotl-config.sh"
-    "$HOME/.cline/hotl/scripts/hotl-config.sh"
-    "$HOME/.claude/plugins/hotl/scripts/hotl-config.sh"
+    "$HOME/.codex/hotl/scripts/hotl-config.sh"                           # #2 Codex native-skills install
+    "$HOME/.codex/plugins/hotl-source/scripts/hotl-config.sh"            # #3 Codex plugin install
 )
-
-# Codex plugin cache fallback uses a glob — expand if any match.
+# #4 Codex plugin cache fallback — glob expanded here so position is preserved.
 for cached in "$HOME"/.codex/plugins/cache/codex-plugins/hotl/*/scripts/hotl-config.sh; do
     [ -e "$cached" ] && candidates+=("$cached")
 done
+candidates+=(
+    "$HOME/.cline/hotl/scripts/hotl-config.sh"                           # #5 Cline install
+    "$HOME/.claude/plugins/hotl/scripts/hotl-config.sh"                  # #6 Claude Code plugin install
+)
 
 for candidate in "${candidates[@]}"; do
     if [ -f "$candidate" ]; then
