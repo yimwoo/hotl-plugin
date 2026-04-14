@@ -47,6 +47,19 @@ Resolve `document-lint.sh` in this order:
 
 Do not assume `scripts/document-lint.sh` exists in the repo being reviewed. The lint script lives in the HOTL install, not in arbitrary user projects.
 
+#### Resolving `hotl-config.sh`
+
+`hotl-config.sh` (the canonical reader for `.hotl/config.yml`) follows the same six-location resolution order as `document-lint.sh`:
+
+1. If you are working in the `hotl-plugin` repo itself, use `scripts/hotl-config.sh`
+2. Codex native-skills install: `~/.codex/hotl/scripts/hotl-config.sh`
+3. Codex plugin install: `~/.codex/plugins/hotl-source/scripts/hotl-config.sh`
+4. Codex plugin cache fallback: `~/.codex/plugins/cache/codex-plugins/hotl/*/scripts/hotl-config.sh`
+5. Cline install fallback: `~/.cline/hotl/scripts/hotl-config.sh`
+6. Claude Code plugin fallback: `~/.claude/plugins/hotl/scripts/hotl-config.sh`
+
+Do not assume `scripts/hotl-config.sh` exists in the repo being reviewed. Callers that do not know their install location should invoke `scripts/hotl-config-resolve.sh` (a thin command proxy that locates `hotl-config.sh` and forwards argv).
+
 **If lint FAILS:** STOP. Show all errors. The author MUST fix structural issues before AI review runs. Do not proceed.
 
 **If lint PASSES:** Continue to Phase 2 (HOTL AI review).

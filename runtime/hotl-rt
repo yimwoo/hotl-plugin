@@ -1246,6 +1246,43 @@ cmd_summary() {
     }' "$state_file"
 }
 
+# ── log-decision ────────────────────────────────────────────────────────────
+
+# Append an autonomous-decision record to the configured log. Opt-in only:
+# when decision_log_path is unset in .hotl/config.yml (or the file is absent),
+# this is a no-op and no file is created.
+#
+# The path is resolved via scripts/hotl-config-resolve.sh — hotl-rt must NOT
+# parse .hotl/config.yml directly.
+cmd_log_decision() {
+    if [ $# -lt 1 ]; then
+        echo "ERROR: log-decision requires a JSON argument" >&2
+        echo "usage: hotl-rt log-decision <json-string>" >&2
+        exit 1
+    fi
+    local json="$1"
+
+    local resolver="$SCRIPT_DIR/../scripts/hotl-config-resolve.sh"
+    if [ ! -f "$resolver" ]; then
+        echo "ERROR: hotl-config-resolve.sh not found at $resolver" >&2
+        exit 1
+    fi
+
+    local log_path
+    log_path=$(bash "$resolver" get decision_log_path)
+
+    # Opt-in: empty path means logging is disabled — no file created.
+    if [ -z "$log_path" ]; then
+        return 0
+    fi
+
+    local dir
+    dir=$(dirname "$log_path")
+    [ -n "$dir" ] && [ "$dir" != "." ] && mkdir -p "$dir"
+
+    printf '%s\n' "$json" >> "$log_path"
+}
+
 # ── Dispatcher ──────────────────────────────────────────────────────────────
 
 usage() {
@@ -1262,6 +1299,9 @@ commands:
                                         Record gate decision
   finalize [--json]                     Finalize run, print summary payload
   summary <run-id> [--json]             Read-only summary for any run
+  log-decision <json>                   Append a JSON line to the configured
+                                        decision log. No-op when
+                                        decision_log_path is unset.
 
 HOTL shared runtime — owns state persistence and verification.
 Agents call this; they don't replicate it.
@@ -1277,12 +1317,13 @@ COMMAND="$1"
 shift
 
 case "$COMMAND" in
-    init)       cmd_init "$@" ;;
-    step)       cmd_step "$@" ;;
-    gate)       cmd_gate "$@" ;;
-    finalize)   cmd_finalize "$@" ;;
-    summary)    cmd_summary "$@" ;;
-    --help|-h|help)  usage ;;
+    init)           cmd_init "$@" ;;
+    step)           cmd_step "$@" ;;
+    gate)           cmd_gate "$@" ;;
+    finalize)       cmd_finalize "$@" ;;
+    summary)        cmd_summary "$@" ;;
+    log-decision)   cmd_log_decision "$@" ;;
+    --help|-h|help) usage ;;
     *)
         echo "ERROR: Unknown command: $COMMAND" >&2
         usage

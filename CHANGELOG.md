@@ -2,6 +2,15 @@
 
 All notable changes to the HOTL plugin will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- `scripts/hotl-config.sh` — canonical reader for `.hotl/config.yml` with the `get <field> [--default=<value>]` subcommand. Foundation for multi-phase initiative support per `docs/designs/initiative-support.md` Slice 1.
+- `scripts/hotl-config-resolve.sh` — command proxy that locates `hotl-config.sh` via the same six-location order as `document-lint.sh`, then forwards argv to it. In-repo callers may invoke `scripts/hotl-config.sh` directly.
+- `runtime/hotl-rt log-decision <json>` subcommand. **Opt-in only:** writes only when `decision_log_path` is explicitly set in `.hotl/config.yml`. Absence of config = no log, no file created.
+- `skills/document-review/SKILL.md` documentation: six-location resolution block for `hotl-config.sh` mirroring the existing `document-lint.sh` block.
+- `test/slice-1-smoke.bats` — 15 tests covering exit contract (Group A), install-path resolution (Group B), decision-log opt-in behavior (Group C), and small-user safety regression (Group D).
+
 ## [2.10.4] - 2026-03-28
 ## [2.10.5] - 2026-03-28
 
