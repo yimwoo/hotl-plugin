@@ -4,6 +4,8 @@
 
 **Full skill:** Read `__HOTL_HOME__/skills/document-review/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 
+**Classification:** files matching `docs/plans/*-design.md`, `docs/plans/*-plan.md`, or `hotl-workflow-*.md` are HOTL-owned artifacts and MUST go through Phase 1 (lint) + Phase 2 (AI review). Other markdown files skip Phase 1 and get a generic review only.
+
 ### MANDATORY — TWO PHASES, BOTH REQUIRED
 
 You MUST run both phases in order. Do NOT skip Phase 1. Do NOT start execution until review completes.
@@ -20,7 +22,7 @@ bash __SCRIPTS_HOME__/document-lint.sh <file>
 
 **If lint PASSES:** Continue to Phase 2.
 
-**What lint checks for design docs (*-design.md):**
+**What lint checks for design/plan docs (*-design.md, *-plan.md):**
 - Intent Contract with intent, constraints, success_criteria, risk_level
 - Verification Contract with at least one verify step
 - Governance Contract with approval_gates and rollback

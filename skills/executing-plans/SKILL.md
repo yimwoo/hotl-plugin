@@ -29,7 +29,7 @@ After resolving the workflow file, run this preflight **before executing any ste
 2. Check for uncommitted changes
    - First, exclude HOTL-owned transient artifacts from the dirty check:
      • hotl-workflow-*.md (workflow plan files)
-     • docs/plans/*-design.md (design docs from brainstorming)
+     • docs/plans/*-design.md, docs/plans/*-plan.md (design/plan docs from brainstorming)
      • .hotl/ (runtime state, reports, cache)
    - If only HOTL artifacts are dirty → treat as clean, continue
    - If non-HOTL dirty files exist:

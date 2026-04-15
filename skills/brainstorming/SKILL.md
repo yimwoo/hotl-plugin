@@ -56,7 +56,7 @@ rollback: [how to undo if something goes wrong]
 ownership: [who is accountable]
 ```
 
-6. **Write design doc** — save to `docs/plans/YYYY-MM-DD-<topic>-design.md`
+6. **Write design doc** — save to `docs/plans/YYYY-MM-DD-<topic>-plan.md`
 7. **Self-check the design doc** — before presenting for human approval, review the saved design doc for: missing constraints, vague success criteria, contract mismatches (do verification steps actually test the intent?), risk_level appropriateness, and scope creep. Fix any issues found. Lightweight: 1-2 passes by default, max 3 only if real issues are found. Do not ask the user to review — this is an internal quality pass.
 8. **Invoke writing-plans** — transition to implementation planning
 

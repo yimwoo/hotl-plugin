@@ -10,6 +10,15 @@ All notable changes to the HOTL plugin will be documented in this file.
 - `runtime/hotl-rt log-decision <json>` subcommand. **Opt-in only:** writes only when `decision_log_path` is explicitly set in `.hotl/config.yml`. Absence of config = no log, no file created.
 - `skills/document-review/SKILL.md` documentation: six-location resolution block for `hotl-config.sh` mirroring the existing `document-lint.sh` block.
 - `test/slice-1-smoke.bats` — 15 tests covering exit contract (Group A), install-path resolution (Group B), decision-log opt-in behavior (Group C), and small-user safety regression (Group D).
+- `.hotl/config.yml: workflows_dir: <path>` opt-in override for the `hotl-workflow-<slug>.md` output directory. Consumed by `writing-plans` via `hotl-config-resolve.sh get workflows_dir --default=.`. Default behavior (project root) unchanged when config absent.
+- `test/slice-2-smoke.bats` — 14 tests covering document-lint acceptance of both suffixes (Group E), SKILL.md content parity (Group F), `workflows_dir` consumption (Group G), and small-user safety regression including legacy `-design.md` compatibility (Group H).
+- `test/fixtures/sample-design.md` — minimal HOTL-contract design doc fixture used by Group E and H1 for lint round-tripping.
+
+### Changed
+- **Cosmetic rename:** `brainstorming` now writes new tactical plans to `docs/plans/YYYY-MM-DD-<topic>-plan.md` instead of `-design.md`. Existing `-design.md` files are never renamed or rewritten; every consumer (lint, document-review classification, executor dirty-worktree exclusion) continues to accept both suffixes. This is the only user-visible change outside the initiative-tier opt-in.
+- `scripts/document-lint.sh` — classification branch and usage text now accept both `*-design.md` and `*-plan.md`.
+- `skills/brainstorming/SKILL.md`, `skills/loop-execution/SKILL.md`, `skills/executing-plans/SKILL.md`, `skills/document-review/SKILL.md`, and the three cline mirrors (`hotl-brainstorming.md`, `hotl-execution.md`, `hotl-document-review.md`) — rule lines extended to carry both literal globs on the same line.
+- `skills/writing-plans/SKILL.md` — new "Output Directory" section documents the `workflows_dir` config resolution procedure (resolve install path → invoke resolver as command proxy → use returned directory).
 
 ## [2.10.4] - 2026-03-28
 ## [2.10.5] - 2026-03-28

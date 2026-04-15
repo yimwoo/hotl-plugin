@@ -21,7 +21,7 @@
 
 ### Dirty Worktree Handling
 
-Preflight automatically excludes HOTL-owned artifacts (`hotl-workflow-*.md`, `docs/plans/*-design.md`, `.hotl/`) from dirty worktree checks. If only those files are dirty, execution proceeds normally.
+Preflight automatically excludes HOTL-owned artifacts (`hotl-workflow-*.md`, `docs/plans/*-design.md`, `docs/plans/*-plan.md`, `.hotl/`) from dirty worktree checks. If only those files are dirty, execution proceeds normally.
 
 For non-HOTL dirty files: if `dirty_worktree: allow` is set in the workflow frontmatter, proceed without prompting. Otherwise, pause and ask the user to clean up, stash, or approve.
 

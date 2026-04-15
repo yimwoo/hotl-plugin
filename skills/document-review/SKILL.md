@@ -19,7 +19,7 @@ Before doing anything else, classify the input into one of four categories:
 
 | Category | Detection | Review Path |
 |---|---|---|
-| **HOTL markdown** | Filename matches `docs/plans/*-design.md` or `hotl-workflow-*.md` | Phase 1 (HOTL lint) → Phase 2 (HOTL AI review) |
+| **HOTL markdown** | Filename matches `docs/plans/*-design.md`, `docs/plans/*-plan.md`, or `hotl-workflow-*.md` | Phase 1 (HOTL lint) → Phase 2 (HOTL AI review) |
 | **Generic text/markdown** | Any other `.md`, `.txt`, or pasted text | Skip Phase 1 → Phase 2 (generic AI review) |
 | **PDF** | `.pdf` extension | If the current runtime can read/extract the content, treat as generic text and review. Otherwise, ask the user for a text, markdown, or PDF-text export. |
 | **DOCX / PPTX / binary** | `.docx`, `.pptx`, or other binary formats | **STOP.** Ask the user for a markdown, plain text, or PDF export. Do not attempt conversion. |
@@ -66,7 +66,7 @@ Do not assume `scripts/hotl-config.sh` exists in the repo being reviewed. Caller
 
 ### What Lint Checks
 
-**Design docs (*-design.md):**
+**Design/plan docs (*-design.md, *-plan.md):**
 - Intent Contract with intent, constraints, success_criteria, risk_level
 - Verification Contract with at least one verify step
 - Governance Contract with approval_gates and rollback

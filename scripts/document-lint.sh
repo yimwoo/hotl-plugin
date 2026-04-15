@@ -7,7 +7,7 @@ set -euo pipefail
 
 if [ $# -lt 1 ]; then
     echo "Usage: document-lint.sh <file>" >&2
-    echo "  Validates design docs (*-design.md) and workflow files (hotl-workflow-*.md)" >&2
+    echo "  Validates design/plan docs (*-design.md, *-plan.md) and workflow files (hotl-workflow-*.md)" >&2
     exit 1
 fi
 
@@ -22,12 +22,12 @@ error() {
 
 # ── Detect file type ─────────────────────────────────────────────────────────
 
-if echo "$FILENAME" | grep -q '\-design\.md$'; then
+if echo "$FILENAME" | grep -Eq '\-(design|plan)\.md$'; then
     FILE_TYPE="design"
 elif echo "$FILENAME" | grep -q '^hotl-workflow-.*\.md$'; then
     FILE_TYPE="workflow"
 else
-    echo "SKIP: $FILENAME is not a design doc or workflow file" >&2
+    echo "SKIP: $FILENAME is not a design/plan doc or workflow file" >&2
     exit 0
 fi
 

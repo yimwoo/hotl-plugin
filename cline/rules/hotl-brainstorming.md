@@ -71,7 +71,7 @@ ownership: [who is accountable]
 
 ### Step 6: Save design doc
 
-Save the complete design to `docs/plans/YYYY-MM-DD-<topic>-design.md`. This file MUST exist before moving on.
+Save the complete design to `docs/plans/YYYY-MM-DD-<topic>-plan.md`. This file MUST exist before moving on.
 
 ### Step 7: Self-check the design doc
 

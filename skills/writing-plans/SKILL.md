@@ -13,7 +13,29 @@ Produce a `hotl-workflow-<slug>.md` file that `loop-execution` can execute. The 
 
 ## Output Filename
 
-Save to project root as `hotl-workflow-<slug>.md`, where `<slug>` is a short kebab-case slug derived from the intent (e.g., `hotl-workflow-add-user-auth.md`, `hotl-workflow-refactor-api.md`). This prevents conflicts when multiple agents work on the same project simultaneously.
+Save as `hotl-workflow-<slug>.md`, where `<slug>` is a short kebab-case slug derived from the intent (e.g., `hotl-workflow-add-user-auth.md`, `hotl-workflow-refactor-api.md`). The slug prevents conflicts when multiple agents work on the same project simultaneously.
+
+## Output Directory
+
+Default: project root. Opt-in override via `.hotl/config.yml: workflows_dir: <path>`. Resolution procedure:
+
+1. Resolve the install path of `hotl-config-resolve.sh` using the same six-location rule documented for `document-lint.sh` and `hotl-config.sh` (see `skills/document-review/SKILL.md`):
+   1. In-repo: `scripts/hotl-config-resolve.sh`
+   2. Codex native-skills install: `~/.codex/hotl/scripts/hotl-config-resolve.sh`
+   3. Codex plugin install: `~/.codex/plugins/hotl-source/scripts/hotl-config-resolve.sh`
+   4. Codex plugin cache fallback: `~/.codex/plugins/cache/codex-plugins/hotl/*/scripts/hotl-config-resolve.sh`
+   5. Cline install fallback: `~/.cline/hotl/scripts/hotl-config-resolve.sh`
+   6. Claude Code plugin fallback: `~/.claude/plugins/hotl/scripts/hotl-config-resolve.sh`
+
+2. Invoke the resolver as a command proxy — it forwards argv to `hotl-config.sh`, no intermediate path-locator step:
+
+   ```bash
+   bash <resolved-hotl-config-resolve.sh> get workflows_dir --default=.
+   ```
+
+3. Use the returned directory as the output location. `.` means project root (the unchanged default). Any other value is an opt-in override — write `hotl-workflow-<slug>.md` inside that directory, creating it if needed.
+
+Projects with no `.hotl/config.yml` receive `.` from the `--default=.` fallback — behavior identical to before the config was introduced.
 
 Format:
 
