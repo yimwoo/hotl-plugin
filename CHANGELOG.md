@@ -4,6 +4,10 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.11.0] - 2026-04-15
+
+Initiative-support rollout (Slices 1–6). Multi-phase initiatives are now a first-class workflow: users can opt into a durable strategic tier (`docs/designs/`), scaffold per-initiative playbook and operating-model docs, kick off each phase via a three-step human-gated workflow (review → triage → requirements), and decompose initiative designs into dated per-phase plans. Small-project users see no workflow-semantics change; the only non-opt-in user-visible difference is the cosmetic filename rename of new tactical plans from `*-design.md` to `*-plan.md`. Full test suite: 249 pass, 1 skip (environmental pandoc-gated check), 0 fail.
+
 ### Added
 - `scripts/hotl-config.sh` — canonical reader for `.hotl/config.yml` with the `get <field> [--default=<value>]` subcommand. Foundation for multi-phase initiative support per `docs/designs/initiative-support.md` Slice 1.
 - `scripts/hotl-config-resolve.sh` — command proxy that locates `hotl-config.sh` via the same six-location order as `document-lint.sh`, then forwards argv to it. In-repo callers may invoke `scripts/hotl-config.sh` directly.
