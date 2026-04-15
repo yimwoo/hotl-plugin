@@ -207,9 +207,12 @@ teardown() {
 
 # ── Group L: small-user safety regression ───────────────────────────────────
 
-@test "L1: templates are inert — referenced only in docs/, test/, adapters/, CHANGELOG.md" {
+@test "L1: Slice 3 templates that should STILL be inert remain so — referenced only in docs/, test/, adapters/, CHANGELOG.md" {
+    # Note: strategic-design.template.md was inert at end of Slice 3 but is
+    # legitimately consumed by brainstorming (skill + cline mirror) starting
+    # in Slice 4. The remaining three templates must stay inert until their
+    # designated consumer slice (Slice 5: setup-project scaffolder).
     for tmpl_name in \
-        strategic-design.template.md \
         tactical-plan.template.md \
         initiative-playbook.template.md \
         initiative-operating-model.template.md; do

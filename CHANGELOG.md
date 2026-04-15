@@ -24,6 +24,13 @@ All notable changes to the HOTL plugin will be documented in this file.
 - `adapters/initiative-playbook.template.md` — generic per-initiative prompt library organized as per-phase × per-role sessions. Works with any agent (Claude Code, Codex, Cline, Cursor, Copilot).
 - `adapters/initiative-operating-model.template.md` — generic operating model defining a six-role vocabulary (`@pm`, `@architect`, `@dev`, `@qa`, `@reviewer`, `@researcher`), decision-rights matrix, escalation tripwires, and decision-log format. Roles and HOTL skills are orthogonal — roles describe who owns an artifact; skills describe the workflow that produces it.
 - `test/slice-3-smoke.bats` — 16 tests covering template presence + required sections (Group I), tactical-plan lint round-trip (Group J), generic render check including a real `pandoc` parse with graceful skip when pandoc is absent (Group K), and small-user safety regression (Group L).
+- `skills/brainstorming/SKILL.md` — new step 2 "Determine scope" with three choices (`feature | phase | initiative`) and `feature` as the default. Initiative scope loads `adapters/strategic-design.template.md` via the same six-location install-path rule as `document-lint.sh` / `hotl-config.sh`, and resolves the output directory via `hotl-config-resolve.sh get designs_dir --default=docs/designs`. Feature/phase scope keeps today's tactical default (`docs/plans/YYYY-MM-DD-<topic>-plan.md`).
+- `cline/rules/hotl-brainstorming.md` — mirrors the scope question, path routing, and initiative-scope template + `designs_dir` resolution.
+- `test/slice-4-smoke.bats` — 13 tests covering SKILL content contract (Group M), template install-path resolution with doc-parity check against `document-lint.sh` (Group N), `designs_dir` config consumption (Group O), and small-user safety regression (Group P).
+- First consumer of a Slice 3 template: `strategic-design.template.md` is no longer inert — it's read by `brainstorming` when scope is initiative. The other three Slice 3 templates remain inert until Slice 5.
+
+### Changed
+- **New non-opt-in UX detail.** `brainstorming` now documents a scope decision as part of its flow. For users with clear feature requests, the experience is unchanged — the agent proceeds with `feature` scope silently or with a one-line acknowledgment. Ambiguous or multi-phase requests surface the scope question explicitly. Single UX contract; no legacy path.
 
 ## [2.10.5] - 2026-03-28
 

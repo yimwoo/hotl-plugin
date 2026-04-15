@@ -6,7 +6,7 @@
 
 ### MANDATORY — DO NOT SKIP ANY STEP
 
-You MUST complete ALL 8 steps below in order. Do NOT mark the task as complete after answering questions. Do NOT skip straight to a solution. The brainstorming process has multiple phases and ALL of them are required.
+You MUST complete ALL steps below in order. Do NOT mark the task as complete after answering questions. Do NOT skip straight to a solution. The brainstorming process has multiple phases and ALL of them are required.
 
 **NEVER claim "Task Completed" until a design doc is saved AND all three contracts are defined.**
 
@@ -24,7 +24,26 @@ You MUST complete ALL 8 steps below in order. Do NOT mark the task as complete a
 
 **Hard rule:** Never scan parent directories, sibling folders, or workspace-wide paths unless the user explicitly provides a path.
 
-### Step 2: Ask clarifying questions — ONE AT A TIME
+### Step 2: Determine scope
+
+Decide between `feature`, `phase`, or `initiative` **before** the clarifying-questions loop. Scope shapes every downstream step: output path, contract structure, depth of inquiry.
+
+**Scope choices:**
+
+- **`feature`** — one feature, one bug fix, one refactor. Output: `docs/plans/YYYY-MM-DD-<topic>-plan.md` (dated, tactical).
+- **`phase`** — one slice of a multi-phase initiative. Same output shape as feature: `docs/plans/YYYY-MM-DD-phase-N-<topic>-plan.md`.
+- **`initiative`** — a multi-phase project (v1/v2, platform migration, enterprise rebuild). Output: `docs/designs/<topic>.md` (undated, durable, strategic).
+
+**Default: feature.** If the user's initial message clearly describes a feature, proceed with `feature` scope without blocking for input. Optionally acknowledge in one line ("Treating as feature scope; say so if this should be a phase or initiative"). Do not pause the flow.
+
+**Ask the scope question explicitly when the request is ambiguous or multi-phase** (e.g., "migrate v1 to v2", "platform rebuild"). Present the three choices with `feature` as the pre-filled default and wait for the user's answer.
+
+**For initiative scope only:**
+
+- Load the strategic-design template. Read `__HOTL_HOME__/adapters/strategic-design.template.md` (the `hotl-plugin` skill directory) and use its section structure (problem, vision, non-goals, stakeholders, architecture, phase breakdown, risks) as the skeleton of the design doc you produce.
+- Resolve the output directory: run `bash __HOTL_HOME__/scripts/hotl-config-resolve.sh get designs_dir --default=docs/designs` and use the returned value as the parent directory. Default is `docs/designs` when no `.hotl/config.yml` is present.
+
+### Step 3: Ask clarifying questions — ONE AT A TIME
 
 Ask the user questions to understand purpose, constraints, and success criteria. Ask ONE question, wait for the answer, then ask the next. Keep going until you fully understand the problem. Minimum 2-3 questions.
 
@@ -32,17 +51,17 @@ Ask the user questions to understand purpose, constraints, and success criteria.
 
 **DO NOT propose solutions yet. You are only gathering information.**
 
-### Step 3: Propose 2-3 approaches
+### Step 4: Propose 2-3 approaches
 
 Present 2-3 different approaches with trade-offs for each. Include a recommendation. Wait for the user to pick or refine.
 
 **DO NOT jump to implementation. Wait for the user to approve an approach.**
 
-### Step 4: Present design for approval
+### Step 5: Present design for approval
 
 Present the chosen approach as a structured design. Get explicit approval from the user before proceeding.
 
-### Step 5: Define all three HOTL contracts
+### Step 6: Define all three HOTL contracts
 
 You MUST define ALL THREE contracts. Do not skip any.
 
@@ -69,19 +88,26 @@ rollback: [how to undo if something goes wrong]
 ownership: [who is accountable]
 ```
 
-### Step 6: Save design doc
+### Step 7: Save design doc
 
-Save the complete design to `docs/plans/YYYY-MM-DD-<topic>-plan.md`. This file MUST exist before moving on.
+Path depends on scope (decided in Step 2):
 
-### Step 7: Self-check the design doc
+- `feature` or `phase` scope: save to `docs/plans/YYYY-MM-DD-<topic>-plan.md` (dated, tactical).
+- `initiative` scope: save to `<designs_dir>/<topic>.md` (undated, durable), where `<designs_dir>` is the value returned by the Step 2 resolver — default `docs/designs`.
+
+This file MUST exist before moving on.
+
+### Step 8: Self-check the design doc
 
 Before presenting for human approval, review the saved design doc for: missing constraints, vague success criteria, contract mismatches (do verification steps actually test the intent?), risk_level appropriateness, and scope creep. Fix any issues found. Lightweight: 1-2 passes by default, max 3 only if real issues are found. Do not ask the user to review — this is an internal quality pass.
 
-### Step 8: Create workflow file
+### Step 9: Create workflow file
 
 Ask the user: "Design approved. Ready to create the implementation plan?" Then create a `hotl-workflow-<slug>.md` following the planning rules.
 
-### Step 9: Present execution options
+For `initiative` scope, do NOT create a workflow file — initiative designs decompose into child phase plans that each go through their own brainstorming → writing-plans cycle.
+
+### Step 10: Present execution options
 
 After the workflow file is created, present these execution options:
 
