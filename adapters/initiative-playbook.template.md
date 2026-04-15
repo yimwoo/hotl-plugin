@@ -82,6 +82,30 @@ After this session: read the memo. Update the design doc or open a new ADR if th
 
 ---
 
+## §2.5. Per-phase kickoff workflow — `workflows/phase-kickoff.md`
+
+Every new phase of `{{INITIATIVE_NAME}}` can be started via the reusable HOTL workflow `workflows/phase-kickoff.md` (shipped with the plugin). It automates the three-step kickoff — **review → triage → requirements** — with a human gate after each step. Output artifacts land in `docs/reviews/` and `docs/requirements/`, giving the per-phase brainstorming session its input.
+
+**Resolve the workflow template** via the same six-location install-path order as `document-lint.sh` and the other HOTL helpers (see `skills/document-review/SKILL.md`):
+
+1. In-repo: `workflows/phase-kickoff.md`
+2. Codex native-skills install: `~/.codex/hotl/workflows/phase-kickoff.md`
+3. Codex plugin install: `~/.codex/plugins/hotl-source/workflows/phase-kickoff.md`
+4. Codex plugin cache fallback: `~/.codex/plugins/cache/codex-plugins/hotl/*/workflows/phase-kickoff.md`
+5. Cline install fallback: `~/.cline/hotl/workflows/phase-kickoff.md`
+6. Claude Code plugin fallback: `~/.claude/plugins/hotl/workflows/phase-kickoff.md`
+
+**Usage:**
+
+1. Copy the resolved template to your project root as `hotl-workflow-{{INITIATIVE_NAME}}-phase-N-kickoff.md` (substitute a real phase number for `N`).
+2. Replace every `{{SLUG}}` token with `{{INITIATIVE_NAME}}` and every `{{PHASE_ID}}` token with the phase number.
+3. Run via `/hotl:loop <copied-filename>` or `/hotl:execute-plan <copied-filename>`. Approve each of the three human gates after reviewing the produced artifact.
+4. After the kickoff workflow finishes, start a fresh session and run `/hotl:brainstorm` with scope: phase — the requirements doc at `docs/requirements/{{INITIATIVE_NAME}}-phase-N.md` is now the input.
+
+The kickoff workflow is optional. A phase whose scope is unambiguous and whose prior-phase artifacts are already solid may skip straight to `brainstorming` (scope: phase). Most phases benefit from the kickoff because it surfaces risks and prerequisites before implementation design begins.
+
+---
+
 ## §3. Phase 1 — {{PHASE_1_NAME}}
 
 One subsection per session. Copy the prompt into a fresh session.
