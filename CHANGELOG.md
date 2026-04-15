@@ -19,6 +19,11 @@ All notable changes to the HOTL plugin will be documented in this file.
 - `scripts/document-lint.sh` — classification branch and usage text now accept both `*-design.md` and `*-plan.md`.
 - `skills/brainstorming/SKILL.md`, `skills/loop-execution/SKILL.md`, `skills/executing-plans/SKILL.md`, `skills/document-review/SKILL.md`, and the three cline mirrors (`hotl-brainstorming.md`, `hotl-execution.md`, `hotl-document-review.md`) — rule lines extended to carry both literal globs on the same line.
 - `skills/writing-plans/SKILL.md` — new "Output Directory" section documents the `workflows_dir` config resolution procedure (resolve install path → invoke resolver as command proxy → use returned directory).
+- `adapters/strategic-design.template.md` — generic template for multi-phase initiative designs. Lives in `docs/designs/` when rendered. Structure: problem, vision, non-goals, stakeholders, architecture, maturity stages (optional), phase breakdown, quality attributes, risks.
+- `adapters/tactical-plan.template.md` — generic template for per-phase or per-feature plans. Lives in `docs/plans/YYYY-MM-DD-<topic>-plan.md` when rendered. Carries the three HOTL contracts (intent / verification / governance). Default `risk_level: medium` with an explicit `# REVIEW BEFORE APPROVAL` must-edit marker so forgetting to edit keeps the plan in a gate-active path rather than silently downgrading to `low`.
+- `adapters/initiative-playbook.template.md` — generic per-initiative prompt library organized as per-phase × per-role sessions. Works with any agent (Claude Code, Codex, Cline, Cursor, Copilot).
+- `adapters/initiative-operating-model.template.md` — generic operating model defining a six-role vocabulary (`@pm`, `@architect`, `@dev`, `@qa`, `@reviewer`, `@researcher`), decision-rights matrix, escalation tripwires, and decision-log format. Roles and HOTL skills are orthogonal — roles describe who owns an artifact; skills describe the workflow that produces it.
+- `test/slice-3-smoke.bats` — 16 tests covering template presence + required sections (Group I), tactical-plan lint round-trip (Group J), generic render check including a real `pandoc` parse with graceful skip when pandoc is absent (Group K), and small-user safety regression (Group L).
 
 ## [2.10.4] - 2026-03-28
 ## [2.10.5] - 2026-03-28
