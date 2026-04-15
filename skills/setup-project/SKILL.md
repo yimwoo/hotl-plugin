@@ -20,7 +20,13 @@ Generate the right config files so every code assistant on your team follows HOT
    - Cursor
    - GitHub Copilot
 
-2. For each selected tool, generate the appropriate file:
+2. Ask: "Will this project run multi-phase initiatives?" **Default: no.** Only answer yes for multi-phase work like major migrations, v1/v2 rewrites, platform rebuilds, or any effort that will span multiple phases with separate plan docs. For a single feature, bug fix, or refactor, answer no — the standard HOTL flow handles those just fine.
+
+   **If yes**, ask the follow-up: "What's the initiative slug? (kebab-case, e.g. `ai-assurance`, `v2-migration`)". Validate the answer matches `[a-z0-9][a-z0-9-]*`.
+
+   **If no** (or if the user declines to opt in), skip step 5 entirely and proceed with tool-adapter generation only.
+
+3. For each selected tool, generate the appropriate file:
 
 | Tool | File Generated | Location |
 |---|---|---|
@@ -30,16 +36,39 @@ Generate the right config files so every code assistant on your team follows HOT
 | Cursor | `.cursor/rules/hotl.md` | Project root |
 | GitHub Copilot | `.github/copilot-instructions.md` | Project root |
 
-3. Each generated file contains:
+4. Each generated file contains:
    - HOTL operating principles (intent/verification/governance contracts)
    - Link to `hotl-workflow-<slug>.md` format
    - Risk level guidelines
    - What always requires human review
 
-4. Commit all generated files:
+5. **If the user opted in to initiative support in step 2**, invoke the scaffolder to create `.hotl/config.yml`, the six `docs/<tier>/` directories, and the four initiative-tier templates under `docs/prompts/`.
+
+   **Resolve `hotl-init-initiative.sh`** using the same six-location order as `document-lint.sh` and `hotl-config.sh` (see `skills/document-review/SKILL.md`):
+
+   1. If you are working in the `hotl-plugin` repo itself, use `scripts/hotl-init-initiative.sh`
+   2. Codex native-skills install: `~/.codex/hotl/scripts/hotl-init-initiative.sh`
+   3. Codex plugin install: `~/.codex/plugins/hotl-source/scripts/hotl-init-initiative.sh`
+   4. Codex plugin cache fallback: `~/.codex/plugins/cache/codex-plugins/hotl/*/scripts/hotl-init-initiative.sh`
+   5. Cline install fallback: `~/.cline/hotl/scripts/hotl-init-initiative.sh`
+   6. Claude Code plugin fallback: `~/.claude/plugins/hotl/scripts/hotl-init-initiative.sh`
+
+   **Invoke the scaffolder with the slug collected in step 2:**
+
+   ```bash
+   bash <resolved-hotl-init-initiative.sh> --name <slug>
+   ```
+
+   The scaffolder refuses cleanly when `.hotl/config.yml` already exists — that is the intended behavior and should not be worked around. If any of the four target outputs under `docs/prompts/` already exists, it is preserved byte-for-byte and a `SKIP:` line is emitted.
+
+   **Only invoke the scaffolder when the user answered yes in step 2.** If the user answered no (the default), skip this step entirely.
+
+6. Commit all generated files:
 
 ```bash
 git add AGENTS.md .clinerules .cursor/ .github/ CLAUDE.md
+# If initiative support was scaffolded in step 5, also add:
+#   .hotl/config.yml docs/
 git commit -m "chore: add HOTL adapter files for [tool list]"
 ```
 

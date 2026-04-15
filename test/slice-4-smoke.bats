@@ -165,24 +165,15 @@ teardown() {
     done
 }
 
-@test "P3: strategic template is consumed, but other three Slice 3 templates remain inert" {
-    # strategic-design.template.md is now referenced by brainstorming.
+@test "P3: strategic-design template is consumed by brainstorming (Slice 4's new wiring)" {
+    # NOTE: P3 originally also asserted the other three Slice 3 templates
+    # remained inert after Slice 4. Slice 5 legitimately consumed them via
+    # hotl-init-initiative.sh, so the "remain inert" half of P3 no longer
+    # applies. The "all four consumed" invariant is enforced by
+    # slice-5-smoke.bats S3. P3 is narrowed to its still-meaningful half:
+    # Slice 4's wiring of strategic-design into brainstorming.
     grep -q 'strategic-design\.template\.md' \
         "$REPO_ROOT/skills/brainstorming/SKILL.md"
-
-    # The other three templates must STILL be inert — referenced only in
-    # docs/, test/, adapters/, .git/, CHANGELOG.md.
-    for tmpl_name in \
-        tactical-plan.template.md \
-        initiative-playbook.template.md \
-        initiative-operating-model.template.md; do
-        local refs
-        refs=$(grep -rl "$tmpl_name" "$REPO_ROOT" 2>/dev/null \
-            | grep -vE '^'"$REPO_ROOT"'/(docs/|test/|adapters/|\.git/|CHANGELOG\.md)' \
-            || true)
-        [ -z "$refs" ] \
-            || { echo "FAIL: $tmpl_name prematurely consumed by: $refs"; return 1; }
-    done
 }
 
 @test "P4: prior slice smoke suites remain green" {

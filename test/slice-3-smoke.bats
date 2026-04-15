@@ -207,27 +207,21 @@ teardown() {
 
 # ── Group L: small-user safety regression ───────────────────────────────────
 
-@test "L1: Slice 3 templates that should STILL be inert remain so — referenced only in docs/, test/, adapters/, CHANGELOG.md" {
-    # Note: strategic-design.template.md was inert at end of Slice 3 but is
-    # legitimately consumed by brainstorming (skill + cline mirror) starting
-    # in Slice 4. The remaining three templates must stay inert until their
-    # designated consumer slice (Slice 5: setup-project scaffolder).
+@test "L1: all four Slice 3 templates still exist in adapters/" {
+    # NOTE: The original L1 asserted "all four templates inert". Slice 4 and
+    # Slice 5 legitimately consumed them all (strategic-design by
+    # brainstorming, the other three by hotl-init-initiative.sh). The
+    # "all four consumed" invariant is now enforced by slice-5-smoke.bats
+    # S3. L1 is narrowed to a structural check: the four Slice 3 template
+    # files must still exist in adapters/ so later slices can keep reading
+    # them.
     for tmpl_name in \
+        strategic-design.template.md \
         tactical-plan.template.md \
         initiative-playbook.template.md \
         initiative-operating-model.template.md; do
-        local refs
-        # `grep -v` returns exit 1 when it filters everything out — that is
-        # the happy path here (all refs are in inert locations). Coerce with
-        # `|| true` so set -e does not trip.
-        refs=$(grep -rl "$tmpl_name" "$REPO_ROOT" 2>/dev/null \
-            | grep -vE '^'"$REPO_ROOT"'/(docs/|test/|adapters/|\.git/|CHANGELOG\.md)' \
-            || true)
-        if [ -n "$refs" ]; then
-            echo "FAIL: $tmpl_name referenced by non-inert files:"
-            echo "$refs"
-            return 1
-        fi
+        [ -f "$REPO_ROOT/adapters/$tmpl_name" ] \
+            || { echo "FAIL: $tmpl_name missing from adapters/"; return 1; }
     done
 }
 
