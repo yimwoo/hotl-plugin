@@ -25,7 +25,6 @@ All notable changes to the HOTL plugin will be documented in this file.
 - `adapters/initiative-operating-model.template.md` — generic operating model defining a six-role vocabulary (`@pm`, `@architect`, `@dev`, `@qa`, `@reviewer`, `@researcher`), decision-rights matrix, escalation tripwires, and decision-log format. Roles and HOTL skills are orthogonal — roles describe who owns an artifact; skills describe the workflow that produces it.
 - `test/slice-3-smoke.bats` — 16 tests covering template presence + required sections (Group I), tactical-plan lint round-trip (Group J), generic render check including a real `pandoc` parse with graceful skip when pandoc is absent (Group K), and small-user safety regression (Group L).
 
-## [2.10.4] - 2026-03-28
 ## [2.10.5] - 2026-03-28
 
 ### Fixed
