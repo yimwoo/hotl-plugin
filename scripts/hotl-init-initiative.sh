@@ -107,7 +107,10 @@ resolve_adapters_dir() {
         "$HOME/.codex/hotl/adapters"
         "$HOME/.codex/plugins/hotl-source/adapters"
     )
-    # Codex plugin cache fallback uses a glob.
+    # Codex plugin cache fallback uses a glob. When no match exists the shell
+    # leaves the literal path containing '*' in place — the subsequent
+    # `[ -d "$cached" ]` then returns non-zero and the candidate is silently
+    # skipped, which is the intended fall-through behavior.
     for cached in "$HOME"/.codex/plugins/cache/codex-plugins/hotl/*/adapters; do
         [ -d "$cached" ] && candidates+=("$cached")
     done
@@ -225,9 +228,9 @@ echo "Initiative support scaffolded for: $SLUG"
 echo "  Config:      .hotl/config.yml (taxonomy: initiative)"
 echo "  Directories: docs/{designs,plans,decisions,requirements,reviews,prompts}/"
 echo "  Templates:   docs/prompts/"
-echo "    - design-doc-template.md       (generic reference)"
-echo "    - plan-template.md             (generic reference)"
-echo "    - ${SLUG}-playbook.md         (per-initiative)"
-echo "    - ${SLUG}-operating-model.md  (per-initiative)"
+echo "    - design-doc-template.md     (generic reference)"
+echo "    - plan-template.md           (generic reference)"
+echo "    - ${SLUG}-playbook.md        (per-initiative)"
+echo "    - ${SLUG}-operating-model.md (per-initiative)"
 echo ""
 echo "Next: edit docs/designs/${SLUG}.md via /hotl:brainstorm (scope: initiative)."
