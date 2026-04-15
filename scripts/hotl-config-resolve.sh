@@ -13,7 +13,7 @@
 #   HOTL_INSTALL_OVERRIDE=<dir>   takes priority over the six default paths.
 #                                 Expected layout: <dir>/hotl/scripts/hotl-config.sh
 #
-# Per docs/designs/slice-1-config-reader-plan.md §2.1 Group B2,
+# Per docs/plans/2026-04-14-slice-1-config-reader-plan.md §2.1 Group B2,
 # stdout, stderr, and exit code pass through from the located target.
 
 set -euo pipefail

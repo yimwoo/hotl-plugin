@@ -8,7 +8,7 @@
 # Usage:
 #   hotl-config.sh get <field> [--default=<value>]
 #
-# Exit contract (per docs/designs/slice-1-config-reader-plan.md §2.1 Group A):
+# Exit contract (per docs/plans/2026-04-14-slice-1-config-reader-plan.md §2.1 Group A):
 #   - field absent, no default          → empty stdout, exit 0
 #   - field absent, default provided    → default on stdout, exit 0
 #   - field present in .hotl/config.yml → value on stdout, exit 0

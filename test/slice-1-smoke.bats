@@ -2,7 +2,7 @@
 #
 # Slice 1 smoke tests — enforces the exit contract, install-path resolution,
 # opt-in decision-log behavior, and small-user safety regression from
-# docs/designs/slice-1-config-reader-plan.md §2.1.
+# docs/plans/2026-04-14-slice-1-config-reader-plan.md §2.1.
 
 setup() {
     REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
