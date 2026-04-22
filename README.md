@@ -173,10 +173,12 @@ workflows/       Workflow templates (feature, bugfix, refactor)
 cline/rules/     Global rules for Cline
 adapters/        Templates for AGENTS.md, Cursor, Copilot, and other tools
 scripts/         Utility scripts including document-lint.sh
-docs/            Setup docs, workflow format reference, and detailed guides
+docs/            Published user-facing docs, setup guides, and references
 docs/contracts/  Output contracts (PR review, code review, execution report)
 docs/checklists/ Reusable review heuristics
 ```
+
+Repo-local work-product docs such as `docs/designs/`, `docs/plans/`, `docs/research/`, `docs/reviews/`, and `docs/requirements/` are intentionally gitignored in this repo so releases only ship end-user documentation.
 
 ## Contributing
 

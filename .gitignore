@@ -8,13 +8,17 @@
 
 # HOTL workspace artifacts
 hotl-workflow*.md
-# Ignore contents of docs/plans/ (downstream user plans) but track plugin-owned
-# slice plans so this repo can dogfood the initiative-support taxonomy.
-# Note: use file-level patterns, not `docs/plans/`, so the `!` carve-out works —
-# git cannot un-ignore files inside an ignored directory.
-docs/plans/*
-!docs/plans/*-slice-*-plan.md
+# Repo-local project work docs. Keep published end-user docs in `docs/`
+# committed; keep planning, research, and initiative work products local.
+docs/backlog.md
+docs/designs/
+docs/plans/
 docs/research/
+docs/strategies/
+docs/decisions/
+docs/requirements/
+docs/reviews/
+docs/prompts/
 docs/submissions/
 .hotl/
 .agents/

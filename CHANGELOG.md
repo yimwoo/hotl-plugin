@@ -4,6 +4,9 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- `docs/` now tracks only user-facing documentation in this repo. Repo-local planning, design, research, backlog, and initiative work-product docs under `docs/` are gitignored so releases stop shipping internal development artifacts.
+
 ## [2.12.0] - 2026-04-22
 
 Execution isolation is now worktree-first across HOTL's shared runtime and execution skills. Git-backed workflow runs now default to an isolated execution root, persist the execution location in runtime state, require explicit run targeting when multiple HOTL runs exist, and keep Codex/Claude Code/Cline aligned on the same execution contract. Full local BATS suite passes: `bats test/*.bats`.
