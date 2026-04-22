@@ -4,6 +4,28 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.12.0] - 2026-04-22
+
+Execution isolation is now worktree-first across HOTL's shared runtime and execution skills. Git-backed workflow runs now default to an isolated execution root, persist the execution location in runtime state, require explicit run targeting when multiple HOTL runs exist, and keep Codex/Claude Code/Cline aligned on the same execution contract. Full local BATS suite passes: `bats test/*.bats`.
+
+### Added
+- `scripts/hotl-prepare-execution-root.sh` — deterministic execution-root bootstrap helper for workflow execution. It resolves branch name, enforces dirty-worktree rules, creates an isolated worktree by default for git-backed runs, bootstraps the workflow file into that execution root, and emits structured JSON metadata (`branch`, `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, `worktree_path`) for executors.
+- `test/execution-root.bats` — end-to-end coverage for default isolated-worktree bootstrap, `worktree: false` opt-out behavior, and dirty-worktree failure handling.
+- `test/smoke.bats` coverage ensuring Claude Code slash-command stubs still delegate to the canonical execution skills and that the repo now documents explicit `--run-id` pinning.
+- `docs/designs/worktree-execution-isolation.md` — retained as design history with an explicit historical note after the cutover.
+
+### Changed
+- `runtime/hotl-rt` now persists `workflow_slug`, `source_workflow_path`, `repo_root`, `execution_root`, `worktree_path`, `executor_mode`, and `last_update` in sidecar state and report metadata.
+- `hotl-rt step`, `hotl-rt gate`, and `hotl-rt finalize` now support explicit `--run-id` targeting. When multiple runs exist, the runtime no longer silently picks "the newest" run.
+- `scripts/show-codex-current-step.sh` and `scripts/finalize-codex-summary.sh` now support explicit run targeting and refuse ambiguous multi-run state.
+- `loop-execution`, `executing-plans`, `subagent-execution`, `resuming`, `workflow-format`, `how-it-works`, Cline execution rules, and Claude/Codex-facing docs now describe an execution-root model instead of shared-checkout branch switching.
+- HOTL now defaults to isolated git worktrees for git repos with history. `worktree: false` is the explicit opt-out for staying in the current checkout on a dedicated branch.
+- Historical design/research docs that previously described worktrees as future or opt-in now carry current-status / historical-note updates so they do not contradict the live execution model.
+
+### Fixed
+- Multi-session execution no longer risks silently mutating or finalizing the wrong HOTL run because runtime/helper selection is pinned by run id instead of "latest state file".
+- Shared-checkout workflow execution no longer depends on another session keeping the repo on the same branch; worktree execution now isolates the filesystem path by default.
+
 ## [2.11.0] - 2026-04-15
 
 Initiative-support rollout (Slices 1–6). Multi-phase initiatives are now a first-class workflow: users can opt into a durable strategic tier (`docs/designs/`), scaffold per-initiative playbook and operating-model docs, kick off each phase via a three-step human-gated workflow (review → triage → requirements), and decompose initiative designs into dated per-phase plans. Small-project users see no workflow-semantics change; the only non-opt-in user-visible difference is the cosmetic filename rename of new tactical plans from `*-design.md` to `*-plan.md`. Full test suite: 249 pass, 1 skip (environmental pandoc-gated check), 0 fail.

@@ -487,6 +487,21 @@ print(match.group(1) if match else '')
     grep -q 'worktree:' "$REPO_ROOT/skills/writing-plans/SKILL.md"
 }
 
+@test "execution root helper script exists" {
+    [ -x "$REPO_ROOT/scripts/hotl-prepare-execution-root.sh" ]
+}
+
+@test "execution docs describe explicit run-id pinning" {
+    grep -q -- '--run-id <run-id>' "$REPO_ROOT/skills/loop-execution/SKILL.md"
+    grep -q -- '--run-id <run-id>' "$REPO_ROOT/docs/workflow-format.md"
+}
+
+@test "Claude Code execution commands delegate to canonical execution skills" {
+    grep -q 'Invoke the hotl:loop-execution skill' "$REPO_ROOT/commands/loop.md"
+    grep -q 'Invoke the hotl:executing-plans skill' "$REPO_ROOT/commands/execute-plan.md"
+    grep -q 'Invoke the hotl:subagent-execution skill' "$REPO_ROOT/commands/subagent-execute.md"
+}
+
 @test "Codex install docs consistently use ~/.codex/hotl" {
     grep -q '~/.codex/hotl' "$REPO_ROOT/README.md"
     grep -q '~/.codex/hotl' "$REPO_ROOT/.codex/INSTALL.md"

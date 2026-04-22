@@ -11,7 +11,7 @@ The workflow file (`hotl-workflow-<slug>.md`) defines work to be executed by the
 | `risk_level` | low\|medium\|high | yes | Determines auto-approve behavior |
 | `auto_approve` | boolean | no (default: false) | Skip `gate: human` for non-high-risk steps |
 | `branch` | string | no | Override branch name (default: derived as `hotl/<slug>` from workflow filename) |
-| `worktree` | boolean | no (default: false) | Create a git worktree instead of switching the current directory |
+| `worktree` | boolean | no (default: true) | Use an isolated git worktree for execution. Set `worktree: false` to stay in the current checkout branch. |
 | `progress` | verbose | no | Enable verbose progress view — prints full step list at each step transition |
 | `report_detail` | full | no | Include all verify output in the execution report, not just failures |
 | `dirty_worktree` | allow | no | Proceed even if non-HOTL files are uncommitted (HOTL artifacts are always excluded automatically) |
@@ -120,7 +120,7 @@ else:
 
 ## Branch/Worktree Preflight
 
-Execution skills (loop-execution, executing-plans, subagent-execution) run a branch/worktree preflight **after document review passes** and **before step 1**. This preflight creates an isolated branch so work does not land directly on main/master.
+Execution skills (loop-execution, executing-plans, subagent-execution) run a branch/worktree preflight **after document review passes** and **before step 1**. This preflight resolves an isolated execution root so work does not land in the wrong checkout or on `main`/`master`.
 
 ### Branch Name Derivation
 
@@ -148,14 +148,21 @@ Execution skills (loop-execution, executing-plans, subagent-execution) run a bra
    - If branch: field exists in frontmatter → use it
    - Otherwise → derive hotl/<slug> from hotl-workflow-<slug>.md
 
-4. Check if branch already exists
-   - Exists, same HEAD    → ask: reuse, delete+recreate, or abort
-   - Exists, different HEAD → ask: delete+recreate, or abort
-   - Does not exist        → create (no prompt)
+4. Determine isolation mode
+   - If `worktree: false` → stay in the current checkout and use a dedicated branch there
+   - Otherwise → use an isolated git worktree by default
 
-5. Create branch/worktree
-   - If worktree: true → create git worktree with the branch
-   - Otherwise → create branch and checkout in current directory
+5. Check if the target branch/worktree already exists
+   - Exists, same intent/HEAD → ask: reuse, delete+recreate, or abort
+   - Exists, different HEAD → ask: delete+recreate, or abort
+   - Does not exist → create (no prompt)
+
+6. Resolve the execution root with `scripts/hotl-prepare-execution-root.sh <workflow-file> --executor-mode <mode>`
+   - Returns JSON with: `branch`, `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, `worktree_path`
+   - By default → create a linked git worktree with the branch, copy the current workflow into it, and execute from that worktree
+   - If `worktree: false` → create/switch to the dedicated branch in the current checkout and execute from the repo root
+7. Change into `execution_root`
+   - Every later git command, runtime call, helper call, and review command for that run must execute from this directory
 ```
 
 ### Design Principles
@@ -175,14 +182,16 @@ Workflow checkboxes (`- [x]`) are a human-visible mirror updated by the agent on
 
 **Runtime API:**
 ```
-hotl-rt init <workflow-file>                  → creates run, state JSON, report
-hotl-rt step <N> start|verify|retry|block     → step state transitions
-hotl-rt gate <N> approved|rejected            → records gate decisions
-hotl-rt finalize [--json]                     → finalizes run, prints summary
+hotl-rt init <workflow-file> [metadata flags] → creates run, state JSON, report
+hotl-rt step <N> start|verify|retry|block     [--run-id <run-id>] → step state transitions
+hotl-rt gate <N> approved|rejected            [--run-id <run-id>] → records gate decisions
+hotl-rt finalize [--json]                     [--run-id <run-id>] → finalizes run, prints summary
 hotl-rt summary <run-id> [--json]             → read-only query
 ```
 
 **Run ID format:** `<slug>-<YYYYMMDDTHHMMSSZ>` (e.g., `add-auth-20260320T212315Z`) — human-readable, lexicographically sortable, UTC
+
+**Execution-root rule:** after `hotl-rt init` returns a run id, every later runtime/helper call for that run must use the same `execution_root` and the same `run_id`. Do not rely on "latest file in .hotl/state" when multiple runs exist.
 
 **Gitignore:** Add `.hotl/` to your project's `.gitignore` — execution state should not be committed.
 

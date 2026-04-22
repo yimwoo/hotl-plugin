@@ -17,7 +17,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
-"$HOTL_RT" finalize --json > "$summary_json"
+run_id="${1:-${HOTL_RUN_ID:-}}"
+finalize_args=(finalize --json)
+if [ -n "$run_id" ]; then
+    finalize_args+=(--run-id "$run_id")
+fi
+
+"$HOTL_RT" "${finalize_args[@]}" > "$summary_json"
 rendered_summary="$("$RENDERER" --platform codex "$summary_json")"
 total_steps="$(jq -r '.total_steps // 0' "$summary_json")"
 rendered_step_lines="$(printf '%s\n' "$rendered_summary" | grep -Ec '^[✓⚡✗→·] Step [0-9]+:')"

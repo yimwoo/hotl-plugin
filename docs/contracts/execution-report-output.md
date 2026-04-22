@@ -14,9 +14,12 @@ Every execution report (`.hotl/reports/<run-id>.md`) must contain these 5 sectio
 # Execution Report: <run-id>
 
 **Workflow:** hotl-workflow-<slug>.md
+**Source Workflow:** /abs/path/to/original/workflow.md
 **Intent:** <intent from frontmatter>
 **Branch:** <branch name>
 **Executor:** loop | executing-plans | subagent
+**Execution Root:** /abs/path/to/repo-or-worktree
+**Worktree:** /abs/path/to/worktree (optional)
 **Started:** <ISO 8601>
 **Updated:** <ISO 8601>
 **Status:** running | completed | paused | blocked
@@ -82,14 +85,14 @@ These are step and run state indicators — status labels, not a severity system
 
 The `hotl-rt` runtime manages all report updates automatically via its subcommands:
 
-1. **`hotl-rt init`:** Create report with metadata and full table (all `· Pending`). Store `report_path` in sidecar JSON.
-2. **`hotl-rt step N start`:** Update table to `→ Running`, update `Updated:`, append event.
-3. **`hotl-rt step N verify` (fail):** Update table, append captured stdout/stderr to event log.
-4. **`hotl-rt step N retry`:** Update table to `↻ Retrying`, append retry event.
-5. **`hotl-rt step N verify` (pass):** Update table to `✓ Done`, append completion event.
-6. **`hotl-rt gate N`:** Update table to `⚡ Auto-approved` or `✓ Approved`.
-7. **`hotl-rt finalize`:** Set status to `completed`, update `Updated:`, finalize report.
-8. **`hotl-rt step N block`:** Set status to `blocked`, include report path in response.
+1. **`hotl-rt init`:** Create report with metadata and full table (all `· Pending`). Store `report_path` plus execution-root metadata in sidecar JSON.
+2. **`hotl-rt step N start --run-id <run-id>`:** Update table to `→ Running`, update `Updated:`, append event.
+3. **`hotl-rt step N verify --run-id <run-id>` (fail):** Update table, append captured stdout/stderr to event log.
+4. **`hotl-rt step N retry --run-id <run-id>`:** Update table to `↻ Retrying`, append retry event.
+5. **`hotl-rt step N verify --run-id <run-id>` (pass):** Update table to `✓ Done`, append completion event.
+6. **`hotl-rt gate N --run-id <run-id>`:** Update table to `⚡ Auto-approved` or `✓ Approved`.
+7. **`hotl-rt finalize --run-id <run-id>`:** Set status to `completed`, update `Updated:`, finalize report.
+8. **`hotl-rt step N block --run-id <run-id>`:** Set status to `blocked`, include report path in response.
 
 ## Verify Output Policy
 

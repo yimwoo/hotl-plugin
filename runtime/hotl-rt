@@ -74,15 +74,63 @@ ensure_dirs() {
     mkdir -p "$STATE_DIR" "$REPORT_DIR"
 }
 
-# Find the active run's state file (most recent in STATE_DIR)
+abspath_existing() {
+    local path="$1"
+    local dir
+    dir=$(cd "$(dirname "$path")" && pwd -P)
+    echo "${dir}/$(basename "$path")"
+}
+
+default_repo_root() {
+    git rev-parse --show-toplevel 2>/dev/null || pwd -P
+}
+
+default_execution_root() {
+    pwd -P
+}
+
+json_string_or_null() {
+    local value="${1:-}"
+    if [ -n "$value" ]; then
+        jq -Rn --arg value "$value" '$value'
+    else
+        echo "null"
+    fi
+}
+
+# Resolve a run-specific state file. With multiple runs present, callers must
+# pass --run-id (or set HOTL_RUN_ID) rather than silently using the newest file.
 find_active_state() {
-    local latest
-    latest=$(ls -t "$STATE_DIR"/*.json 2>/dev/null | head -1)
-    if [ -z "$latest" ]; then
-        echo "ERROR: No active run found in $STATE_DIR/" >&2
+    local requested_run_id="${1:-${HOTL_RUN_ID:-}}"
+    if [ -n "$requested_run_id" ]; then
+        local requested_state="${STATE_DIR}/${requested_run_id}.json"
+        if [ ! -f "$requested_state" ]; then
+            echo "ERROR: No HOTL run found for run_id: $requested_run_id" >&2
+            exit 1
+        fi
+        echo "$requested_state"
+        return
+    fi
+
+    local -a state_files=()
+    shopt -s nullglob
+    state_files=("$STATE_DIR"/*.json)
+    shopt -u nullglob
+
+    if [ "${#state_files[@]}" -eq 0 ]; then
+        echo "ERROR: No active HOTL run found in $STATE_DIR/" >&2
         exit 1
     fi
-    echo "$latest"
+
+    if [ "${#state_files[@]}" -gt 1 ]; then
+        echo "ERROR: Multiple HOTL runs found in $STATE_DIR/. Select one with --run-id <run-id> or HOTL_RUN_ID." >&2
+        for state_file in "${state_files[@]}"; do
+            jq -r '"  - \(.run_id) [\(.status)] workflow=\(.workflow_path)"' "$state_file" >&2
+        done
+        exit 1
+    fi
+
+    echo "${state_files[0]}"
 }
 
 # Read a field from the active state JSON
@@ -494,11 +542,52 @@ ${VERIFY_STDERR}"
 
 cmd_init() {
     if [ $# -lt 1 ]; then
-        echo "usage: hotl-rt init <workflow-file>" >&2
+        echo "usage: hotl-rt init <workflow-file> [--executor-mode <mode>] [--repo-root <path>] [--execution-root <path>] [--source-workflow-path <path>] [--worktree-path <path>] [--branch <name>]" >&2
         exit 1
     fi
 
     local workflow="$1"
+    shift
+    local executor_mode="loop"
+    local repo_root=""
+    local execution_root=""
+    local source_workflow_path=""
+    local worktree_path=""
+    local branch_override=""
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --executor-mode)
+                executor_mode="$2"
+                shift 2
+                ;;
+            --repo-root)
+                repo_root="$2"
+                shift 2
+                ;;
+            --execution-root)
+                execution_root="$2"
+                shift 2
+                ;;
+            --source-workflow-path)
+                source_workflow_path="$2"
+                shift 2
+                ;;
+            --worktree-path)
+                worktree_path="$2"
+                shift 2
+                ;;
+            --branch)
+                branch_override="$2"
+                shift 2
+                ;;
+            *)
+                echo "ERROR: Unknown option for init: $1" >&2
+                exit 1
+                ;;
+        esac
+    done
+
     if [ ! -f "$workflow" ]; then
         echo "ERROR: Workflow file not found: $workflow" >&2
         exit 1
@@ -509,6 +598,11 @@ cmd_init() {
 
     local slug
     slug=$(slug_from_workflow "$workflow")
+    workflow=$(abspath_existing "$workflow")
+    [ -z "$source_workflow_path" ] && source_workflow_path="$workflow"
+    source_workflow_path=$(abspath_existing "$source_workflow_path")
+    [ -z "$repo_root" ] && repo_root=$(default_repo_root)
+    [ -z "$execution_root" ] && execution_root=$(default_execution_root)
     local run_id
     run_id=$(generate_run_id "$slug")
     local started_at
@@ -527,6 +621,7 @@ cmd_init() {
     [ -z "$fm_auto" ] && fm_auto="false"
     fm_branch=$(echo "$frontmatter" | { grep -i '^branch:' || true; } | sed 's/^[Bb]ranch:[[:space:]]*//')
     [ -z "$fm_branch" ] && fm_branch="hotl/${slug}"
+    [ -n "$branch_override" ] && fm_branch="$branch_override"
 
     # Parse steps
     local content
@@ -620,20 +715,37 @@ cmd_init() {
     intent_esc=$(echo "$fm_intent" | sed 's/\\/\\\\/g; s/"/\\"/g')
     success_esc=$(echo "$fm_success" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
+    local workflow_json source_workflow_json branch_json repo_root_json execution_root_json executor_mode_json report_path_json
+    workflow_json=$(jq -Rn --arg value "$workflow" '$value')
+    source_workflow_json=$(jq -Rn --arg value "$source_workflow_path" '$value')
+    branch_json=$(jq -Rn --arg value "$fm_branch" '$value')
+    repo_root_json=$(jq -Rn --arg value "$repo_root" '$value')
+    execution_root_json=$(jq -Rn --arg value "$execution_root" '$value')
+    executor_mode_json=$(jq -Rn --arg value "$executor_mode" '$value')
+    report_path_json=$(jq -Rn --arg value "${execution_root}/${REPORT_DIR}/${run_id}.md" '$value')
+    local worktree_json
+    worktree_json=$(json_string_or_null "$worktree_path")
     local state_json="{
   \"run_id\": \"${run_id}\",
-  \"workflow_path\": \"${workflow}\",
+  \"workflow_path\": ${workflow_json},
+  \"source_workflow_path\": ${source_workflow_json},
+  \"workflow_slug\": \"${slug}\",
   \"intent\": \"${intent_esc}\",
   \"success_criteria\": \"${success_esc}\",
   \"risk_level\": \"${fm_risk}\",
   \"auto_approve\": ${fm_auto},
-  \"branch\": \"${fm_branch}\",
+  \"branch\": ${branch_json},
+  \"repo_root\": ${repo_root_json},
+  \"execution_root\": ${execution_root_json},
+  \"worktree_path\": ${worktree_json},
+  \"executor_mode\": ${executor_mode_json},
   \"started_at\": \"${started_at}\",
+  \"last_update\": \"${started_at}\",
   \"completed_at\": null,
   \"status\": \"running\",
   \"current_step\": 1,
   \"total_steps\": ${total_steps},
-  \"report_path\": \"${REPORT_DIR}/${run_id}.md\",
+  \"report_path\": ${report_path_json},
   \"steps\": ${steps_json}
 }"
 
@@ -646,9 +758,14 @@ cmd_init() {
         echo "# Execution Report: ${run_id}"
         echo ""
         echo "**Workflow:** $(basename "$workflow")"
+        echo "**Source Workflow:** ${source_workflow_path}"
         echo "**Intent:** ${fm_intent}"
         echo "**Branch:** ${fm_branch}"
-        echo "**Executor:** loop"
+        echo "**Executor:** ${executor_mode}"
+        echo "**Execution Root:** ${execution_root}"
+        if [ -n "$worktree_path" ]; then
+            echo "**Worktree:** ${worktree_path}"
+        fi
         echo "**Started:** ${started_at}"
         echo "**Updated:** ${started_at}"
         echo "**Status:** running"
@@ -735,7 +852,7 @@ _parse_step_block() {
 
 cmd_step() {
     if [ $# -lt 2 ]; then
-        echo "usage: hotl-rt step <step-number> <start|verify|retry|block>" >&2
+        echo "usage: hotl-rt step <step-number> <start|verify|retry|block> [--run-id <run-id>]" >&2
         exit 1
     fi
 
@@ -744,9 +861,24 @@ cmd_step() {
     local step_num="$1"
     local action="$2"
     shift 2
+    local run_id="${HOTL_RUN_ID:-}"
+
+    case "$action" in
+        start|verify|retry)
+            if [ $# -gt 0 ]; then
+                if [ "$1" = "--run-id" ] && [ $# -eq 2 ]; then
+                    run_id="$2"
+                    shift 2
+                else
+                    echo "ERROR: Unknown option for step $action: $1" >&2
+                    exit 1
+                fi
+            fi
+            ;;
+    esac
 
     local state_file
-    state_file=$(find_active_state)
+    state_file=$(find_active_state "$run_id")
     local report
     report=$(report_path_from_state "$state_file")
     local ts
@@ -971,6 +1103,7 @@ cmd_step() {
             while [ $# -gt 0 ]; do
                 case "$1" in
                     --reason) reason="$2"; shift 2 ;;
+                    --run-id) run_id="$2"; shift 2 ;;
                     *) echo "ERROR: Unknown option for block: $1" >&2; exit 1 ;;
                 esac
             done
@@ -979,6 +1112,9 @@ cmd_step() {
                 echo "ERROR: --reason is required for block" >&2
                 exit 1
             fi
+
+            state_file=$(find_active_state "$run_id")
+            report=$(report_path_from_state "$state_file")
 
             local step_name
             step_name=$(jq -r ".steps[$((step_num - 1))].name" "$state_file")
@@ -1002,7 +1138,7 @@ cmd_step() {
 
         *)
             echo "ERROR: Unknown step action: $action" >&2
-            echo "usage: hotl-rt step <step-number> <start|verify|retry|block>" >&2
+            echo "usage: hotl-rt step <step-number> <start|verify|retry|block> [--run-id <run-id>]" >&2
             exit 1
             ;;
     esac
@@ -1010,7 +1146,7 @@ cmd_step() {
 
 cmd_gate() {
     if [ $# -lt 2 ]; then
-        echo "usage: hotl-rt gate <step-number> <approved|rejected> [--mode auto|human]" >&2
+        echo "usage: hotl-rt gate <step-number> <approved|rejected> [--mode auto|human] [--run-id <run-id>]" >&2
         exit 1
     fi
 
@@ -1020,11 +1156,16 @@ cmd_gate() {
     local decision="$2"
     shift 2
     local gate_mode="human"
+    local run_id="${HOTL_RUN_ID:-}"
 
     while [ $# -gt 0 ]; do
         case "$1" in
             --mode)
                 gate_mode="$2"
+                shift 2
+                ;;
+            --run-id)
+                run_id="$2"
                 shift 2
                 ;;
             *)
@@ -1045,7 +1186,7 @@ cmd_gate() {
     fi
 
     local state_file
-    state_file=$(find_active_state)
+    state_file=$(find_active_state "$run_id")
     local report
     report=$(report_path_from_state "$state_file")
     local ts
@@ -1142,9 +1283,26 @@ cmd_gate() {
 
 cmd_finalize() {
     require_jq
+    local run_id="${HOTL_RUN_ID:-}"
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --json)
+                shift
+                ;;
+            --run-id)
+                run_id="$2"
+                shift 2
+                ;;
+            *)
+                echo "ERROR: Unknown option for finalize: $1" >&2
+                exit 1
+                ;;
+        esac
+    done
 
     local state_file
-    state_file=$(find_active_state)
+    state_file=$(find_active_state "$run_id")
     local report
     report=$(report_path_from_state "$state_file")
     local ts
@@ -1180,9 +1338,17 @@ cmd_finalize() {
     summary=$(jq '{
         run_id: .run_id,
         workflow_path: .workflow_path,
+        source_workflow_path: .source_workflow_path,
+        workflow_slug: .workflow_slug,
         intent: .intent,
+        branch: .branch,
+        repo_root: .repo_root,
+        execution_root: .execution_root,
+        worktree_path: .worktree_path,
+        executor_mode: .executor_mode,
         status: .status,
         started_at: .started_at,
+        last_update: .last_update,
         completed_at: .completed_at,
         total_steps: .total_steps,
         completed_steps: ([.steps[] | select(.status == "done")] | length),
@@ -1225,9 +1391,17 @@ cmd_summary() {
     jq '{
         run_id: .run_id,
         workflow_path: .workflow_path,
+        source_workflow_path: .source_workflow_path,
+        workflow_slug: .workflow_slug,
         intent: .intent,
+        branch: .branch,
+        repo_root: .repo_root,
+        execution_root: .execution_root,
+        worktree_path: .worktree_path,
+        executor_mode: .executor_mode,
         status: .status,
         started_at: .started_at,
+        last_update: .last_update,
         completed_at: .completed_at,
         total_steps: .total_steps,
         completed_steps: ([.steps[] | select(.status == "done")] | length),
@@ -1290,14 +1464,18 @@ usage() {
 usage: hotl-rt <command> [args]
 
 commands:
-  init <workflow-file>                  Initialize a run from a workflow file
-  step <N> start                        Mark step N as in-progress
-  step <N> verify                       Run verify command, auto-transition to done/fail
-  step <N> retry                        Reset failed step to in-progress for retry
-  step <N> block --reason "..."         Mark step as blocked with reason
-  gate <N> <approved|rejected> [--mode auto|human]
+  init <workflow-file> [--executor-mode <mode>] [--repo-root <path>]
+       [--execution-root <path>] [--source-workflow-path <path>]
+       [--worktree-path <path>] [--branch <name>]
+                                        Initialize a run from a workflow file
+  step <N> start [--run-id <run-id>]    Mark step N as in-progress
+  step <N> verify [--run-id <run-id>]   Run verify command, auto-transition to done/fail
+  step <N> retry [--run-id <run-id>]    Reset failed step to in-progress for retry
+  step <N> block --reason "..." [--run-id <run-id>]
+                                        Mark step as blocked with reason
+  gate <N> <approved|rejected> [--mode auto|human] [--run-id <run-id>]
                                         Record gate decision
-  finalize [--json]                     Finalize run, print summary payload
+  finalize [--json] [--run-id <run-id>] Finalize run, print summary payload
   summary <run-id> [--json]             Read-only summary for any run
   log-decision <json>                   Append a JSON line to the configured
                                         decision log. No-op when

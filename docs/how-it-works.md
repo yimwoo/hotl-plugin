@@ -25,7 +25,7 @@ success_criteria: 429 after threshold, configurable per-endpoint, all tests pass
 risk_level: medium
 auto_approve: true
 branch: feat/add-rate-limiter   # optional — defaults to hotl/<slug>
-worktree: false                 # optional — use git worktree for isolation
+worktree: false                 # optional opt-out — default is isolated worktree execution
 ---
 
 ## Steps
@@ -61,21 +61,23 @@ Lint failures are hard blockers. AI review produces one of:
 
 Execution does not start from a structurally broken or obviously weak plan.
 
-## 4. Git Branch Isolation
+## 4. Git Execution Isolation
 
-Before executing any steps, HOTL creates a dedicated git branch so work never lands directly on `main` or `master`.
+Before executing any steps, HOTL resolves a dedicated execution root so work never lands directly on `main`, `master`, or the wrong live checkout.
 
 **Branch naming:**
 - Default: derived from the workflow filename — `hotl-workflow-add-auth.md` becomes `hotl/add-auth`
 - Override: set `branch: feat/add-auth` in the workflow frontmatter
-- Full isolation: set `worktree: true` to create a git worktree
+- Default isolation: create a git worktree, copy the workflow into it, and execute from that isolated checkout
+- Opt out: set `worktree: false` to stay in the current checkout on a dedicated branch
 
 **Safety checks:**
 - Uncommitted changes block execution (no auto-stash — you decide what to do)
 - Existing branches always prompt: reuse, recreate, or abort
 - Repos without git or with no commits skip branching and execute in place
 
-Every workflow execution starts clean, on its own branch, with no risk to the main branch.
+Every workflow execution starts clean, on its own isolated execution root, with no risk to the main branch.
+HOTL records the `execution_root` and `worktree_path` in runtime state so resume/reporting stay bound to the correct checkout rather than whatever branch another session switched later.
 
 ## 5. Execute
 

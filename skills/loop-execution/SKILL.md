@@ -56,14 +56,21 @@ After resolving the workflow file, run this preflight **before executing any ste
    - If branch: field exists in workflow frontmatter → use it
    - Otherwise → derive hotl/<slug> from hotl-workflow-<slug>.md
 
-4. Check if branch already exists locally
-   - Exists, same HEAD    → ask: reuse, delete+recreate, or abort
-   - Exists, different HEAD → ask: delete+recreate, or abort
-   - Does not exist        → create (no prompt)
+4. Determine isolation mode
+   - If `worktree: false` in frontmatter → stay in the current checkout and use a dedicated branch there
+   - Otherwise → use an isolated git worktree by default
 
-5. Create branch/worktree
-   - If worktree: true in frontmatter → create git worktree with the branch
-   - Otherwise → create branch and checkout in current directory
+5. Check if the target branch/worktree already exists locally
+   - Existing branch/worktree for the same intent → ask: reuse, delete+recreate, or abort
+   - Existing branch at a different HEAD → ask: delete+recreate, or abort
+   - Does not exist → create (no prompt)
+
+6. Resolve the execution root with `scripts/hotl-prepare-execution-root.sh <workflow-file> --executor-mode <mode>`
+   - The helper returns JSON with: `branch`, `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, `worktree_path`
+   - By default it creates a linked git worktree for the branch, copies the current workflow into that worktree, and returns that worktree as `execution_root`
+   - If `worktree: false` in frontmatter → create/switch to the dedicated branch in the current checkout and return the repo root as `execution_root`
+7. Change into `execution_root`
+   - Every later git command, runtime call, Codex helper call, and review command for this run MUST execute from that directory
 ```
 
 **Rules:**
@@ -80,13 +87,16 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
 1. Resolve workflow file (see above)
 2. Parse frontmatter: intent, risk_level, auto_approve, branch, worktree
 3. Run Branch/Worktree Preflight (see above)
-4. Initialize run via runtime:
-   - Run: `hotl-rt init <workflow-file>`
+4. Capture preflight metadata and change into `execution_root`
+5. Initialize run via runtime:
+   - Run: `hotl-rt init <workflow-file> --executor-mode loop --repo-root <repo-root> --execution-root <execution-root> --source-workflow-path <source-workflow-path> --worktree-path <worktree-path|null> --branch <branch>`
    - This parses the workflow, creates .hotl/state/<run-id>.json with all steps, and initializes .hotl/reports/<run-id>.md
    - Capture the run_id from stdout
+   - For every later `hotl-rt step`, `hotl-rt gate`, `hotl-rt finalize`, `scripts/show-codex-current-step.sh`, and `scripts/finalize-codex-summary.sh` call, pass `--run-id <run-id>` or set `HOTL_RUN_ID=<run-id>`
+   - Never let the runtime silently choose "the newest run" when multiple runs exist
    - Only after init succeeds should chat output or native plan/progress UI show anything
 
-5. For each step in order:
+6. For each step in order:
 
    a. Start step via runtime:
       - Run: `hotl-rt step N start`
@@ -156,8 +166,8 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
 6. All steps complete:
    → Run review checkpoint (see Review Checkpoints below)
    → Invoke hotl:verification-before-completion skill
-   → For Codex final summaries, run: `scripts/finalize-codex-summary.sh`
-   → For Claude Code/Cline, run: `hotl-rt finalize --json`, write the payload to a temp file, then render it with: `scripts/render-execution-summary.sh --platform <claude|cline> <summary-json-file>`
+   → For Codex final summaries, run: `scripts/finalize-codex-summary.sh <run-id>` (or set `HOTL_RUN_ID`)
+   → For Claude Code/Cline, run: `hotl-rt finalize --json --run-id <run-id>`, write the payload to a temp file, then render it with: `scripts/render-execution-summary.sh --platform <claude|cline> <summary-json-file>`
    → Do not freehand the final summary when the renderer is available
    → The rendered summary must be shown as visible chat output in the final response; do not paraphrase it away
 ```
@@ -170,11 +180,15 @@ The runtime owns:
 - `.hotl/state/<run-id>.json` — authoritative machine state (created by `hotl-rt init`, updated by `hotl-rt step/gate/finalize`)
 - `.hotl/reports/<run-id>.md` — durable Markdown report (initialized at init, updated incrementally, finalized at finalize)
 
+The sidecar also records the execution location for the run: `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, `worktree_path`, and `executor_mode`.
+
 Run ID format: `<slug>-<YYYYMMDDTHHMMSSZ>` (e.g., `add-auth-20260320T212315Z`).
 
 Workflow checkboxes (`- [x]`) are a human-visible mirror updated by the agent on step completion. The sidecar is the source of truth.
 
 Operational rule: `hotl-rt` calls happen before the corresponding chat log or Codex native plan/progress update. Native progress UI is never a substitute for the runtime-managed artifacts.
+
+Concurrency rule: after `hotl-rt init` returns a run id, pin every later runtime/helper call to that run id. Do not rely on "latest file in .hotl/state" when more than one run exists.
 
 See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection, and verify-first resume flow.
 

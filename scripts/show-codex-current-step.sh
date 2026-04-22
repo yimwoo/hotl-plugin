@@ -10,10 +10,28 @@ if ! command -v jq >/dev/null 2>&1; then
     exit 1
 fi
 
-state_file="$(ls -t .hotl/state/*.json 2>/dev/null | head -1 || true)"
-if [ -z "$state_file" ] || [ ! -f "$state_file" ]; then
-    echo "ERROR: No active HOTL run found in .hotl/state/" >&2
-    exit 1
+run_id="${1:-${HOTL_RUN_ID:-}}"
+state_dir=".hotl/state"
+
+if [ -n "$run_id" ]; then
+    state_file="${state_dir}/${run_id}.json"
+    if [ ! -f "$state_file" ]; then
+        echo "ERROR: No HOTL run found for run_id: ${run_id}" >&2
+        exit 1
+    fi
+else
+    shopt -s nullglob
+    state_files=("${state_dir}"/*.json)
+    shopt -u nullglob
+    if [ "${#state_files[@]}" -eq 0 ]; then
+        echo "ERROR: No active HOTL run found in .hotl/state/" >&2
+        exit 1
+    fi
+    if [ "${#state_files[@]}" -gt 1 ]; then
+        echo "ERROR: Multiple HOTL runs found. Pass a run id or set HOTL_RUN_ID." >&2
+        exit 1
+    fi
+    state_file="${state_files[0]}"
 fi
 
 run_id="$(jq -r '.run_id' "$state_file")"

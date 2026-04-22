@@ -68,7 +68,7 @@ Implementation tasks follow seven phases:
 | **Brainstorm** | Clarify requirements. Compare approaches. Define intent, verification, and governance contracts. |
 | **Plan** | Generate a `hotl-workflow-<slug>.md` with steps, verification, loop conditions, and gates. |
 | **Lint** | Self-check built into planning. Structural lint runs automatically in execution preflight. |
-| **Branch** | Create an isolated git branch. Dirty repos hard-fail. |
+| **Branch** | Resolve an isolated execution root. Default is a git worktree; `worktree: false` opts into current-checkout branch execution. Dirty repos hard-fail. |
 | **Execute** | Run the plan in loop, manual, or subagent mode. |
 | **Review** | Review findings are checked against the codebase and HOTL contracts before acting. |
 | **Verify** | Run tests, lint, and verify commands. No green light without proof. |

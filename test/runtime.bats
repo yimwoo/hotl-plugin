@@ -9,6 +9,7 @@ setup() {
     HOTL_RT="$REPO_ROOT/runtime/hotl-rt"
     FIXTURES="$REPO_ROOT/test/fixtures"
     TEST_DIR=$(mktemp -d)
+    TEST_ROOT="$(cd "$TEST_DIR" && pwd -P)"
     cp -r "$FIXTURES" "$TEST_DIR/"
     cd "$TEST_DIR"
 }
@@ -37,9 +38,40 @@ teardown() {
     [ "$(jq -r '.total_steps' "$STATE")" = "3" ]
     [ "$(jq -r '.risk_level' "$STATE")" = "low" ]
     [ "$(jq -r '.auto_approve' "$STATE")" = "true" ]
+    [ "$(jq -r '.workflow_slug' "$STATE")" = "runtime-sample" ]
+    [ "$(jq -r '.executor_mode' "$STATE")" = "loop" ]
+    [ "$(jq -r '.repo_root' "$STATE")" = "$TEST_ROOT" ]
+    [ "$(jq -r '.execution_root' "$STATE")" = "$TEST_ROOT" ]
+    [ "$(jq -r '.worktree_path' "$STATE")" = "null" ]
+    [ "$(jq -r '.last_update' "$STATE")" = "$(jq -r '.started_at' "$STATE")" ]
 
     # Timestamps are ISO 8601 format
     jq -r '.started_at' "$STATE" | grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}T'
+}
+
+@test "init accepts execution metadata overrides" {
+    custom_execution_root="$TEST_ROOT"
+    custom_source="$TEST_ROOT/source/hotl-workflow-runtime-sample.md"
+    custom_worktree="$TEST_ROOT/custom-worktree"
+    mkdir -p "$TEST_ROOT/source"
+    cp fixtures/hotl-workflow-runtime-sample.md "$custom_source"
+
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md \
+        --executor-mode subagent \
+        --repo-root "$TEST_ROOT/repo-root" \
+        --execution-root "$custom_execution_root" \
+        --source-workflow-path "$custom_source" \
+        --worktree-path "$custom_worktree" \
+        --branch "feat/runtime-override")
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    [ "$(jq -r '.executor_mode' "$STATE")" = "subagent" ]
+    [ "$(jq -r '.repo_root' "$STATE")" = "$TEST_ROOT/repo-root" ]
+    [ "$(jq -r '.execution_root' "$STATE")" = "$custom_execution_root" ]
+    [ "$(jq -r '.source_workflow_path' "$STATE")" = "$custom_source" ]
+    [ "$(jq -r '.worktree_path' "$STATE")" = "$custom_worktree" ]
+    [ "$(jq -r '.branch' "$STATE")" = "feat/runtime-override" ]
+    [ "$(jq -r '.report_path' "$STATE")" = "$custom_execution_root/.hotl/reports/${RUN_ID}.md" ]
 }
 
 @test "init creates report with metadata header" {
@@ -49,7 +81,9 @@ teardown() {
     [ -f "$REPORT" ]
     grep -q "Execution Report: ${RUN_ID}" "$REPORT"
     grep -Fq "**Workflow:**" "$REPORT"
+    grep -Fq "**Source Workflow:**" "$REPORT"
     grep -Fq "**Intent:**" "$REPORT"
+    grep -Fq "**Execution Root:**" "$REPORT"
     grep -Fq "**Status:** running" "$REPORT"
     grep -q "## Event Log" "$REPORT"
 }
@@ -148,6 +182,19 @@ teardown() {
     REPORT=".hotl/reports/${RUN_ID}.md"
 
     grep -q '→ Step 1:' "$REPORT"
+}
+
+@test "step commands require explicit run id when multiple runs exist" {
+    RUN_ID_A=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    RUN_ID_B=$("$HOTL_RT" init fixtures/hotl-workflow-retry-sample.md)
+
+    run "$HOTL_RT" step 1 start
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Multiple HOTL runs found"* ]]
+
+    "$HOTL_RT" step 1 start --run-id "$RUN_ID_A"
+    [ "$(jq -r '.steps[0].status' ".hotl/state/${RUN_ID_A}.json")" = "in_progress" ]
+    [ "$(jq -r '.steps[0].status' ".hotl/state/${RUN_ID_B}.json")" = "pending" ]
 }
 
 # ── step verify ─────────────────────────────────────────────────────────────

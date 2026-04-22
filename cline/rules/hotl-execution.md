@@ -36,6 +36,20 @@ bash __SCRIPTS_HOME__/document-lint.sh <workflow-file>
 If lint **fails:** STOP. Show all errors. The workflow must be fixed before execution can proceed.
 If lint **passes:** Continue silently to execution.
 
+### Branch / Worktree Execution Root
+
+After lint passes, resolve the execution root before step 1:
+
+```bash
+bash __SCRIPTS_HOME__/hotl-prepare-execution-root.sh <workflow-file> --executor-mode <loop|executing-plans|subagent>
+```
+
+This helper returns JSON with `branch`, `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, and `worktree_path`.
+
+- By default, it creates a linked worktree, copies the current workflow into it, and returns that worktree as `execution_root`.
+- If `worktree: false`, it creates/switches to the dedicated branch in the current checkout and returns the repo root as `execution_root`.
+- After that, every git command, runtime call, helper call, and review command for the run MUST execute from `execution_root`.
+
 ### Typed Verification
 
 The `verify` field supports 4 types. Scalar string = type: shell. List = all must pass.
@@ -74,6 +88,8 @@ After every 3 completed steps, pause and show:
 ### Execution State Persistence
 
 HOTL persists execution state in `.hotl/state/<run-id>.json` (sidecar). This is the authoritative source of truth — workflow checkboxes are a human-visible mirror. State is updated on each step transition, verify result, and status change.
+
+After `hotl-rt init` returns a run id, pin every later runtime/helper call to that run (`--run-id <run-id>` or `HOTL_RUN_ID=<run-id>`). Never rely on "the newest file in .hotl/state" when multiple runs exist.
 
 If the session is interrupted, use `/hotl:resume` to continue. Executors also auto-detect interrupted runs and offer resume when starting a workflow that has unfinished state.
 

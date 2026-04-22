@@ -11,7 +11,7 @@ This is a **delegation profile** over the HOTL execution state machine. Follow t
 ### Process
 
 1. Resolve the workflow file
-2. Run preflight and structural lint (same as hotl-execution.md)
+2. Run preflight and structural lint (same as hotl-execution.md), change into the resolved `execution_root`, and pin runtime/helper calls to the captured `run_id`
 3. For each step in order:
    - Decide whether to delegate or run inline
    - If delegated: use a fresh subagent with the exact step text and relevant context

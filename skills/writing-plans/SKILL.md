@@ -46,7 +46,7 @@ success_criteria: [from design's intent contract]
 risk_level: low | medium | high
 auto_approve: true | false
 # branch: custom/branch-name   # optional — execution derives hotl/<slug> if absent
-# worktree: true                # optional — default false, creates git worktree instead of branch checkout
+# worktree: false               # optional opt-out — default true, keeps execution in the current checkout branch
 # dirty_worktree: allow         # optional — proceed even if non-HOTL files are uncommitted
 ---
 

@@ -44,14 +44,21 @@ After resolving the workflow file, run this preflight **before executing any ste
    - If branch: field exists in workflow frontmatter → use it
    - Otherwise → derive hotl/<slug> from hotl-workflow-<slug>.md
 
-4. Check if branch already exists locally
-   - Exists, same HEAD    → ask: reuse, delete+recreate, or abort
-   - Exists, different HEAD → ask: delete+recreate, or abort
-   - Does not exist        → create (no prompt)
+4. Determine isolation mode
+   - If `worktree: false` in frontmatter → stay in the current checkout and use a dedicated branch there
+   - Otherwise → use an isolated git worktree by default
 
-5. Create branch/worktree
-   - If worktree: true in frontmatter → create git worktree with the branch
-   - Otherwise → create branch and checkout in current directory
+5. Check if the target branch/worktree already exists locally
+   - Existing branch/worktree for the same intent → ask: reuse, delete+recreate, or abort
+   - Existing branch at a different HEAD → ask: delete+recreate, or abort
+   - Does not exist → create (no prompt)
+
+6. Resolve the execution root with `scripts/hotl-prepare-execution-root.sh <workflow-file> --executor-mode <mode>`
+   - The helper returns JSON with: `branch`, `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, `worktree_path`
+   - By default it creates a linked git worktree for the branch, copies the current workflow into that worktree, and returns that worktree as `execution_root`
+   - If `worktree: false` in frontmatter → create/switch to the dedicated branch in the current checkout and return the repo root as `execution_root`
+7. Change into `execution_root`
+   - Every later git command, runtime call, Codex helper call, and review command for this run MUST execute from that directory
 ```
 
 **Rules:**
@@ -74,12 +81,12 @@ The `verify` field supports 4 types. A scalar string is shorthand for `type: she
 
 All state persistence is handled by the `hotl-rt` shared runtime (`runtime/hotl-rt`). This executor calls `hotl-rt` for all state transitions:
 
-- `hotl-rt init <workflow-file>` — at run start
-- `hotl-rt step N start` — before each step
-- `hotl-rt step N verify` — after each step's action
-- `hotl-rt step N retry` / `hotl-rt step N block --reason "..."` — on failure
-- `hotl-rt gate N approved|rejected` — at gate steps
-- `hotl-rt finalize --json` — at run completion
+- `hotl-rt init <workflow-file> --executor-mode executing-plans ...` — at run start
+- `hotl-rt step N start --run-id <run-id>` — before each step
+- `hotl-rt step N verify --run-id <run-id>` — after each step's action
+- `hotl-rt step N retry --run-id <run-id>` / `hotl-rt step N block --reason "..." --run-id <run-id>` — on failure
+- `hotl-rt gate N approved|rejected --run-id <run-id>` — at gate steps
+- `hotl-rt finalize --json --run-id <run-id>` — at run completion
 
 The runtime owns `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md`. Agents do not manage these files directly. Runtime calls happen before the corresponding chat or progress UI update.
 
@@ -92,18 +99,19 @@ To resume an interrupted executing-plans run, use the host tool's native resume 
 ## Process
 
 1. Resolve and read the plan (see above)
-2. Run Branch/Worktree Preflight (see above)
-3. Run `hotl-rt init <workflow-file>` to initialize state and report
-4. Execute tasks in order, 3 at a time:
-   - `hotl-rt step N start` before each step
+2. Run Branch/Worktree Preflight (see above), capture its JSON result, and change into `execution_root`
+3. Run `hotl-rt init <workflow-file> --executor-mode executing-plans --repo-root <repo-root> --execution-root <execution-root> --source-workflow-path <source-workflow-path> --worktree-path <worktree-path|null> --branch <branch>` to initialize state and report
+4. Capture the run id from stdout, then pass `--run-id <run-id>` (or set `HOTL_RUN_ID=<run-id>`) on every later runtime/helper call for this run
+5. Execute tasks in order, 3 at a time:
+   - `hotl-rt step N start --run-id <run-id>` before each step
    - Execute the action
-   - `hotl-rt step N verify` to run typed verification
-   - If verify reports `human review required: ...`, pause and do not continue until `hotl-rt gate N approved|rejected --mode human` succeeds
-   - On failure: `hotl-rt step N retry` or `hotl-rt step N block --reason "..."`
-   - On gate: `hotl-rt gate N approved|rejected`
-5. After each batch: run review checkpoint (see below), then show what was done, ask "Continue to next batch?"
-6. On failure: stop and report — never silently skip a failed step
-7. When complete: run final review checkpoint (see below), invoke `hotl:verification-before-completion`, then `hotl-rt finalize --json`, render the final summary via `scripts/render-execution-summary.sh`
+   - `hotl-rt step N verify --run-id <run-id>` to run typed verification
+   - If verify reports `human review required: ...`, pause and do not continue until `hotl-rt gate N approved|rejected --mode human --run-id <run-id>` succeeds
+   - On failure: `hotl-rt step N retry --run-id <run-id>` or `hotl-rt step N block --reason "..." --run-id <run-id>`
+   - On gate: `hotl-rt gate N approved|rejected --run-id <run-id>`
+6. After each batch: run review checkpoint (see below), then show what was done, ask "Continue to next batch?"
+7. On failure: stop and report — never silently skip a failed step
+8. When complete: run final review checkpoint (see below), invoke `hotl:verification-before-completion`, then `hotl-rt finalize --json --run-id <run-id>`, render the final summary via `scripts/render-execution-summary.sh`
 
 ## Review Checkpoints
 
