@@ -30,9 +30,9 @@ teardown() {
     run "$FINALIZE_CODEX"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Execution Summary"* ]]
-    [[ "$output" == *"Step 1: Run a passing shell verify - Done (1 attempt)"* ]]
-    [[ "$output" == *"Step 2: Loop until condition met - Done (1 attempt)"* ]]
-    [[ "$output" == *"Step 3: Human gate step - Approved (-)"* ]]
+    [[ "$output" == *"Step 1: Run verify command - Done (1 attempt)"* ]]
+    [[ "$output" == *"Step 2: Run second verify command - Done (1 attempt)"* ]]
+    [[ "$output" == *"Step 3: Human gate without verify - Approved (-)"* ]]
 }
 
 @test "show-codex-current-step prints active step metadata" {
@@ -44,7 +44,7 @@ teardown() {
     run "$SHOW_CODEX_CURRENT"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Current step: 1/3"* ]]
-    [[ "$output" == *"Name: Run a passing shell verify"* ]]
+    [[ "$output" == *"Name: Run verify command"* ]]
     [[ "$output" == *"Status: in_progress"* ]]
     [[ "$output" == *"Attempts: 1"* ]]
 }
@@ -56,7 +56,7 @@ teardown() {
     run "$SHOW_CODEX_CURRENT"
     [ "$status" -eq 0 ]
     [[ "$output" == *"Current step: 1/3"* ]]
-    [[ "$output" == *"Name: Run a passing shell verify"* ]]
+    [[ "$output" == *"Name: Run verify command"* ]]
     [[ "$output" == *"Status: pending"* ]]
     [[ "$output" == *"Attempts: 0"* ]]
 }
@@ -91,7 +91,7 @@ teardown() {
 
     run "$FINALIZE_CODEX" "$RUN_ID_A"
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Step 1: Run a passing shell verify - Done (1 attempt)"* ]]
+    [[ "$output" == *"Step 1: Run verify command - Done (1 attempt)"* ]]
 
     [ "$(jq -r '.status' ".hotl/state/${RUN_ID_A}.json")" = "completed" ]
     [ "$(jq -r '.status' ".hotl/state/${RUN_ID_B}.json")" = "running" ]

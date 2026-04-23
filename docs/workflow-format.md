@@ -11,7 +11,7 @@ The workflow file (`hotl-workflow-<slug>.md`) defines work to be executed by the
 | `risk_level` | low\|medium\|high | yes | Determines auto-approve behavior |
 | `auto_approve` | boolean | no (default: false) | Skip `gate: human` for non-high-risk steps |
 | `branch` | string | no | Override branch name (default: derived as `hotl/<slug>` from workflow filename) |
-| `worktree` | boolean | no (default: true) | Use an isolated git worktree for execution. Set `worktree: false` to stay in the current checkout branch. |
+| `worktree` | boolean | no (default: true) | Use an isolated git worktree for execution. Set `worktree: false` to stay in the current checkout (on a dedicated branch if needed) instead of a separate worktree. |
 | `progress` | verbose | no | Enable verbose progress view — prints full step list at each step transition |
 | `report_detail` | full | no | Include all verify output in the execution report, not just failures |
 | `dirty_worktree` | allow | no | Proceed even if non-HOTL files are uncommitted (HOTL artifacts are always excluded automatically) |
@@ -148,20 +148,28 @@ Execution skills (loop-execution, executing-plans, subagent-execution) run a bra
    - If branch: field exists in frontmatter → use it
    - Otherwise → derive hotl/<slug> from hotl-workflow-<slug>.md
 
-4. Determine isolation mode
+4. Capture authoring origin
+   - Record the current branch name (if any) and current HEAD commit as the workflow's authoring origin
+   - If the current branch is neither `main` nor `master`, and the workflow does not already pin `branch:` or `worktree:`, pause and ask whether to:
+     a. continue on the current branch in this checkout (`branch: <current-branch>` + `worktree: false`)
+     b. use HOTL's isolated execution branch/worktree (recommended)
+     c. use a custom execution branch
+
+5. Determine isolation mode
    - If `worktree: false` → stay in the current checkout and use a dedicated branch there
    - Otherwise → use an isolated git worktree by default
 
-5. Check if the target branch/worktree already exists
-   - Exists, same intent/HEAD → ask: reuse, delete+recreate, or abort
-   - Exists, different HEAD → ask: delete+recreate, or abort
+6. Check if the target branch/worktree already exists
+   - Current helper behavior: branch/worktree collisions stop with a clear error; interactive reuse/recreate is not implemented yet
+   - If a collision occurs, pause and ask the user whether to resolve it manually, delete and recreate manually, or abort
    - Does not exist → create (no prompt)
 
-6. Resolve the execution root with `scripts/hotl-prepare-execution-root.sh <workflow-file> --executor-mode <mode>`
-   - Returns JSON with: `branch`, `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, `worktree_path`
+7. Resolve the execution root with `scripts/hotl-prepare-execution-root.sh <workflow-file> --executor-mode <mode>`
+   - Returns JSON with: `branch`, `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, `source_branch`, `source_head`, `worktree_path`
    - By default → create a linked git worktree with the branch, copy the current workflow into it, and execute from that worktree
    - If `worktree: false` → create/switch to the dedicated branch in the current checkout and execute from the repo root
-7. Change into `execution_root`
+   - If `branch:` matches the currently checked-out branch while worktree isolation is still enabled, STOP and tell the user to use `worktree: false` for same-branch continuity
+8. Change into `execution_root`
    - Every later git command, runtime call, helper call, and review command for that run must execute from this directory
 ```
 

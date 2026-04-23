@@ -1,16 +1,16 @@
 ## HOTL Planning
 
-**When to use:** After design approval. Create an implementation plan before coding.
+**When to use:** After design approval. Create an executable workflow before coding.
 
 **Full skill:** Read `__HOTL_HOME__/skills/writing-plans/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 
 ### MANDATORY — DO NOT SKIP
 
-You MUST create a `hotl-workflow-<slug>.md` file before writing any implementation code. Do NOT start coding without a plan file.
+You MUST create a dated workflow file in `docs/plans/` before writing any implementation code. Do NOT start coding without a workflow file.
 
 ### Output
 
-Save to project root as `hotl-workflow-<slug>.md` where `<slug>` is a short kebab-case name from the intent (e.g., `hotl-workflow-add-auth.md`).
+Save to `docs/plans/YYYY-MM-DD-<slug>-workflow.md` where `<slug>` is a short kebab-case semantic identity from the intent (for example, `docs/plans/2026-04-22-add-auth-workflow.md`).
 
 ### Format (follow exactly)
 
@@ -59,7 +59,7 @@ Examples:
 
 ### Self-Check Loop
 
-After saving the workflow file, run a self-check before offering execution options. Review the plan for:
+After saving the workflow file, run a self-check before offering execution options. Review the workflow for:
 - **Step sizing** — each step should be 2-5 minutes of atomic work
 - **Verify coverage** — every looped step has a verify command
 - **Gate placement** — risky steps have `gate: human`
@@ -72,7 +72,7 @@ If issues are found, fix them and re-check until clean. This is an internal qual
 
 After the self-check passes, present these execution options:
 
-"Plan saved. How would you like to execute?"
+"Workflow saved. How would you like to execute?"
 1. **Loop execution** — autonomous execution with auto-approve for low-risk steps
 2. **Checkpoint execution** — linear execution with human review every 3 steps
 3. **Subagent execution** — delegated execution with parallel subagents
@@ -84,5 +84,5 @@ Do NOT auto-execute. Wait for the user to choose.
 <HARD-GATE>
 Do NOT mark task complete after saving the workflow file.
 You MUST present execution options and wait for the user to choose.
-The planning task is NOT complete until the user selects an execution mode.
+The writing-plans task is NOT complete until the user selects an execution mode.
 </HARD-GATE>

@@ -175,6 +175,10 @@ assert_codex_prompt_resolves() {
         echo "using-hotl index missing pr-reviewing entry"
         return 1
     }
+    grep -q 'hotl:finishing-a-development-branch' "$REPO_ROOT/skills/using-hotl/SKILL.md" || {
+        echo "using-hotl index missing finishing-a-development-branch entry"
+        return 1
+    }
 }
 
 # ── JSON validity ─────────────────────────────────────────────────────────────
@@ -487,6 +491,24 @@ print(match.group(1) if match else '')
     grep -q 'worktree:' "$REPO_ROOT/skills/writing-plans/SKILL.md"
 }
 
+@test "writing-plans documents default branch derivation and warns against brittle branch-name verifies" {
+    grep -q 'Default branch derivation: `hotl/<slug>`' "$REPO_ROOT/skills/writing-plans/SKILL.md"
+    grep -q "Avoid brittle verify steps such as \`git branch --show-current" "$REPO_ROOT/skills/writing-plans/SKILL.md"
+    grep -q 'copies the workflow into that worktree at the same relative path' "$REPO_ROOT/skills/writing-plans/SKILL.md"
+    grep -q 'set both `branch: <current-branch>` and `worktree: false`' "$REPO_ROOT/skills/writing-plans/SKILL.md"
+}
+
+@test "workflow-format describes worktree false as current checkout, not current branch" {
+    grep -q 'stay in the current checkout (on a dedicated branch if needed)' "$REPO_ROOT/docs/workflow-format.md"
+}
+
+@test "execution docs describe continuity chooser and source metadata" {
+    grep -q 'source_branch' "$REPO_ROOT/skills/loop-execution/SKILL.md"
+    grep -q 'source_head' "$REPO_ROOT/skills/loop-execution/SKILL.md"
+    grep -q 'Continue on the current branch in this checkout' "$REPO_ROOT/skills/loop-execution/SKILL.md"
+    grep -q 'interactive reuse/recreate is not implemented yet' "$REPO_ROOT/docs/workflow-format.md"
+}
+
 @test "execution root helper script exists" {
     [ -x "$REPO_ROOT/scripts/hotl-prepare-execution-root.sh" ]
 }
@@ -537,7 +559,8 @@ print(match.group(1) if match else '')
 
 @test "Codex prompt examples resolve to installed HOTL skills locally" {
     assert_codex_prompt_resolves 'Use $hotl:brainstorming to design this feature before writing code.'
-    assert_codex_prompt_resolves 'Use $hotl:writing-plans to create a hotl-workflow file for adding OAuth login.'
+    assert_codex_prompt_resolves 'Use $hotl:writing-plans to create docs/plans/2026-04-22-add-oauth-login-workflow.md.'
+    assert_codex_prompt_resolves 'Use $hotl:finishing-a-development-branch for run add-oauth-login-20260422T010203Z.'
     assert_codex_prompt_resolves 'Use $hotl:pr-reviewing to review https://github.com/org/repo/pull/123.'
     assert_codex_prompt_resolves 'Use HOTL for this task and choose the correct skill automatically.'
 }
@@ -555,11 +578,27 @@ print(match.group(1) if match else '')
 
 @test "docs/README.codex.md prompt examples resolve to installed HOTL skills locally" {
     assert_codex_prompt_resolves 'Use @hotl to compare OAuth and API-key auth before writing code.'
-    assert_codex_prompt_resolves 'Use $hotl:writing-plans to create hotl-workflow-add-rate-limiting.md.'
-    assert_codex_prompt_resolves 'Review hotl-workflow-add-rate-limiting.md with HOTL and tell me if it is ready to execute.'
-    assert_codex_prompt_resolves 'Use $hotl:subagent-execution to execute hotl-workflow-add-rate-limiting.md in this session.'
+    assert_codex_prompt_resolves 'Use $hotl:writing-plans to create docs/plans/2026-04-22-add-rate-limiting-workflow.md.'
+    assert_codex_prompt_resolves 'Review docs/plans/2026-04-22-add-rate-limiting-workflow.md with HOTL and tell me if it is ready to execute.'
+    assert_codex_prompt_resolves 'Use $hotl:subagent-execution to execute docs/plans/2026-04-22-add-rate-limiting-workflow.md in this session.'
+    assert_codex_prompt_resolves 'After execution finishes, use $hotl:finishing-a-development-branch for the run id.'
     assert_codex_prompt_resolves 'Before you say this task is done, use $hotl:verification-before-completion.'
     assert_codex_prompt_resolves 'Use HOTL for this task and choose the most appropriate skill automatically.'
+}
+
+@test "execution lifecycle docs mention finishing-a-development-branch" {
+    grep -q 'finishing-a-development-branch' "$REPO_ROOT/README.md"
+    grep -q 'finishing-a-development-branch' "$REPO_ROOT/.codex/INSTALL.md"
+    grep -q 'finishing-a-development-branch' "$REPO_ROOT/docs/README.codex.md"
+    grep -q 'finishing-a-development-branch' "$REPO_ROOT/docs/skills.md"
+    grep -q '## Finish Outcome' "$REPO_ROOT/docs/contracts/execution-report-output.md"
+}
+
+@test "Codex docs describe canonical design and workflow artifact locations" {
+    grep -q 'docs/designs/' "$REPO_ROOT/README.md"
+    grep -q 'docs/plans/YYYY-MM-DD-<slug>-workflow.md' "$REPO_ROOT/README.md"
+    grep -q 'docs/plans/YYYY-MM-DD-<slug>-workflow.md' "$REPO_ROOT/.codex/INSTALL.md"
+    grep -q 'docs/plans/2026-04-22-add-rate-limiting-workflow.md' "$REPO_ROOT/docs/README.codex.md"
 }
 
 @test "docs/README.cline.md documents the current global rule set" {

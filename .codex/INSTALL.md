@@ -1,6 +1,6 @@
 # Installing the HOTL Plugin for Codex
 
-Install HOTL in Codex via native skill discovery. HOTL is a Human-on-the-Loop AI coding workflow that adds structured planning, execution, review, and verification skills to Codex.
+Install HOTL in Codex via native skill discovery. HOTL is a Human-on-the-Loop AI coding workflow that adds structured design, workflow execution, review, and verification skills to Codex.
 
 If you want the recommended Codex plugin install with UI screenshots, use
 [`docs/README.codex.md`](../docs/README.codex.md).
@@ -66,26 +66,28 @@ ones coming from `~/.agents/skills/hotl`.
 ## Available Skills
 
 - `brainstorming` — Design a feature with HOTL contracts before writing code
-- `writing-plans` — Create a `hotl-workflow-<slug>.md` plan
-- `document-review` — Review design docs and workflow plans before execution
+- `writing-plans` — Create `docs/plans/YYYY-MM-DD-<slug>-workflow.md`
+- `document-review` — Review design docs and workflow files before execution
 - `loop-execution` — Execute workflow files with auto-approve
 - `executing-plans` — Linear execution with checkpoints
 - `subagent-execution` — Execute reviewed workflows in-session with delegated subagent steps
+- `finishing-a-development-branch` — Merge back, publish/PR, keep, or discard an execution branch/worktree
 - `pr-reviewing` — Review a PR across description, code, scan, and tests
 - `code-review` — Review branch changes against the workflow and HOTL contracts
 - `verification-before-completion` — Require test and command output before claiming success
 - `tdd` — RED-GREEN-REFACTOR cycle
 - `systematic-debugging` — 4-phase root cause process
 
-## Running A Saved Plan In Codex
+## Running A Saved Workflow In Codex
 
 Codex does not use Claude-style `/hotl:*` slash commands. After HOTL writes a
 workflow file, continue with the matching skill name instead:
 
-- Requests like `Use $hotl:loop-execution to run hotl-workflow-<slug>.md` for autonomous execution
-- Requests like `Use $hotl:executing-plans to run hotl-workflow-<slug>.md` for manual checkpoints
-- Requests like `Use $hotl:subagent-execution to run hotl-workflow-<slug>.md` for delegated execution
-- Requests like `Use $hotl:resuming to continue hotl-workflow-<slug>.md` for interrupted runs
+- Requests like `Use $hotl:loop-execution to run docs/plans/YYYY-MM-DD-<slug>-workflow.md` for autonomous execution
+- Requests like `Use $hotl:executing-plans to run docs/plans/YYYY-MM-DD-<slug>-workflow.md` for manual checkpoints
+- Requests like `Use $hotl:subagent-execution to run docs/plans/YYYY-MM-DD-<slug>-workflow.md` for delegated execution
+- Requests like `Use $hotl:resuming to continue docs/plans/YYYY-MM-DD-<slug>-workflow.md` for interrupted runs
+- Requests like `Use $hotl:finishing-a-development-branch for run <run-id>` after execution to merge back, publish, keep, or discard the execution checkout
 
 ## Updating
 

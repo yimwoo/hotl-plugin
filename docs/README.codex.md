@@ -1,6 +1,6 @@
 # HOTL Plugin for Codex
 
-HOTL for Codex can be installed either as a native Codex plugin or as native skills. Plugin install is the recommended path for reusable, versioned team setup; native skills remain the lightweight option for local development and older Codex builds. Both modes give you the same HOTL skills to brainstorm, plan, execute, review, and verify changes with more structure.
+HOTL for Codex can be installed either as a native Codex plugin or as native skills. Plugin install is the recommended path for reusable, versioned team setup; native skills remain the lightweight option for local development and older Codex builds. Both modes give you the same HOTL skills to brainstorm design docs, write executable workflows, execute, review, and verify changes with more structure.
 
 ## Installation
 
@@ -211,21 +211,23 @@ Use `@hotl` to compare OAuth and API-key auth before writing code.
 
 Please use HOTL to compare OAuth and API-key auth before writing code.
 
-Use `$hotl:writing-plans` to create `hotl-workflow-add-rate-limiting.md`.
+Use `$hotl:writing-plans` to create `docs/plans/2026-04-22-add-rate-limiting-workflow.md`.
 
-After a plan is saved, use `$hotl:loop-execution`, `$hotl:executing-plans`,
+After a workflow is saved, use `$hotl:loop-execution`, `$hotl:executing-plans`,
 `$hotl:subagent-execution`, or `$hotl:resuming` with the workflow filename
 instead of Claude-style `/hotl:*` commands.
 
-Review `hotl-workflow-add-rate-limiting.md` with HOTL and tell me if it is ready to execute.
+Review `docs/plans/2026-04-22-add-rate-limiting-workflow.md` with HOTL and tell me if it is ready to execute.
 
-Use `$hotl:subagent-execution` to execute `hotl-workflow-add-rate-limiting.md` in this session.
+Use `$hotl:subagent-execution` to execute `docs/plans/2026-04-22-add-rate-limiting-workflow.md` in this session.
 
-Use `$hotl:loop-execution` to execute `hotl-workflow-add-rate-limiting.md` in this session.
+Use `$hotl:loop-execution` to execute `docs/plans/2026-04-22-add-rate-limiting-workflow.md` in this session.
 
-Use `$hotl:executing-plans` to execute `hotl-workflow-add-rate-limiting.md` with manual checkpoints.
+Use `$hotl:executing-plans` to execute `docs/plans/2026-04-22-add-rate-limiting-workflow.md` with manual checkpoints.
 
-Use `$hotl:resuming` to continue `hotl-workflow-add-rate-limiting.md`.
+Use `$hotl:resuming` to continue `docs/plans/2026-04-22-add-rate-limiting-workflow.md`.
+
+After execution finishes, use `$hotl:finishing-a-development-branch` for the run id to merge back, publish/create a PR, keep the execution checkout, or discard it.
 
 Use `$hotl:pr-reviewing` to review https://github.com/org/repo/pull/123.
 
@@ -244,7 +246,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 ## Common Skills
 
 - `brainstorming` — design with HOTL contracts before implementation
-- `writing-plans` — create `hotl-workflow-<slug>.md` files
+- `writing-plans` — create `docs/plans/YYYY-MM-DD-<slug>-workflow.md` files
 - `document-review` — run structural lint and qualitative review before execution
 - `loop-execution` — autonomous execution with retries
   - **Output contract:** `docs/contracts/execution-report-output.md` defines the execution report schema, status vocabulary, and platform rendering tables
@@ -257,6 +259,10 @@ Use HOTL for this task and choose the most appropriate skill automatically.
   - **Deterministic renderer:** `scripts/finalize-codex-summary.sh` delegates to `scripts/render-execution-summary.sh`, which remains the source of truth for Codex summary formatting.
 - `executing-plans` — manual checkpointed execution (references same output contract)
 - `subagent-execution` — same-session delegated execution with controller-owned verification (references same output contract)
+- `finishing-a-development-branch` — closes the execution lifecycle intentionally
+  - **Execution provenance:** uses `source_branch`, `branch`, `execution_root`, and `worktree_path` from HOTL runtime state so authoring and execution checkouts stay distinguishable
+  - **Helper path:** use `scripts/hotl-finish-execution.sh` to merge back, publish, keep, or discard while recording the disposition in HOTL state
+  - **Safety rule:** merge/discard must not delete the durable report; isolated worktree runs preserve `.hotl/state/` and `.hotl/reports/` back into the repo checkout before cleanup
 - `pr-reviewing` — review a PR across description, code, scan, and tests
   - **Output contract:** `docs/contracts/pr-review-output.md` defines the canonical 9-section review schema
   - **Codex rendering (advisory):** emit platform-native inline findings first (e.g., `::code-comment` directives for BLOCK and WARN findings with file:line), then render the full 9-section structured summary. Use plain markdown for the summary.

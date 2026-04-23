@@ -593,6 +593,41 @@ EOF
     [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "0" ]
 }
 
+@test "finish records a kept outcome in state, summary, and report" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    "$HOTL_RT" step 1 start
+    "$HOTL_RT" step 1 verify
+    "$HOTL_RT" step 2 start
+    "$HOTL_RT" step 2 verify
+    "$HOTL_RT" step 3 start
+    "$HOTL_RT" step 3 verify
+    "$HOTL_RT" finalize --json > /dev/null
+
+    SUMMARY=$("$HOTL_RT" finish kept --run-id "$RUN_ID" --branch-action kept --worktree-action kept --notes "Keep for follow-up")
+    STATE=".hotl/state/${RUN_ID}.json"
+    REPORT=".hotl/reports/${RUN_ID}.md"
+
+    [ "$(jq -r '.finish.disposition' "$STATE")" = "kept" ]
+    [ "$(jq -r '.finish.branch_action' "$STATE")" = "kept" ]
+    [ "$(jq -r '.finish.worktree_action' "$STATE")" = "kept" ]
+    [ "$(jq -r '.finish.notes' "$STATE")" = "Keep for follow-up" ]
+    [ "$(echo "$SUMMARY" | jq -r '.finish.disposition')" = "kept" ]
+    grep -q '## Finish Outcome' "$REPORT"
+    grep -Fq '**Disposition:** kept' "$REPORT"
+    grep -Fq '**Branch Action:** kept' "$REPORT"
+}
+
+@test "finish rejects published disposition for blocked runs" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    "$HOTL_RT" step 1 start
+    "$HOTL_RT" step 1 block --reason "stop"
+    "$HOTL_RT" finalize --json > /dev/null
+
+    run "$HOTL_RT" finish published --run-id "$RUN_ID" --remote origin
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"requires a completed run"* ]]
+}
+
 # ── summary ─────────────────────────────────────────────────────────────────
 
 @test "summary returns current state for in-progress run" {

@@ -11,8 +11,8 @@ Want to create or modify HOTL abstractions? See [Authoring Skills vs Agents](aut
 | Skill | Description | Phase |
 | --- | --- | --- |
 | [`brainstorming`](../skills/brainstorming/SKILL.md) | Explore intent, requirements, and design. Produces HOTL contracts (intent, verification, governance) before implementation. Prefers multiple-choice questions and includes a design-doc self-check. | Brainstorm |
-| [`writing-plans`](../skills/writing-plans/SKILL.md) | Create a `hotl-workflow-<slug>.md` implementation plan with typed verification (shell, browser, human-review, artifact), loop/gate definitions, and a built-in self-check loop. | Plan |
-| [`document-review`](../skills/document-review/SKILL.md) | Optional utility for reviewing existing docs, external specs, or hand-authored plans. Runs deterministic lint then AI-driven qualitative review. | Review |
+| [`writing-plans`](../skills/writing-plans/SKILL.md) | Create a dated executable workflow in `docs/plans/YYYY-MM-DD-<slug>-workflow.md` with typed verification (shell, browser, human-review, artifact), loop/gate definitions, and a built-in self-check loop. | Plan |
+| [`document-review`](../skills/document-review/SKILL.md) | Optional utility for reviewing existing docs, external specs, design docs, workflows, or hand-authored legacy plans. Runs deterministic lint then AI-driven qualitative review. | Review |
 
 ### Execution
 
@@ -23,6 +23,7 @@ Want to create or modify HOTL abstractions? See [Authoring Skills vs Agents](aut
 | [`subagent-execution`](../skills/subagent-execution/SKILL.md) | Delegated step runner over the loop execution engine — delegates eligible steps to fresh subagents while the controller keeps governance and verification. | Execute |
 | [`resuming`](../skills/resuming/SKILL.md) | Resume an interrupted workflow run — verify-first strategy with sidecar state persistence. | Execute |
 | [`dispatch-agents`](../skills/dispatch-agents/SKILL.md) | Run 2+ independent tasks in parallel with no shared state — dispatches parallel subagents for each task. | Execute |
+| [`finishing-a-development-branch`](../skills/finishing-a-development-branch/SKILL.md) | Close the execution lifecycle intentionally — merge back, publish/create a PR, keep the execution checkout, or discard it while recording the outcome in HOTL state. | Finish |
 
 ### Quality & Review
 

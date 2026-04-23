@@ -1,6 +1,6 @@
 # HOTL Plugin for Cline
 
-HOTL is a Human-on-the-Loop AI coding workflow for Cline. It adds structured brainstorming, planning, review, and verification so Cline does not jump straight into implementation without guardrails.
+HOTL is a Human-on-the-Loop AI coding workflow for Cline. It adds structured brainstorming, design, workflow planning, review, and verification so Cline does not jump straight into implementation without guardrails.
 
 Works with **any API provider** — Oracle Code Assist (OCA), OpenAI (GPT-4, GPT-5), Anthropic (Claude), Google (Gemini), local models, and more.
 
@@ -40,8 +40,8 @@ Tell Cline what you need in natural language. HOTL rules teach Cline to follow s
 
 | What you say | What Cline does |
 | --- | --- |
-| "brainstorm this feature" | Asks clarifying questions one at a time, proposes 2-3 approaches, defines HOTL contracts (intent, verification, governance), saves a design doc |
-| "plan the implementation" | Creates a `hotl-workflow-<slug>.md` with atomic steps, verify commands, and approval gates |
+| "brainstorm this feature" | Asks clarifying questions one at a time, proposes 2-3 approaches, defines HOTL contracts (intent, verification, governance), saves a design doc in `docs/designs/` |
+| "plan the implementation" | Uses `writing-plans` semantics to create a dated workflow in `docs/plans/` with atomic steps, verify commands, and approval gates |
 | "execute the plan" | Runs the workflow step by step with human checkpoints every 3 steps |
 | "subagent execute the plan" | Delegates implementation-friendly workflow steps to fresh subagents while keeping verification and gates in the controller |
 | "use TDD" | Follows RED-GREEN-REFACTOR — writes a failing test before any implementation code |
@@ -76,11 +76,12 @@ This hybrid approach works with any API provider and any model.
 ## The HOTL Workflow
 
 ```text
-brainstorm  →  design doc with intent/verification/governance contracts
-plan        →  hotl-workflow-<slug>.md with atomic steps and gates
-review      →  lint and qualitative review before execution
-execute     →  step-by-step execution with verification at each step
-verify      →  review code and confirm evidence before claiming done
+brainstorm     →  design doc in docs/designs/ with intent/verification/governance contracts
+writing-plans  →  dated workflow in docs/plans/ with atomic steps and gates
+review         →  lint and qualitative review before execution
+execute        →  step-by-step execution with verification at each step
+verify         →  review code and confirm evidence before claiming done
+finish         →  merge back, publish, keep, or discard the execution checkout intentionally
 ```
 
 ### Three Contracts
@@ -101,7 +102,7 @@ Every workflow defines:
 
 ## Workflow Files
 
-Plans are saved as `hotl-workflow-<slug>.md` in the project root (e.g., `hotl-workflow-add-auth.md`):
+Canonical workflows are saved as `docs/plans/YYYY-MM-DD-<slug>-workflow.md` (for example, `docs/plans/2026-04-22-add-auth-workflow.md`). Legacy root files such as `hotl-workflow-add-auth.md` remain readable during migration, but new writes should use the canonical `docs/plans/` location:
 
 ```yaml
 ---
@@ -178,7 +179,7 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.cline\hotl\install-c
 
 This installs:
 - 1 global rule: `hotl-operating-model.md` (always-on task router)
-- 10 native skills to `~/.cline/skills/hotl/` (macOS/Linux) or `%USERPROFILE%\.cline\skills\hotl\` (Windows)
+- 11 native skills to `~/.cline/skills/hotl/` (macOS/Linux) or `%USERPROFILE%\.cline\skills\hotl\` (Windows)
 
 The install mode is persisted in `~/.cline/hotl/.cline-install-mode`. Updates automatically refresh the correct mode.
 

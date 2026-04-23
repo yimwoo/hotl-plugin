@@ -6,7 +6,7 @@
 **Co-authors:** {{agent roles that contributed — e.g., @architect, @pm}}
 **Related:** {{prior design docs or decision records that constrain this initiative}}
 
-This is a strategic / multi-phase initiative design. It lives in `docs/designs/` because it defines the **parent direction** — what are we building overall, why, across what phases, and what is explicitly out of scope. Child tactical plans live in `docs/plans/YYYY-MM-DD-<topic>-plan.md` and reference this document.
+This is a strategic / multi-phase initiative design. It lives in `docs/designs/` because it defines the **parent direction** — what are we building overall, why, across what phases, and what is explicitly out of scope. Child tactical phase designs also live in `docs/designs/`, and accepted phase designs later feed executable workflows in `docs/plans/`.
 
 Design docs are durable. Rewrite rather than patch when direction changes meaningfully; supersede rather than edit when an initiative ends.
 
@@ -89,15 +89,15 @@ Optional section — include when the initiative rolls out in graduated stages. 
 
 ## 7. Phase breakdown
 
-Each phase is a child tactical plan in `docs/plans/`. One line of intent per phase.
+Each phase is a child tactical design in `docs/designs/`. One line of intent per phase.
 
-| Phase | Intent (one sentence) | Dated plan filename |
+| Phase | Intent (one sentence) | Dated phase design filename |
 |---|---|---|
-| Phase 1 | {{what ships in this phase}} | `docs/plans/YYYY-MM-DD-phase-1-{{slug}}-plan.md` |
-| Phase 2 | {{…}} | `docs/plans/YYYY-MM-DD-phase-2-{{slug}}-plan.md` |
-| Phase 3 | {{…}} | `docs/plans/YYYY-MM-DD-phase-3-{{slug}}-plan.md` |
+| Phase 1 | {{what ships in this phase}} | `docs/designs/YYYY-MM-DD-phase-1-{{slug}}-design.md` |
+| Phase 2 | {{…}} | `docs/designs/YYYY-MM-DD-phase-2-{{slug}}-design.md` |
+| Phase 3 | {{…}} | `docs/designs/YYYY-MM-DD-phase-3-{{slug}}-design.md` |
 
-Phases ship sequentially by default. Parallel execution only when the design explicitly allows it and the phases share no mutable state.
+Phases ship sequentially by default. Parallel execution only when the design explicitly allows it and the phases share no mutable state. After a phase design is accepted, `writing-plans` should produce an executable workflow at `docs/plans/YYYY-MM-DD-<slug>-workflow.md`.
 
 ---
 

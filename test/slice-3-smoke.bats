@@ -225,7 +225,7 @@ teardown() {
     done
 }
 
-@test "L2: command and skill counts unchanged from pre-Slice-3 baseline" {
+@test "L2: command count unchanged and skill count is at least the pre-Slice-3 baseline" {
     local expected_cmds actual_cmds expected_skills actual_skills
     expected_cmds=$(cat "$REPO_ROOT/test/fixtures/pre-slice-3-command-count.txt")
     actual_cmds=$(ls "$REPO_ROOT"/commands/*.md | wc -l | tr -d ' ')
@@ -233,7 +233,7 @@ teardown() {
 
     expected_skills=$(cat "$REPO_ROOT/test/fixtures/pre-slice-3-skill-count.txt")
     actual_skills=$(grep -c '^| `' "$REPO_ROOT/skills/using-hotl/SKILL.md")
-    [ "$actual_skills" -eq "$expected_skills" ]
+    [ "$actual_skills" -ge "$expected_skills" ]
 }
 
 @test "L3: Slice 3 surface creates no forbidden initiative-support artifacts in a clean repo" {

@@ -8,13 +8,13 @@
 
 - Parent strategic design: `docs/designs/{{INITIATIVE_NAME}}.md`
 - Operating model for this initiative: `docs/prompts/{{INITIATIVE_NAME}}-operating-model.md`
-- Plan documents produced by these sessions: `docs/plans/YYYY-MM-DD-phase-N-<slug>-plan.md`
+- Executable workflows produced by these sessions: `docs/plans/YYYY-MM-DD-<slug>-workflow.md`
 
 ---
 
 ## §0. Session discipline — new session vs. same context
 
-Session discipline is the single biggest lever on plan quality. A fresh session reading a well-written plan outperforms a long chat that drifted.
+Session discipline is the single biggest lever on artifact quality. A fresh session reading a well-written design doc or workflow outperforms a long chat that drifted.
 
 **Always start a new session when:**
 
@@ -30,7 +30,7 @@ Session discipline is the single biggest lever on plan quality. A fresh session 
 - Iterating on the same artifact within the same role (e.g., refining code after a failing test)
 - The task is one logical unit of work and restart would lose nothing but gain nothing
 
-**Rule of thumb.** If the next step has a different goal or a different role, it is a new session. Your design doc, ADRs, requirements docs, and plan docs are the continuity layer — they carry state across sessions far better than a single long chat.
+**Rule of thumb.** If the next step has a different goal or a different role, it is a new session. Your design docs, ADRs, requirements docs, and workflow docs are the continuity layer — they carry state across sessions far better than a single long chat.
 
 Expect roughly **{{N}} sessions total** across the initiative. That is correct and healthy.
 
@@ -42,15 +42,14 @@ Every phase follows the same cycle. Each step is one session.
 
 ```
   1. @pm                → docs/requirements/phase-N-{{slug}}.md       (if phase has user-facing scope)
-  2. brainstorming      → docs/designs/{{INITIATIVE_NAME}}.md         (strategic, only once per initiative)
-                        → docs/plans/YYYY-MM-DD-phase-N-<slug>-plan.md (tactical, per phase)
+  2. brainstorming      → docs/designs/YYYY-MM-DD-phase-N-<slug>-design.md (tactical, per phase)
   3. @architect         → docs/decisions/NNN-{{slug}}.md              (ADR — only when a decision is expensive to reverse)
-  4. writing-plans      → hotl-workflow-<slug>.md                     (executable decomposition)
+  4. writing-plans      → docs/plans/YYYY-MM-DD-<slug>-workflow.md    (executable decomposition)
   5. @dev               → source code and tests                       (one session per workflow step)
   6. @reviewer          → review memo in docs/reviews/                (gate before merge)
 ```
 
-Steps 1 and 3 are optional per phase — see per-phase guidance below for which to run.
+The parent strategic design at `docs/designs/{{INITIATIVE_NAME}}.md` is created once before phase execution begins. Steps 1 and 3 are optional per phase — see per-phase guidance below for which to run.
 
 ---
 
@@ -97,7 +96,7 @@ Every new phase of `{{INITIATIVE_NAME}}` can be started via the reusable HOTL wo
 
 **Usage:**
 
-1. Copy the resolved template to your project root as `hotl-workflow-{{INITIATIVE_NAME}}-phase-N-kickoff.md` (substitute a real phase number for `N`).
+1. Copy the resolved template to `docs/plans/YYYY-MM-DD-{{INITIATIVE_NAME}}-phase-N-kickoff-workflow.md` (substitute a real date and phase number).
 2. Replace every `{{SLUG}}` token with `{{INITIATIVE_NAME}}` and every `{{PHASE_ID}}` token with the phase number.
 3. Run via `/hotl:loop <copied-filename>` or `/hotl:execute-plan <copied-filename>`. Approve each of the three human gates after reviewing the produced artifact.
 4. After the kickoff workflow finishes, start a fresh session and run `/hotl:brainstorm` with scope: phase — the requirements doc at `docs/requirements/{{INITIATIVE_NAME}}-phase-N.md` is now the input.
@@ -134,11 +133,11 @@ No architecture or module design. That is the @architect's job.
 Do not write code.
 ```
 
-### 3.2 Plan session
+### 3.2 Design and workflow session
 
 **Role:** `@architect`
 **Skill:** `brainstorming`, then `writing-plans`
-**Output:** `docs/plans/YYYY-MM-DD-phase-1-{{slug}}-plan.md` (brainstorming) + `hotl-workflow-<slug>.md` (writing-plans)
+**Output:** `docs/designs/YYYY-MM-DD-phase-1-{{slug}}-design.md` (brainstorming) + `docs/plans/YYYY-MM-DD-{{slug}}-workflow.md` (writing-plans)
 
 ```
 You are the @architect for phase 1 of {{INITIATIVE_NAME}}.
@@ -148,15 +147,15 @@ Read:
   - docs/requirements/phase-1-{{slug}}.md (from the prior session)
   - Any ADRs in docs/decisions/ that constrain this phase
 
-Use the HOTL brainstorming skill to produce a tactical plan at
-docs/plans/YYYY-MM-DD-phase-1-{{slug}}-plan.md with:
+Use the HOTL brainstorming skill to produce a tactical phase design at
+docs/designs/YYYY-MM-DD-phase-1-{{slug}}-design.md with:
   - Intent, Verification, Governance contracts
   - Scope (in / out)
   - Module-level changes
   - Task breakdown that feeds writing-plans
 
-After the plan is accepted, use the writing-plans skill to produce the
-executable hotl-workflow-<slug>.md.
+After the design is accepted, use the writing-plans skill to produce the
+executable workflow at docs/plans/YYYY-MM-DD-{{slug}}-workflow.md.
 ```
 
 ### 3.3 Implementation sessions
@@ -182,7 +181,7 @@ Dispatch after implementation is complete. Gate on merging is PASS verdict + pas
 Copy §3's structure, replacing `phase-1` with `phase-2` and updating the inputs:
 
 - §4.1 Requirements: reads Phase 1's committed artifacts as baseline
-- §4.2 Plan: input is the Phase 2 row of the design's phase breakdown
+- §4.2 Design and workflow: input is the Phase 2 row of the design's phase breakdown
 - §4.3 Implementation: same shape as §3.3
 - §4.4 Code review: same shape as §3.4
 

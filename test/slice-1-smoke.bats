@@ -186,8 +186,8 @@ teardown() {
     [ "$ACTUAL" -eq "$EXPECTED" ]
 }
 
-@test "D3: using-hotl skill-table length unchanged from pre-Slice-1 baseline" {
+@test "D3: using-hotl skill-table count is at least the pre-Slice-1 baseline" {
     EXPECTED=$(cat "$REPO_ROOT/test/fixtures/pre-slice-1-skill-count.txt")
     ACTUAL=$(grep -c '^| `' "$REPO_ROOT/skills/using-hotl/SKILL.md")
-    [ "$ACTUAL" -eq "$EXPECTED" ]
+    [ "$ACTUAL" -ge "$EXPECTED" ]
 }

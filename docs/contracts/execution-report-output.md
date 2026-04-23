@@ -1,12 +1,12 @@
 # Execution Report Output Contract
 
-This contract defines the canonical output schema for HOTL execution reports. It specifies the durable report format, execution status vocabulary, final summary semantics, and platform rendering tables for final artifacts. All executors (loop-execution, executing-plans, subagent-execution) must conform to this contract.
+This contract defines the canonical output schema for HOTL execution reports. It specifies the durable report format, execution status vocabulary, final summary semantics, finish-outcome recording, and platform rendering tables for final artifacts. All executors (loop-execution, executing-plans, subagent-execution) must conform to this contract.
 
 Presentation of live progress is executor behavior, not part of this contract. See executor skill files for live step visibility rules.
 
 ## Required Sections
 
-Every execution report (`.hotl/reports/<run-id>.md`) must contain these 5 sections.
+Every execution report (`.hotl/reports/<run-id>.md`) must contain these 5 required sections during execution. If HOTL later records a post-execution finish decision, it appends an optional sixth section.
 
 ### 1. Report Metadata
 
@@ -62,6 +62,24 @@ For Codex, the compact summary itself must appear as visible chat text in the fi
 
 What verification was performed across the run — test commands, linter results, artifacts inspected. Brief, just enough to show what informed the execution outcomes.
 
+### 6. Finish Outcome (Optional)
+
+If HOTL records a post-execution disposition, append:
+
+```markdown
+## Finish Outcome
+
+**Disposition:** kept | merged | published | discarded
+**Recorded:** <ISO 8601>
+**Target Branch:** <branch>                 (optional)
+**Remote:** <remote>                        (optional)
+**PR URL:** <url>                           (optional)
+**Branch Action:** kept | deleted | merged-into-<branch>
+**Worktree Action:** kept | removed         (optional)
+**Artifacts Preserved At:** /abs/path/.hotl (optional)
+**Notes:** <short explanation>              (optional)
+```
+
 ## Execution Status Vocabulary
 
 These are step and run state indicators — status labels, not a severity system.
@@ -93,6 +111,7 @@ The `hotl-rt` runtime manages all report updates automatically via its subcomman
 6. **`hotl-rt gate N --run-id <run-id>`:** Update table to `⚡ Auto-approved` or `✓ Approved`.
 7. **`hotl-rt finalize --run-id <run-id>`:** Set status to `completed`, update `Updated:`, finalize report.
 8. **`hotl-rt step N block --run-id <run-id>`:** Set status to `blocked`, include report path in response.
+9. **`hotl-rt finish <disposition> --run-id <run-id>`:** Record the post-execution disposition, append the Finish Outcome section, and update `Updated:`.
 
 ## Verify Output Policy
 

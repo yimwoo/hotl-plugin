@@ -1,13 +1,13 @@
 ---
 name: loop-execution
-description: Use when executing a hotl-workflow-*.md — reads steps, loops until success criteria met, auto-approves low-risk gates, pauses at high-risk gates.
+description: Use when executing an existing HOTL workflow file — reads steps, loops until success criteria met, auto-approves low-risk gates, pauses at high-risk gates.
 ---
 
 # HOTL Loop Execution
 
 ## Overview
 
-Execute a `hotl-workflow-<slug>.md` file autonomously. Loop on steps with success criteria. Auto-approve low-risk gates. Always pause for high-risk gates.
+Execute an existing HOTL workflow file autonomously. Canonical workflows live at `docs/plans/YYYY-MM-DD-<slug>-workflow.md`, with legacy root `hotl-workflow-<slug>.md` still accepted during migration. Loop on steps with success criteria. Auto-approve low-risk gates. Always pause for high-risk gates.
 
 **Announce:** "Starting HOTL loop execution. Looking for workflow file..."
 
@@ -15,11 +15,14 @@ Execute a `hotl-workflow-<slug>.md` file autonomously. Loop on steps with succes
 
 Resolve which workflow file to execute:
 
-1. If the user specified a filename (e.g., `Use $hotl:loop-execution to run hotl-workflow-add-auth.md` or `/hotl:loop hotl-workflow-add-auth.md`) → use that file
-2. Else, glob for `hotl-workflow*.md` in project root:
+1. If the user specified a filename → use that file
+2. Else, glob for canonical workflows in `docs/plans/*-workflow.md`:
+   - **One match** → use it automatically
+   - **Multiple matches** → if one is clearly the newest revision for the same semantic slug, prefer it; otherwise list them and ask the user to pick
+3. If no canonical matches, glob for legacy `hotl-workflow*.md` in project root:
    - **One match** → use it automatically
    - **Multiple matches** → list them and ask the user to pick
-   - **No matches** → see "What to Do If No Workflow Found" below
+4. **No matches** → see "What to Do If No Workflow Found" below
 
 ### Interrupted Run Detection
 
@@ -40,8 +43,10 @@ After resolving the workflow file, run this preflight **before executing any ste
 
 2. Check for uncommitted changes
    - First, exclude HOTL-owned transient artifacts from the dirty check:
-     • hotl-workflow-*.md (workflow plan files)
-     • docs/plans/*-design.md, docs/plans/*-plan.md (design/plan docs from brainstorming)
+     • docs/plans/*-workflow.md (canonical workflow files)
+     • hotl-workflow-*.md (legacy workflow files)
+     • docs/designs/*.md (canonical design docs from brainstorming)
+     • docs/plans/*-design.md, docs/plans/*-plan.md (legacy design docs from brainstorming)
      • .hotl/ (runtime state, reports, cache)
    - If only HOTL artifacts are dirty → treat as clean, continue
    - If non-HOTL dirty files exist:
@@ -54,28 +59,42 @@ After resolving the workflow file, run this preflight **before executing any ste
 
 3. Determine branch name
    - If branch: field exists in workflow frontmatter → use it
-   - Otherwise → derive hotl/<slug> from hotl-workflow-<slug>.md
+   - Otherwise → derive `hotl/<slug>` from the workflow filename
+     • Canonical: strip `YYYY-MM-DD-` prefix and `-workflow.md` suffix from `docs/plans/YYYY-MM-DD-<slug>-workflow.md`
+     • Legacy: strip `hotl-workflow-` prefix and `.md` suffix from `hotl-workflow-<slug>.md`
 
-4. Determine isolation mode
+4. Capture authoring origin
+   - Record the current branch name (if any) and current `HEAD` commit as the workflow's authoring origin
+   - If the current branch is neither `main` nor `master`, and the workflow frontmatter does not already set `branch:` or `worktree:`, PAUSE and ask:
+     a. Continue on the current branch in this checkout
+        → set `branch: <current-branch>` and `worktree: false`
+     b. Use HOTL's isolated execution branch/worktree (recommended)
+        → leave `worktree: true` and let HOTL derive `hotl/<slug>` unless the user wants a custom branch name
+     c. Use a custom execution branch
+        → set `branch: <user-branch>` and keep worktree isolation unless the user explicitly opts out
+   - Explain clearly: the authoring checkout and the execution checkout can differ. HOTL can execute in a separate worktree while leaving the current checkout untouched
+
+5. Determine isolation mode
    - If `worktree: false` in frontmatter → stay in the current checkout and use a dedicated branch there
    - Otherwise → use an isolated git worktree by default
 
-5. Check if the target branch/worktree already exists locally
-   - Existing branch/worktree for the same intent → ask: reuse, delete+recreate, or abort
-   - Existing branch at a different HEAD → ask: delete+recreate, or abort
+6. Check if the target branch/worktree already exists locally
+   - Current helper behavior: existing branch/worktree collisions are a hard stop, not an interactive reuse/recreate flow
+   - If the helper reports an existing branch/worktree conflict, stop and ask the user whether to reuse manually, delete+recreate manually, or abort
    - Does not exist → create (no prompt)
 
-6. Resolve the execution root with `scripts/hotl-prepare-execution-root.sh <workflow-file> --executor-mode <mode>`
-   - The helper returns JSON with: `branch`, `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, `worktree_path`
+7. Resolve the execution root with `scripts/hotl-prepare-execution-root.sh <workflow-file> --executor-mode <mode>`
+   - The helper returns JSON with: `branch`, `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, `source_branch`, `source_head`, `worktree_path`
    - By default it creates a linked git worktree for the branch, copies the current workflow into that worktree, and returns that worktree as `execution_root`
    - If `worktree: false` in frontmatter → create/switch to the dedicated branch in the current checkout and return the repo root as `execution_root`
-7. Change into `execution_root`
+   - If `branch:` matches the currently checked-out branch while worktree isolation is still enabled, the helper must STOP with a clear message telling the user to set `worktree: false` for same-branch continuity
+8. Change into `execution_root`
    - Every later git command, runtime call, Codex helper call, and review command for this run MUST execute from that directory
 ```
 
 **Rules:**
 - No auto-stash. Hidden state mutation weakens governance.
-- Existing branch always prompts, even at the same HEAD.
+- Existing branch/worktree collisions do not currently auto-prompt; treat them as a stop-and-ask condition until interactive reuse/recreate is implemented.
 - Non-git repos skip entirely — HOTL works without git ceremony.
 - Run HOTL structural lint (`scripts/document-lint.sh`) automatically on the workflow file before any git mutation or step execution. If lint fails, STOP and show all errors. If lint passes, continue silently.
 
@@ -89,7 +108,7 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
 3. Run Branch/Worktree Preflight (see above)
 4. Capture preflight metadata and change into `execution_root`
 5. Initialize run via runtime:
-   - Run: `hotl-rt init <workflow-file> --executor-mode loop --repo-root <repo-root> --execution-root <execution-root> --source-workflow-path <source-workflow-path> --worktree-path <worktree-path|null> --branch <branch>`
+   - Run: `hotl-rt init <workflow-file> --executor-mode loop --repo-root <repo-root> --execution-root <execution-root> --source-workflow-path <source-workflow-path> --source-branch <source-branch|null> --source-head <source-head|null> --worktree-path <worktree-path|null> --branch <branch>`
    - This parses the workflow, creates .hotl/state/<run-id>.json with all steps, and initializes .hotl/reports/<run-id>.md
    - Capture the run_id from stdout
    - For every later `hotl-rt step`, `hotl-rt gate`, `hotl-rt finalize`, `scripts/show-codex-current-step.sh`, and `scripts/finalize-codex-summary.sh` call, pass `--run-id <run-id>` or set `HOTL_RUN_ID=<run-id>`
@@ -170,6 +189,8 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
    → For Claude Code/Cline, run: `hotl-rt finalize --json --run-id <run-id>`, write the payload to a temp file, then render it with: `scripts/render-execution-summary.sh --platform <claude|cline> <summary-json-file>`
    → Do not freehand the final summary when the renderer is available
    → The rendered summary must be shown as visible chat output in the final response; do not paraphrase it away
+   → After rendering the final summary, if the run used git isolation or the user asks what to do with the execution checkout, invoke `hotl:finishing-a-development-branch` with the same `run_id`
+   → Never silently merge, publish, keep, or discard the execution branch/worktree
 ```
 
 ## Execution State Persistence
@@ -357,7 +378,7 @@ Include short result details only when useful (test counts on completed steps, a
 
 ## What to Do If No Workflow Found
 
-If no `hotl-workflow*.md` found in project root:
+If no canonical `docs/plans/*-workflow.md` or legacy `hotl-workflow*.md` is found:
 "No workflow file found. Would you like to:
-1. Create one from a template (`$hotl:writing-plans` in Codex, `/hotl:write-plan` in Claude Code)
+1. Create one from a design doc (`$hotl:writing-plans` in Codex, `/hotl:write-plan` in Claude Code)
 2. Use a workflow template from the plugin (`workflows/feature.md`, `workflows/bugfix.md`, `workflows/refactor.md`)"

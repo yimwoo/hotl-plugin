@@ -1,9 +1,11 @@
-# {{INITIATIVE_NAME}} — Phase {{PHASE_ID}}
+# {{INITIATIVE_NAME}} — Phase {{PHASE_ID}} Design
 
 **Status:** Proposed — for review
 **Date:** {{DATE}}
-**Depends on:** {{list prior phases, design docs, or plans this phase builds on}}
+**Depends on:** {{list prior phases, design docs, or workflows this phase builds on}}
 **Strategy reference:** {{path to the parent strategic design in docs/designs/}}
+
+This is a tactical phase design. Despite this template's compatibility-oriented filename, the accepted artifact is a design doc: save it in `docs/designs/YYYY-MM-DD-phase-{{PHASE_ID}}-<slug>-design.md`, then use `writing-plans` to turn it into an executable workflow in `docs/plans/YYYY-MM-DD-<slug>-workflow.md`.
 
 ---
 
@@ -48,10 +50,11 @@ Examples of bad criteria — reject these: "code quality is good", "users are ha
 
 **Approvers.** {{who signs off before execution begins — typically: product manager, architect, optionally QA or security}}
 
-**Review gates.** {{list of explicit checkpoints between "plan accepted" and "phase done"}}
+**Review gates.** {{list of explicit checkpoints between "design accepted" and "phase done"}}
 
 - approval_gates:
-  - {{plan review → implementation}}
+  - {{design review → workflow creation}}
+  - {{workflow creation → implementation}}
   - {{implementation → code review}}
   - {{code review → pre-merge verification}}
 

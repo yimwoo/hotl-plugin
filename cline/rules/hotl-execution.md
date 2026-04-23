@@ -134,6 +134,8 @@ Show the final summary table. Then run a final verification:
 - Confirm the success criteria from the intent contract are met
 - Show evidence — NEVER claim success without proof
 
+After that, do not silently merge or delete the execution branch/worktree. Present the explicit finish options: merge back locally, publish/create PR, keep, or discard.
+
 **ONLY THEN mark the task as complete.**
 
 ### Final Summary Hard Gate

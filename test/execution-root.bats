@@ -21,7 +21,8 @@ teardown() {
 }
 
 @test "prepare-execution-root defaults to an isolated worktree and bootstraps the workflow file" {
-    cat > hotl-workflow-sample.md <<'EOF'
+    mkdir -p docs/plans
+    cat > docs/plans/2026-04-22-sample-workflow.md <<'EOF'
 ---
 intent: Sample worktree execution
 success_criteria: Workflow exists in isolated checkout
@@ -37,7 +38,7 @@ loop: false
 verify: echo ok
 EOF
 
-    run "$PREPARE_ROOT" hotl-workflow-sample.md --executor-mode loop
+    run "$PREPARE_ROOT" docs/plans/2026-04-22-sample-workflow.md --executor-mode loop
     [ "$status" -eq 0 ]
 
     branch="$(echo "$output" | jq -r '.branch')"
@@ -50,11 +51,12 @@ EOF
     [ "$execution_root" = "$worktree_path" ]
     [ -f "$workflow_path" ]
     [ "$(git -C "$execution_root" branch --show-current)" = "$branch" ]
-    cmp -s hotl-workflow-sample.md "$workflow_path"
+    cmp -s docs/plans/2026-04-22-sample-workflow.md "$workflow_path"
 }
 
 @test "prepare-execution-root honors worktree false as an opt-out" {
-    cat > hotl-workflow-sample.md <<'EOF'
+    mkdir -p docs/plans
+    cat > docs/plans/2026-04-22-sample-workflow.md <<'EOF'
 ---
 intent: Shared checkout execution
 success_criteria: Workflow stays in repo root
@@ -71,7 +73,7 @@ loop: false
 verify: echo ok
 EOF
 
-    run "$PREPARE_ROOT" hotl-workflow-sample.md --executor-mode loop
+    run "$PREPARE_ROOT" docs/plans/2026-04-22-sample-workflow.md --executor-mode loop
     [ "$status" -eq 0 ]
 
     execution_root="$(echo "$output" | jq -r '.execution_root')"
@@ -80,11 +82,63 @@ EOF
 
     [ "$execution_root" = "$REPO_DIR" ]
     [ "$worktree_path" = "null" ]
-    [ "$workflow_path" = "$REPO_DIR/hotl-workflow-sample.md" ]
+    [ "$workflow_path" = "$REPO_DIR/docs/plans/2026-04-22-sample-workflow.md" ]
+}
+
+@test "prepare-execution-root reports source branch and source head metadata" {
+    mkdir -p docs/plans
+    cat > docs/plans/2026-04-22-sample-workflow.md <<'EOF'
+---
+intent: Metadata capture
+success_criteria: Source branch and head are recorded
+risk_level: low
+auto_approve: true
+---
+
+## Steps
+
+- [ ] **Step 1: Do the thing**
+action: Echo
+loop: false
+verify: echo ok
+EOF
+
+    run "$PREPARE_ROOT" docs/plans/2026-04-22-sample-workflow.md --executor-mode loop
+    [ "$status" -eq 0 ]
+
+    [ "$(echo "$output" | jq -r '.source_branch')" = "main" ]
+    [ -n "$(echo "$output" | jq -r '.source_head')" ]
+}
+
+@test "prepare-execution-root blocks same-branch worktree execution with clear guidance" {
+    git switch -c feature/demo >/dev/null
+    mkdir -p docs/plans
+    cat > docs/plans/2026-04-22-sample-workflow.md <<'EOF'
+---
+intent: Same branch conflict
+success_criteria: Guard catches current-branch worktree conflict
+risk_level: low
+auto_approve: true
+branch: feature/demo
+---
+
+## Steps
+
+- [ ] **Step 1: Do the thing**
+action: Echo
+loop: false
+verify: echo ok
+EOF
+
+    run "$PREPARE_ROOT" docs/plans/2026-04-22-sample-workflow.md --executor-mode loop
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"already checked out in the current checkout"* ]]
+    [[ "$output" == *"worktree: false"* ]]
 }
 
 @test "prepare-execution-root blocks on non-HOTL dirty files" {
-    cat > hotl-workflow-sample.md <<'EOF'
+    mkdir -p docs/plans
+    cat > docs/plans/2026-04-22-sample-workflow.md <<'EOF'
 ---
 intent: Dirty repo
 success_criteria: Dirty files are rejected
@@ -103,8 +157,33 @@ EOF
 
     printf '%s\n' 'dirty' > app.txt
 
-    run "$PREPARE_ROOT" hotl-workflow-sample.md --executor-mode loop
+    run "$PREPARE_ROOT" docs/plans/2026-04-22-sample-workflow.md --executor-mode loop
     [ "$status" -ne 0 ]
     [[ "$output" == *"Non-HOTL dirty files block execution"* ]]
     [[ "$output" == *"app.txt"* ]]
+}
+
+@test "prepare-execution-root ignores canonical HOTL artifacts in dirty check" {
+    mkdir -p docs/plans docs/designs
+    cat > docs/plans/2026-04-22-sample-workflow.md <<'EOF'
+---
+intent: HOTL-owned dirty files are allowed
+success_criteria: Canonical HOTL files do not block execution
+risk_level: low
+auto_approve: true
+---
+
+## Steps
+
+- [ ] **Step 1: Do the thing**
+action: Echo
+loop: false
+verify: echo ok
+EOF
+
+    printf '%s\n' '# canonical design' > docs/designs/2026-04-22-sample-design.md
+
+    run "$PREPARE_ROOT" docs/plans/2026-04-22-sample-workflow.md --executor-mode loop
+    [ "$status" -eq 0 ]
+    [ "$(echo "$output" | jq -r '.branch')" = "hotl/sample" ]
 }

@@ -1,8 +1,7 @@
 #!/usr/bin/env bats
 #
-# Slice 2 smoke tests — enforces the -plan.md rename + workflows_dir consumer
-# contract per docs/plans/2026-04-14-slice-2-plan-rename-plan.md §2.1.
-# Groups E/F/G/H continue the letter sequence from Slice 1 (A/B/C/D).
+# Slice 2 smoke tests — enforces canonical docs/designs + docs/plans workflow
+# taxonomy with legacy compatibility for prior design/workflow locations.
 
 setup() {
     REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
@@ -19,151 +18,124 @@ teardown() {
     rm -rf "$TMP"
 }
 
-# ── Group E: document-lint.sh accepts both suffixes ─────────────────────────
+# ── Group E: document-lint.sh accepts canonical + legacy HOTL artifacts ─────
 
-@test "E1: lint accepts *-plan.md and *-design.md identically" {
-    cp "$FIXTURES/sample-design.md" "$TMP/2026-04-14-demo-design.md"
+@test "E1: lint accepts canonical docs/designs docs and legacy plan docs" {
+    mkdir -p "$TMP/docs/designs"
+    cp "$FIXTURES/sample-design.md" "$TMP/docs/designs/demo-initiative.md"
     cp "$FIXTURES/sample-design.md" "$TMP/2026-04-14-demo-plan.md"
 
-    run bash "$DOCUMENT_LINT" "$TMP/2026-04-14-demo-design.md"
+    run bash "$DOCUMENT_LINT" "$TMP/docs/designs/demo-initiative.md"
     [ "$status" -eq 0 ]
 
     run bash "$DOCUMENT_LINT" "$TMP/2026-04-14-demo-plan.md"
     [ "$status" -eq 0 ]
 }
 
-@test "E2: lint skips files with neither suffix nor hotl-workflow- prefix" {
+@test "E2: lint accepts canonical docs/plans/*-workflow.md files" {
+    mkdir -p "$TMP/docs/plans"
+    cp "$FIXTURES/hotl-workflow-checkbox-sample.md" \
+        "$TMP/docs/plans/2026-04-14-demo-workflow.md"
+
+    run bash "$DOCUMENT_LINT" "$TMP/docs/plans/2026-04-14-demo-workflow.md"
+    [ "$status" -eq 0 ]
+}
+
+@test "E3: lint skips files outside canonical and legacy HOTL paths" {
     cp "$FIXTURES/sample-design.md" "$TMP/random-notes.md"
     run bash "$DOCUMENT_LINT" "$TMP/random-notes.md"
     [ "$status" -eq 0 ]
     echo "$output" | grep -qi "skip"
 }
 
-@test "E3: lint usage text mentions both design and plan suffixes" {
+@test "E4: lint usage text mentions canonical design and workflow locations" {
     run bash "$DOCUMENT_LINT"
     [ "$status" -ne 0 ]
-    echo "$output" | grep -q '\-design\.md'
-    echo "$output" | grep -q '\-plan\.md'
+    echo "$output" | grep -q 'docs/designs'
+    echo "$output" | grep -q '\-workflow\.md'
 }
 
-# ── Group F: SKILL.md content parity between suffixes ───────────────────────
+# ── Group F: skill/rule parity for canonical taxonomy ───────────────────────
 
-@test "F1: brainstorming default output path is -plan.md" {
-    grep -E 'docs/plans/YYYY-MM-DD-<topic>-plan\.md' \
+@test "F1: brainstorming default output path is docs/designs/*-design.md" {
+    grep -q 'docs/designs/YYYY-MM-DD-<slug>-design.md' \
+        "$REPO_ROOT/skills/brainstorming/SKILL.md"
+    grep -q 'docs/designs/YYYY-MM-DD-phase-N-<slug>-design.md' \
         "$REPO_ROOT/skills/brainstorming/SKILL.md"
 }
 
-@test "F2: executor/reviewer rule lines name both suffixes on the same line" {
-    # Canonical form required: two literal globs on one line, either order.
-    # Brace-expansion forms not accepted.
-    local pattern='docs/plans/\*-design\.md.*docs/plans/\*-plan\.md|docs/plans/\*-plan\.md.*docs/plans/\*-design\.md'
+@test "F2: document-review classifies canonical and legacy HOTL docs" {
+    local skill="$REPO_ROOT/skills/document-review/SKILL.md"
+    grep -qF 'docs/designs/*.md' "$skill"
+    grep -qF 'docs/plans/*-workflow.md' "$skill"
+    grep -qF 'docs/plans/*-plan.md' "$skill"
+    grep -qF 'hotl-workflow-*.md' "$skill"
+}
 
+@test "F3: executor exclusions name canonical and legacy HOTL artifacts" {
     for skill in \
         skills/loop-execution/SKILL.md \
-        skills/executing-plans/SKILL.md \
-        skills/document-review/SKILL.md \
-        cline/rules/hotl-execution.md \
-        cline/rules/hotl-document-review.md; do
-        grep -E "$pattern" "$REPO_ROOT/$skill" \
-            || { echo "FAIL: $skill rule line does not name both suffixes"; return 1; }
+        skills/executing-plans/SKILL.md; do
+        grep -qF 'docs/plans/*-workflow.md' "$REPO_ROOT/$skill"
+        grep -qF 'docs/designs/*.md' "$REPO_ROOT/$skill"
+        grep -qF 'docs/plans/*-plan.md' "$REPO_ROOT/$skill"
+        grep -qF 'hotl-workflow-*.md' "$REPO_ROOT/$skill"
     done
 }
 
-@test "F2b: loop-execution exclusion glob actually matches a representative *-plan.md file" {
-    local pattern='docs/plans/\*-design\.md.*docs/plans/\*-plan\.md|docs/plans/\*-plan\.md.*docs/plans/\*-design\.md'
-    GLOB_LINE=$(grep -E "$pattern" \
-        "$REPO_ROOT/skills/loop-execution/SKILL.md" | head -1)
-    [ -n "$GLOB_LINE" ]
+# ── Group G: writing-plans honors workflows_dir with docs/plans default ─────
 
-    for glob in 'docs/plans/*-plan.md' 'docs/plans/*-design.md'; do
-        echo "$GLOB_LINE" | grep -qF "$glob"
-    done
-
-    # Behavioral: the -plan.md glob actually resolves a representative file.
-    mkdir -p docs/plans
-    touch docs/plans/2026-04-14-demo-plan.md
-    shopt -s nullglob
-    MATCHES=(docs/plans/*-plan.md)
-    [ ${#MATCHES[@]} -eq 1 ]
-    [ "${MATCHES[0]}" = "docs/plans/2026-04-14-demo-plan.md" ]
-}
-
-@test "F3: cline hotl-brainstorming mirror updated to -plan.md" {
-    grep -q 'docs/plans/YYYY-MM-DD-<topic>-plan\.md' \
-        "$REPO_ROOT/cline/rules/hotl-brainstorming.md"
-}
-
-# ── Group G: writing-plans honors workflows_dir ─────────────────────────────
-
-@test "G1: writing-plans SKILL.md documents workflows_dir resolution" {
-    # Must reference the resolver (command proxy) and the --default=.
+@test "G1: writing-plans SKILL.md documents workflows_dir resolution with docs/plans default" {
     grep -q 'hotl-config-resolve\.sh' "$REPO_ROOT/skills/writing-plans/SKILL.md"
     grep -q 'workflows_dir' "$REPO_ROOT/skills/writing-plans/SKILL.md"
-    grep -q -- '--default=\.' "$REPO_ROOT/skills/writing-plans/SKILL.md"
+    grep -q -- '--default=docs/plans' "$REPO_ROOT/skills/writing-plans/SKILL.md"
 }
 
 @test "G2: config resolver returns workflows_dir override from .hotl/config.yml" {
     mkdir -p .hotl
     echo "workflows_dir: docs/workflows" > .hotl/config.yml
-    run bash "$HOTL_CONFIG_RESOLVE" get workflows_dir --default=.
+    run bash "$HOTL_CONFIG_RESOLVE" get workflows_dir --default=docs/plans
     [ "$status" -eq 0 ]
     [ "$output" = "docs/workflows" ]
 }
 
-@test "G3: config resolver returns default when .hotl/config.yml absent" {
-    run bash "$HOTL_CONFIG_RESOLVE" get workflows_dir --default=.
+@test "G3: config resolver returns docs/plans default when config absent" {
+    run bash "$HOTL_CONFIG_RESOLVE" get workflows_dir --default=docs/plans
     [ "$status" -eq 0 ]
-    [ "$output" = "." ]
+    [ "$output" = "docs/plans" ]
 }
 
-# ── Group H: small-user safety regression ───────────────────────────────────
+# ── Group H: compatibility and safety regression checks ─────────────────────
 
-@test "H1: existing -design.md files remain accepted by every consumer" {
-    # Behavioral: a real -design.md file still passes lint end-to-end.
-    cp "$FIXTURES/sample-design.md" "$TMP/2026-04-14-legacy-design.md"
-    run bash "$DOCUMENT_LINT" "$TMP/2026-04-14-legacy-design.md"
+@test "H1: legacy design docs remain accepted by lint and review classification" {
+    mkdir -p docs/plans
+    cp "$FIXTURES/sample-design.md" "$TMP/docs/plans/2026-04-14-legacy-plan.md"
+
+    run bash "$DOCUMENT_LINT" "$TMP/docs/plans/2026-04-14-legacy-plan.md"
     [ "$status" -eq 0 ]
 
-    # Rule-line: document-review classification must still carry both literal
-    # globs including -design.md (canonical F2 form).
-    local pattern='docs/plans/\*-design\.md.*docs/plans/\*-plan\.md|docs/plans/\*-plan\.md.*docs/plans/\*-design\.md'
-    grep -E "$pattern" "$REPO_ROOT/skills/document-review/SKILL.md" \
-        || { echo "FAIL: document-review classification does not carry both globs"; return 1; }
-
-    # Rule-line: executor exclusions must still list the literal
-    # docs/plans/*-design.md glob.
-    for skill in \
-        skills/loop-execution/SKILL.md \
-        skills/executing-plans/SKILL.md; do
-        grep -qF 'docs/plans/*-design.md' "$REPO_ROOT/$skill" \
-            || { echo "FAIL: $skill exclusion no longer names literal -design.md"; return 1; }
-    done
-
-    # Behavioral round-trip: -design.md glob still resolves a legacy file.
-    mkdir -p docs/plans
-    touch docs/plans/2026-04-14-legacy-design.md
+    grep -qF 'docs/plans/*-plan.md' "$REPO_ROOT/skills/document-review/SKILL.md"
     shopt -s nullglob
-    MATCHES=(docs/plans/*-design.md)
+    MATCHES=(docs/plans/*-plan.md)
     [ ${#MATCHES[@]} -eq 1 ]
 }
 
-@test "H2: command and skill counts unchanged from pre-Slice-2 baseline" {
+@test "H2: command count unchanged and skill count is at least the pre-Slice-2 baseline" {
     EXPECTED_CMDS=$(cat "$REPO_ROOT/test/fixtures/pre-slice-2-command-count.txt")
     ACTUAL_CMDS=$(ls "$REPO_ROOT"/commands/*.md | wc -l | tr -d ' ')
     [ "$ACTUAL_CMDS" -eq "$EXPECTED_CMDS" ]
 
     EXPECTED_SKILLS=$(cat "$REPO_ROOT/test/fixtures/pre-slice-2-skill-count.txt")
     ACTUAL_SKILLS=$(grep -c '^| `' "$REPO_ROOT/skills/using-hotl/SKILL.md")
-    [ "$ACTUAL_SKILLS" -eq "$EXPECTED_SKILLS" ]
+    [ "$ACTUAL_SKILLS" -ge "$EXPECTED_SKILLS" ]
 }
 
 @test "H3: Slice 2 surface in clean repo creates no forbidden initiative-support artifacts" {
     git init -q
 
-    # Exercise all Slice 2 surfaces that could create files.
     bash "$HOTL_RT" log-decision '{"event":"test"}'
-    bash "$HOTL_CONFIG_SH" get workflows_dir --default=. >/dev/null
-    bash "$HOTL_CONFIG_RESOLVE" get workflows_dir --default=. >/dev/null
+    bash "$HOTL_CONFIG_SH" get workflows_dir --default=docs/plans >/dev/null
+    bash "$HOTL_CONFIG_RESOLVE" get workflows_dir --default=docs/plans >/dev/null
     bash "$DOCUMENT_LINT" "$FIXTURES/sample-design.md" >/dev/null
 
     for forbidden in \

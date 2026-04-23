@@ -23,7 +23,7 @@ The generic HOTL role vocabulary. These are **roles** (who owns an artifact) not
 | Role | Primary artifact | Typical skills invoked |
 |---|---|---|
 | `@pm` | Requirements / acceptance criteria in `docs/requirements/` | (prompt-driven; no skill) |
-| `@architect` | Strategic designs in `docs/designs/`, plans in `docs/plans/`, ADRs in `docs/decisions/` | `brainstorming`, `writing-plans` |
+| `@architect` | Strategic and tactical designs in `docs/designs/`, workflows in `docs/plans/`, ADRs in `docs/decisions/` | `brainstorming`, `writing-plans` |
 | `@dev` | Source code and tests in `src/`, `tests/` | `executing-plans`, `loop-execution`, `tdd` |
 | `@qa` | Test plans, regression suites, strategies in `docs/strategies/` | `tdd`, `test-driven-development` |
 | `@reviewer` | Review memos in `docs/reviews/`, PR reviews | `code-review`, `pr-reviewing`, `document-review` |
@@ -54,7 +54,7 @@ What each role decides autonomously vs. what must escalate. Start conservative. 
 
 ### Phase-specific overrides
 
-Any plan document (`docs/plans/*.md`) may **tighten — but not loosen —** these rights for the duration of one phase. Example: a phase touching destructive operations might add `@dev must escalate on any change to <module>`. The override lives in the plan's §3 Governance contract and expires when the phase closes.
+Any workflow document (`docs/plans/*-workflow.md`) may **tighten — but not loosen —** these rights for the duration of one phase. Example: a phase touching destructive operations might add `@dev must escalate on any change to <module>`. The override lives in the workflow's governance/gate structure and expires when the phase closes. Legacy `docs/plans/*-plan.md` files remain readable during migration but are no longer the canonical artifact.
 
 ---
 
@@ -97,7 +97,7 @@ Every autonomous decision appends one JSON line to `docs/decisions/log.md`. Form
   "phase": "phase-2",
   "decision": "chose library X over Y",
   "rationale": "X has fewer dependencies and aligns with ADR-003",
-  "artifact": "docs/plans/2026-MM-DD-phase-2-<slug>-plan.md",
+  "artifact": "docs/plans/2026-MM-DD-<slug>-workflow.md",
   "reversible": true
 }
 ```
@@ -115,7 +115,7 @@ Mandatory human involvement happens only at these moments:
 | Checkpoint | Trigger | Human output |
 |---|---|---|
 | **Initiative kickoff** | Before Phase 1 begins | Design doc signed off; operating model signed off |
-| **Phase plan review** | Before each phase's `writing-plans` session | Plan approved / revise / reject |
+| **Phase design review** | Before each phase's `writing-plans` session | Design approved / revise / reject |
 | **Tripwire firing** | See §4 | Decision or unblocking action |
 | **Weekly digest** | Configured cadence | Acknowledge or redirect |
 | **Initiative exit** | Final phase merged | Sign-off and post-mortem notes |

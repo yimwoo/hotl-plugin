@@ -39,7 +39,22 @@ abspath_existing() {
 
 slug_from_workflow() {
     local file="$1"
-    basename "$file" .md | sed 's/^hotl-workflow-//'
+    local base
+    base=$(basename "$file" .md)
+    case "$base" in
+        hotl-workflow-*)
+            echo "${base#hotl-workflow-}"
+            ;;
+        [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*-workflow)
+            echo "$base" | sed -E 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}-(.*)-workflow$/\1/'
+            ;;
+        *-workflow)
+            echo "${base%-workflow}"
+            ;;
+        *)
+            echo "$base"
+            ;;
+    esac
 }
 
 sanitize_for_path() {
@@ -54,7 +69,7 @@ frontmatter_value() {
 
 is_hotl_transient_path() {
     case "$1" in
-        hotl-workflow-*.md|docs/plans/*-design.md|docs/plans/*-plan.md|.hotl|.hotl/*)
+        hotl-workflow-*.md|docs/plans/*-workflow.md|docs/designs/*.md|docs/plans/*-design.md|docs/plans/*-plan.md|.hotl|.hotl/*)
             return 0
             ;;
         *)
@@ -105,6 +120,8 @@ repo_root=""
 execution_root=""
 worktree_path=""
 workflow_target="$workflow_abs"
+source_branch=""
+source_head=""
 
 cleanup_worktree=0
 cleanup_worktree_path=""
@@ -133,6 +150,8 @@ if ! repo_root=$(git rev-parse --show-toplevel 2>/dev/null); then
             execution_root: $execution_root,
             workflow_path: $workflow_path,
             source_workflow_path: $source_workflow_path,
+            source_branch: null,
+            source_head: null,
             worktree_path: null
         }'
     trap - EXIT
@@ -141,6 +160,8 @@ fi
 
 repo_root=$(cd "$repo_root" && pwd -P)
 execution_root="$repo_root"
+source_branch="$(git -C "$repo_root" symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+source_head="$(git -C "$repo_root" rev-parse HEAD 2>/dev/null || true)"
 
 if ! git -C "$repo_root" rev-parse HEAD >/dev/null 2>&1; then
     jq -n \
@@ -149,6 +170,8 @@ if ! git -C "$repo_root" rev-parse HEAD >/dev/null 2>&1; then
         --arg repo_root "$repo_root" \
         --arg workflow_path "$workflow_abs" \
         --arg source_workflow_path "$workflow_abs" \
+        --argjson source_branch "$(json_string_or_null "$source_branch")" \
+        --argjson source_head "$(json_string_or_null "$source_head")" \
         '{
             branch: $branch,
             executor_mode: $executor_mode,
@@ -156,6 +179,8 @@ if ! git -C "$repo_root" rev-parse HEAD >/dev/null 2>&1; then
             execution_root: $repo_root,
             workflow_path: $workflow_path,
             source_workflow_path: $source_workflow_path,
+            source_branch: $source_branch,
+            source_head: $source_head,
             worktree_path: null
         }'
     trap - EXIT
@@ -180,8 +205,17 @@ if [ "$worktree_enabled" = "true" ]; then
     worktree_base="$(dirname "$repo_root")/.hotl-worktrees/$(basename "$repo_root")"
     worktree_path="${worktree_base}/${branch_safe}"
 
+    if [ -n "$source_branch" ] && [ "$branch" = "$source_branch" ]; then
+        echo "ERROR: Execution branch '$branch' is already checked out in the current checkout." >&2
+        echo "       To continue on this exact branch, set both 'branch: $source_branch' and 'worktree: false'." >&2
+        echo "       Otherwise choose a different execution branch or omit branch: to use HOTL's default isolated branch." >&2
+        exit 1
+    fi
+
     if [ -e "$worktree_path" ]; then
         echo "ERROR: Worktree path already exists: $worktree_path" >&2
+        echo "       Automatic reuse/recreate prompts are not implemented by the helper yet." >&2
+        echo "       Remove or rename the existing worktree path, or choose a different execution branch, then re-run." >&2
         exit 1
     fi
 
@@ -202,7 +236,9 @@ else
     current_branch="$(git -C "$repo_root" rev-parse --abbrev-ref HEAD)"
     if [ "$current_branch" != "$branch" ]; then
         if git -C "$repo_root" show-ref --verify --quiet "refs/heads/$branch"; then
-            echo "ERROR: Branch already exists: $branch. Resolve reuse vs recreate explicitly before execution." >&2
+            echo "ERROR: Branch already exists: $branch." >&2
+            echo "       Automatic reuse/recreate prompts are not implemented by the helper yet." >&2
+            echo "       Switch to that branch manually or pick a different execution branch, then re-run." >&2
             exit 1
         fi
         git -C "$repo_root" switch -c "$branch" >/dev/null 2>&1
@@ -216,6 +252,8 @@ jq -n \
     --arg execution_root "$execution_root" \
     --arg workflow_path "$workflow_target" \
     --arg source_workflow_path "$workflow_abs" \
+    --argjson source_branch "$(json_string_or_null "$source_branch")" \
+    --argjson source_head "$(json_string_or_null "$source_head")" \
     --argjson worktree_path "$(json_string_or_null "$worktree_path")" \
     '{
         branch: $branch,
@@ -224,6 +262,8 @@ jq -n \
         execution_root: $execution_root,
         workflow_path: $workflow_path,
         source_workflow_path: $source_workflow_path,
+        source_branch: $source_branch,
+        source_head: $source_head,
         worktree_path: $worktree_path
     }'
 

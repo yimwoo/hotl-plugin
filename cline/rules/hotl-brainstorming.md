@@ -14,12 +14,13 @@ You MUST complete ALL steps below in order. Do NOT mark the task as complete aft
 
 **Phase 1 — Cheap preflight** (Glob/ls only, current project directory):
 - If user's message references a doc path, read it
-- Check for `docs/plans/*.md`
+- Check for canonical design docs in `docs/designs/*.md`
+- Check for legacy design docs in `docs/plans/*.md`
 - Check for source code, config manifests, or project-specific config files
 - **"Relevant context" means:** design docs, source code, configuration manifests, or project-specific config. `README.md`, `.gitignore`, `LICENSE`, and scaffolding boilerplate do **not** count.
 
 **Phase 2 — Branch on result:**
-- **Relevant local context found:** Read the most recent 1-2 design docs, inspect only relevant in-project files, and optionally review recent commits (only if the directory is a git repo).
+- **Relevant local context found:** Read the most recent 1-2 design docs from canonical or legacy locations, inspect only relevant in-project files, and optionally review recent commits (only if the directory is a git repo).
 - **No relevant local context found:** State: "This appears to be a greenfield or effectively empty project, so I'm skipping deep context scanning and moving to clarifying questions." Proceed directly to step 2.
 
 **Hard rule:** Never scan parent directories, sibling folders, or workspace-wide paths unless the user explicitly provides a path.
@@ -30,8 +31,8 @@ Decide between `feature`, `phase`, or `initiative` **before** the clarifying-que
 
 **Scope choices:**
 
-- **`feature`** — one feature, one bug fix, one refactor. Output: `docs/plans/YYYY-MM-DD-<topic>-plan.md` (dated, tactical).
-- **`phase`** — one slice of a multi-phase initiative. Same output shape as feature: `docs/plans/YYYY-MM-DD-phase-N-<topic>-plan.md`.
+- **`feature`** — one feature, one bug fix, one refactor. Output: `docs/designs/YYYY-MM-DD-<slug>-design.md` (dated, tactical).
+- **`phase`** — one slice of a multi-phase initiative. Same output family as feature: `docs/designs/YYYY-MM-DD-phase-N-<slug>-design.md`.
 - **`initiative`** — a multi-phase project (v1/v2, platform migration, enterprise rebuild). Output: `docs/designs/<topic>.md` (undated, durable, strategic).
 
 **Default: feature.** If the user's initial message clearly describes a feature, proceed with `feature` scope without blocking for input. Optionally acknowledge in one line ("Treating as feature scope; say so if this should be a phase or initiative"). Do not pause the flow.
@@ -92,7 +93,8 @@ ownership: [who is accountable]
 
 Path depends on scope (decided in Step 2):
 
-- `feature` or `phase` scope: save to `docs/plans/YYYY-MM-DD-<topic>-plan.md` (dated, tactical).
+- `feature` scope: save to `docs/designs/YYYY-MM-DD-<slug>-design.md` (dated, tactical).
+- `phase` scope: save to `docs/designs/YYYY-MM-DD-phase-N-<slug>-design.md` (dated, tactical).
 - `initiative` scope: save to `<designs_dir>/<topic>.md` (undated, durable), where `<designs_dir>` is the value returned by the Step 2 resolver — default `docs/designs`.
 
 This file MUST exist before moving on.
@@ -101,29 +103,17 @@ This file MUST exist before moving on.
 
 Before presenting for human approval, review the saved design doc for: missing constraints, vague success criteria, contract mismatches (do verification steps actually test the intent?), risk_level appropriateness, and scope creep. Fix any issues found. Lightweight: 1-2 passes by default, max 3 only if real issues are found. Do not ask the user to review — this is an internal quality pass.
 
-### Step 9: Create workflow file
+### Step 9: Hand off to writing-plans
 
-Ask the user: "Design approved. Ready to create the implementation plan?" Then create a `hotl-workflow-<slug>.md` following the planning rules.
+For `feature` and `phase` scope, tell the user the design is ready for `writing-plans`, which will create the dated workflow in `docs/plans/`.
 
-For `initiative` scope, do NOT create a workflow file — initiative designs decompose into child phase plans that each go through their own brainstorming → writing-plans cycle.
-
-### Step 10: Present execution options
-
-After the workflow file is created, present these execution options:
-
-"Workflow file created. How would you like to execute?"
-1. **Loop execution** — autonomous execution with auto-approve for low-risk steps
-2. **Checkpoint execution** — linear execution with human review every 3 steps
-3. **Subagent execution** — delegated execution with parallel subagents
-
-Do NOT auto-execute. Wait for the user to choose.
+For `initiative` scope, do NOT create a workflow file — initiative designs decompose into child phase designs that each go through their own brainstorming → writing-plans cycle.
 
 **ONLY NOW is the brainstorming task complete.**
 
 <HARD-GATE>
-Do NOT mark task complete after creating the workflow file.
-You MUST present execution options and wait for the user to choose.
-The brainstorming task is NOT complete until the user selects an execution mode.
+Do NOT mark task complete after creating the design doc unless the user has clearly paused there.
+For feature/phase scope, you MUST point the user to `writing-plans` as the next step; brainstorming does not directly create the executable workflow.
 </HARD-GATE>
 
 ### Rules

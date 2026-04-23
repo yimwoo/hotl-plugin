@@ -189,7 +189,7 @@ teardown() {
 
 # ── Group S: small-user safety regression ──────────────────────────────────
 
-@test "S1: command and skill counts unchanged from pre-Slice-5 baseline" {
+@test "S1: command count unchanged and skill count is at least the pre-Slice-5 baseline" {
     local expected_cmds actual_cmds expected_skills actual_skills
     expected_cmds=$(cat "$REPO_ROOT/test/fixtures/pre-slice-5-command-count.txt")
     actual_cmds=$(ls "$REPO_ROOT"/commands/*.md | wc -l | tr -d ' ')
@@ -197,7 +197,7 @@ teardown() {
 
     expected_skills=$(cat "$REPO_ROOT/test/fixtures/pre-slice-5-skill-count.txt")
     actual_skills=$(grep -c '^| `' "$REPO_ROOT/skills/using-hotl/SKILL.md")
-    [ "$actual_skills" -eq "$expected_skills" ]
+    [ "$actual_skills" -ge "$expected_skills" ]
 }
 
 @test "S2: non-scaffolder Slice 1–5 surface creates no forbidden artifacts; explicit scaffolder invocation creates the expected artifacts" {

@@ -66,8 +66,20 @@ slug_from_workflow() {
     local file="$1"
     local base
     base=$(basename "$file" .md)
-    # Strip hotl-workflow- prefix
-    echo "$base" | sed 's/^hotl-workflow-//'
+    case "$base" in
+        hotl-workflow-*)
+            echo "${base#hotl-workflow-}"
+            ;;
+        [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*-workflow)
+            echo "$base" | sed -E 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}-(.*)-workflow$/\1/'
+            ;;
+        *-workflow)
+            echo "${base%-workflow}"
+            ;;
+        *)
+            echo "$base"
+            ;;
+    esac
 }
 
 ensure_dirs() {
@@ -200,6 +212,76 @@ report_update_step_row() {
         print
     }' "$report" > "$tmp"
     mv "$tmp" "$report"
+}
+
+report_write_finish_section() {
+    local report="$1"
+    local content="$2"
+    local tmp="${report}.tmp"
+
+    awk '
+    $0 == "## Finish Outcome" { exit }
+    { print }
+    ' "$report" > "$tmp"
+
+    if [ -s "$tmp" ]; then
+        printf '\n' >> "$tmp"
+    fi
+
+    {
+        echo "## Finish Outcome"
+        echo ""
+        printf '%s\n' "$content"
+    } >> "$tmp"
+
+    mv "$tmp" "$report"
+}
+
+build_summary_payload() {
+    local state_file="$1"
+    jq '{
+        run_id: .run_id,
+        workflow_path: .workflow_path,
+        source_workflow_path: .source_workflow_path,
+        source_branch: .source_branch,
+        source_head: .source_head,
+        workflow_slug: .workflow_slug,
+        intent: .intent,
+        branch: .branch,
+        repo_root: .repo_root,
+        execution_root: .execution_root,
+        worktree_path: .worktree_path,
+        executor_mode: .executor_mode,
+        status: .status,
+        started_at: .started_at,
+        last_update: .last_update,
+        completed_at: .completed_at,
+        total_steps: .total_steps,
+        completed_steps: ([.steps[] | select(.status == "done")] | length),
+        failed_steps: ([.steps[] | select(.status == "failed")] | length),
+        blocked_steps: ([.steps[] | select(.status == "blocked")] | length),
+        finish: (.finish // {
+            disposition: null,
+            recorded_at: null,
+            target_branch: null,
+            remote: null,
+            pr_url: null,
+            branch_action: null,
+            worktree_action: null,
+            artifacts_preserved_at: null,
+            notes: null
+        }),
+        steps: [.steps[] | {
+            number: .number,
+            name: .name,
+            status: .status,
+            attempts: .attempts,
+            verify_passed: .verify.passed,
+            gate_result: .gate_result,
+            gate_mode: .gate_mode,
+            block_reason: .block_reason
+        }]
+    }' "$state_file"
 }
 
 verify_object_shell() {
@@ -542,7 +624,7 @@ ${VERIFY_STDERR}"
 
 cmd_init() {
     if [ $# -lt 1 ]; then
-        echo "usage: hotl-rt init <workflow-file> [--executor-mode <mode>] [--repo-root <path>] [--execution-root <path>] [--source-workflow-path <path>] [--worktree-path <path>] [--branch <name>]" >&2
+        echo "usage: hotl-rt init <workflow-file> [--executor-mode <mode>] [--repo-root <path>] [--execution-root <path>] [--source-workflow-path <path>] [--worktree-path <path>] [--branch <name>] [--source-branch <name>] [--source-head <sha>]" >&2
         exit 1
     fi
 
@@ -554,6 +636,8 @@ cmd_init() {
     local source_workflow_path=""
     local worktree_path=""
     local branch_override=""
+    local source_branch=""
+    local source_head=""
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -579,6 +663,14 @@ cmd_init() {
                 ;;
             --branch)
                 branch_override="$2"
+                shift 2
+                ;;
+            --source-branch)
+                source_branch="$2"
+                shift 2
+                ;;
+            --source-head)
+                source_head="$2"
                 shift 2
                 ;;
             *)
@@ -725,10 +817,15 @@ cmd_init() {
     report_path_json=$(jq -Rn --arg value "${execution_root}/${REPORT_DIR}/${run_id}.md" '$value')
     local worktree_json
     worktree_json=$(json_string_or_null "$worktree_path")
+    local source_branch_json source_head_json
+    source_branch_json=$(json_string_or_null "$source_branch")
+    source_head_json=$(json_string_or_null "$source_head")
     local state_json="{
   \"run_id\": \"${run_id}\",
   \"workflow_path\": ${workflow_json},
   \"source_workflow_path\": ${source_workflow_json},
+  \"source_branch\": ${source_branch_json},
+  \"source_head\": ${source_head_json},
   \"workflow_slug\": \"${slug}\",
   \"intent\": \"${intent_esc}\",
   \"success_criteria\": \"${success_esc}\",
@@ -746,6 +843,17 @@ cmd_init() {
   \"current_step\": 1,
   \"total_steps\": ${total_steps},
   \"report_path\": ${report_path_json},
+  \"finish\": {
+    \"disposition\": null,
+    \"recorded_at\": null,
+    \"target_branch\": null,
+    \"remote\": null,
+    \"pr_url\": null,
+    \"branch_action\": null,
+    \"worktree_action\": null,
+    \"artifacts_preserved_at\": null,
+    \"notes\": null
+  },
   \"steps\": ${steps_json}
 }"
 
@@ -759,6 +867,12 @@ cmd_init() {
         echo ""
         echo "**Workflow:** $(basename "$workflow")"
         echo "**Source Workflow:** ${source_workflow_path}"
+        if [ -n "$source_branch" ]; then
+            echo "**Source Branch:** ${source_branch}"
+        fi
+        if [ -n "$source_head" ]; then
+            echo "**Source HEAD:** ${source_head}"
+        fi
         echo "**Intent:** ${fm_intent}"
         echo "**Branch:** ${fm_branch}"
         echo "**Executor:** ${executor_mode}"
@@ -1335,38 +1449,163 @@ cmd_finalize() {
 
     # Build summary payload
     local summary
-    summary=$(jq '{
-        run_id: .run_id,
-        workflow_path: .workflow_path,
-        source_workflow_path: .source_workflow_path,
-        workflow_slug: .workflow_slug,
-        intent: .intent,
-        branch: .branch,
-        repo_root: .repo_root,
-        execution_root: .execution_root,
-        worktree_path: .worktree_path,
-        executor_mode: .executor_mode,
-        status: .status,
-        started_at: .started_at,
-        last_update: .last_update,
-        completed_at: .completed_at,
-        total_steps: .total_steps,
-        completed_steps: ([.steps[] | select(.status == "done")] | length),
-        failed_steps: ([.steps[] | select(.status == "failed")] | length),
-        blocked_steps: ([.steps[] | select(.status == "blocked")] | length),
-        steps: [.steps[] | {
-            number: .number,
-            name: .name,
-            status: .status,
-            attempts: .attempts,
-            verify_passed: .verify.passed,
-            gate_result: .gate_result,
-            gate_mode: .gate_mode,
-            block_reason: .block_reason
-        }]
-    }' "$state_file")
+    summary=$(build_summary_payload "$state_file")
 
     echo "$summary"
+}
+
+cmd_finish() {
+    if [ $# -lt 1 ]; then
+        echo "usage: hotl-rt finish <kept|merged|published|discarded> [--run-id <run-id>] [--target-branch <name>] [--remote <name>] [--pr-url <url>] [--branch-action <action>] [--worktree-action <action>] [--artifacts-preserved-at <path>] [--notes <text>] [--force]" >&2
+        exit 1
+    fi
+
+    require_jq
+
+    local disposition="$1"
+    shift
+    local run_id="${HOTL_RUN_ID:-}"
+    local target_branch=""
+    local remote=""
+    local pr_url=""
+    local branch_action=""
+    local worktree_action=""
+    local artifacts_preserved_at=""
+    local notes=""
+    local force=0
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --run-id)
+                run_id="$2"
+                shift 2
+                ;;
+            --target-branch)
+                target_branch="$2"
+                shift 2
+                ;;
+            --remote)
+                remote="$2"
+                shift 2
+                ;;
+            --pr-url)
+                pr_url="$2"
+                shift 2
+                ;;
+            --branch-action)
+                branch_action="$2"
+                shift 2
+                ;;
+            --worktree-action)
+                worktree_action="$2"
+                shift 2
+                ;;
+            --artifacts-preserved-at)
+                artifacts_preserved_at="$2"
+                shift 2
+                ;;
+            --notes)
+                notes="$2"
+                shift 2
+                ;;
+            --force)
+                force=1
+                shift
+                ;;
+            *)
+                echo "ERROR: Unknown option for finish: $1" >&2
+                exit 1
+                ;;
+        esac
+    done
+
+    case "$disposition" in
+        kept|merged|published|discarded) ;;
+        *)
+            echo "ERROR: Unsupported finish disposition: $disposition" >&2
+            exit 1
+            ;;
+    esac
+
+    local state_file
+    state_file=$(find_active_state "$run_id")
+    local report
+    report=$(report_path_from_state "$state_file")
+    local status
+    status=$(jq -r '.status' "$state_file")
+    local existing_disposition
+    existing_disposition=$(jq -r '.finish.disposition // empty' "$state_file")
+
+    if [ -n "$existing_disposition" ] && [ "$force" -ne 1 ]; then
+        echo "ERROR: Finish outcome already recorded: $existing_disposition. Use --force to replace it." >&2
+        exit 1
+    fi
+
+    case "$disposition" in
+        merged|published)
+            if [ "$status" != "completed" ]; then
+                echo "ERROR: Finish disposition '$disposition' requires a completed run. Current status: $status" >&2
+                exit 1
+            fi
+            ;;
+        kept|discarded)
+            case "$status" in
+                completed|blocked) ;;
+                *)
+                    echo "ERROR: Finish disposition '$disposition' requires a finalized run. Current status: $status" >&2
+                    exit 1
+                    ;;
+            esac
+            ;;
+    esac
+
+    local ts
+    ts=$(now_iso)
+    local time_short
+    time_short=$(now_time)
+
+    local updated
+    updated=$(jq \
+        --arg disposition "$disposition" \
+        --arg ts "$ts" \
+        --arg target_branch "$target_branch" \
+        --arg remote "$remote" \
+        --arg pr_url "$pr_url" \
+        --arg branch_action "$branch_action" \
+        --arg worktree_action "$worktree_action" \
+        --arg artifacts_preserved_at "$artifacts_preserved_at" \
+        --arg notes "$notes" '
+        .last_update = $ts |
+        .finish = {
+            disposition: $disposition,
+            recorded_at: $ts,
+            target_branch: (if $target_branch == "" then null else $target_branch end),
+            remote: (if $remote == "" then null else $remote end),
+            pr_url: (if $pr_url == "" then null else $pr_url end),
+            branch_action: (if $branch_action == "" then null else $branch_action end),
+            worktree_action: (if $worktree_action == "" then null else $worktree_action end),
+            artifacts_preserved_at: (if $artifacts_preserved_at == "" then null else $artifacts_preserved_at end),
+            notes: (if $notes == "" then null else $notes end)
+        }
+    ' "$state_file")
+    state_write "$state_file" "$updated"
+
+    report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+    report_append_event "$report" "**[$time_short]** Finish recorded: $disposition"
+
+    local finish_lines=()
+    finish_lines+=("**Disposition:** $disposition")
+    finish_lines+=("**Recorded:** $ts")
+    [ -n "$target_branch" ] && finish_lines+=("**Target Branch:** $target_branch")
+    [ -n "$remote" ] && finish_lines+=("**Remote:** $remote")
+    [ -n "$pr_url" ] && finish_lines+=("**PR URL:** $pr_url")
+    [ -n "$branch_action" ] && finish_lines+=("**Branch Action:** $branch_action")
+    [ -n "$worktree_action" ] && finish_lines+=("**Worktree Action:** $worktree_action")
+    [ -n "$artifacts_preserved_at" ] && finish_lines+=("**Artifacts Preserved At:** $artifacts_preserved_at")
+    [ -n "$notes" ] && finish_lines+=("**Notes:** $notes")
+    report_write_finish_section "$report" "$(printf '%s\n' "${finish_lines[@]}")"
+
+    build_summary_payload "$state_file"
 }
 
 cmd_summary() {
@@ -1387,37 +1626,7 @@ cmd_summary() {
         exit 1
     fi
 
-    # Same payload format as finalize
-    jq '{
-        run_id: .run_id,
-        workflow_path: .workflow_path,
-        source_workflow_path: .source_workflow_path,
-        workflow_slug: .workflow_slug,
-        intent: .intent,
-        branch: .branch,
-        repo_root: .repo_root,
-        execution_root: .execution_root,
-        worktree_path: .worktree_path,
-        executor_mode: .executor_mode,
-        status: .status,
-        started_at: .started_at,
-        last_update: .last_update,
-        completed_at: .completed_at,
-        total_steps: .total_steps,
-        completed_steps: ([.steps[] | select(.status == "done")] | length),
-        failed_steps: ([.steps[] | select(.status == "failed")] | length),
-        blocked_steps: ([.steps[] | select(.status == "blocked")] | length),
-        steps: [.steps[] | {
-            number: .number,
-            name: .name,
-            status: .status,
-            attempts: .attempts,
-            verify_passed: .verify.passed,
-            gate_result: .gate_result,
-            gate_mode: .gate_mode,
-            block_reason: .block_reason
-        }]
-    }' "$state_file"
+    build_summary_payload "$state_file"
 }
 
 # ── log-decision ────────────────────────────────────────────────────────────
@@ -1476,6 +1685,11 @@ commands:
   gate <N> <approved|rejected> [--mode auto|human] [--run-id <run-id>]
                                         Record gate decision
   finalize [--json] [--run-id <run-id>] Finalize run, print summary payload
+  finish <kept|merged|published|discarded> [--run-id <run-id>]
+       [--target-branch <name>] [--remote <name>] [--pr-url <url>]
+       [--branch-action <action>] [--worktree-action <action>]
+       [--artifacts-preserved-at <path>] [--notes <text>] [--force]
+                                        Record the post-execution disposition
   summary <run-id> [--json]             Read-only summary for any run
   log-decision <json>                   Append a JSON line to the configured
                                         decision log. No-op when
@@ -1499,6 +1713,7 @@ case "$COMMAND" in
     step)           cmd_step "$@" ;;
     gate)           cmd_gate "$@" ;;
     finalize)       cmd_finalize "$@" ;;
+    finish)         cmd_finish "$@" ;;
     summary)        cmd_summary "$@" ;;
     log-decision)   cmd_log_decision "$@" ;;
     --help|-h|help) usage ;;

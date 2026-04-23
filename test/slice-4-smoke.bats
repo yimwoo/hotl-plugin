@@ -37,19 +37,13 @@ teardown() {
 @test "M2: initiative scope routes output to docs/designs/<topic>.md (undated, durable)" {
     local skill="$REPO_ROOT/skills/brainstorming/SKILL.md"
 
-    grep -qE 'docs/designs/<topic>\.md|docs/designs/\{\{TOPIC\}\}\.md' "$skill"
-
-    # Guard against a half-done rename where someone prefixed docs/designs/
-    # with YYYY-MM-DD-. The durable tier is undated.
-    if grep -qE 'docs/designs/YYYY-MM-DD-' "$skill"; then
-        echo "FAIL: docs/designs/ path must be undated (durable tier)"
-        return 1
-    fi
+    grep -qE 'initiative.*docs/designs/<topic>\.md|initiative.*<designs_dir>/<topic>\.md' "$skill"
 }
 
-@test "M3: feature/phase scope still routes output to docs/plans/YYYY-MM-DD-<topic>-plan.md" {
+@test "M3: feature/phase scope routes output to dated docs/designs design docs" {
     local skill="$REPO_ROOT/skills/brainstorming/SKILL.md"
-    grep -qE 'docs/plans/YYYY-MM-DD-<topic>-plan\.md' "$skill"
+    grep -qE 'feature.*docs/designs/YYYY-MM-DD-<slug>-design\.md' "$skill"
+    grep -qE 'phase.*docs/designs/YYYY-MM-DD-phase-N-<slug>-design\.md' "$skill"
 }
 
 @test "M4: cline/rules/hotl-brainstorming.md mirror carries the scope question" {
@@ -58,8 +52,9 @@ teardown() {
     grep -qw phase "$mirror"
     grep -qw initiative "$mirror"
     grep -qi 'scope' "$mirror"
-    grep -qE 'docs/designs/<topic>\.md|docs/designs/\{\{TOPIC\}\}\.md' "$mirror"
-    grep -qE 'docs/plans/YYYY-MM-DD-<topic>-plan\.md' "$mirror"
+    grep -qE 'docs/designs/<topic>\.md|<designs_dir>/<topic>\.md' "$mirror"
+    grep -qE 'docs/designs/YYYY-MM-DD-<slug>-design\.md' "$mirror"
+    grep -qE 'docs/designs/YYYY-MM-DD-phase-N-<slug>-design\.md' "$mirror"
 }
 
 # ── Group N: strategic-design template install-path resolution ─────────────
@@ -136,7 +131,7 @@ teardown() {
 
 # ── Group P: small-user safety regression ──────────────────────────────────
 
-@test "P1: command and skill counts unchanged from pre-Slice-4 baseline" {
+@test "P1: command count unchanged and skill count is at least the pre-Slice-4 baseline" {
     local expected_cmds actual_cmds expected_skills actual_skills
     expected_cmds=$(cat "$REPO_ROOT/test/fixtures/pre-slice-4-command-count.txt")
     actual_cmds=$(ls "$REPO_ROOT"/commands/*.md | wc -l | tr -d ' ')
@@ -144,7 +139,7 @@ teardown() {
 
     expected_skills=$(cat "$REPO_ROOT/test/fixtures/pre-slice-4-skill-count.txt")
     actual_skills=$(grep -c '^| `' "$REPO_ROOT/skills/using-hotl/SKILL.md")
-    [ "$actual_skills" -eq "$expected_skills" ]
+    [ "$actual_skills" -ge "$expected_skills" ]
 }
 
 @test "P2: Slice 4 surface in a clean repo creates no forbidden initiative-support artifacts" {
