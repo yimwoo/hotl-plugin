@@ -11,7 +11,7 @@ The workflow file (`hotl-workflow-<slug>.md`) defines work to be executed by the
 | `risk_level` | low\|medium\|high | yes | Determines auto-approve behavior |
 | `auto_approve` | boolean | no (default: false) | Skip `gate: human` for non-high-risk steps |
 | `branch` | string | no | Override branch name (default: derived as `hotl/<slug>` from workflow filename) |
-| `worktree` | boolean | no (default: true) | Use an isolated git worktree for execution. Set `worktree: false` to stay in the current checkout (on a dedicated branch if needed) instead of a separate worktree. |
+| `worktree` | true\|false\|host | no (default: true, or host inside an unpinned named linked worktree) | Choose the execution checkout. `true` creates an isolated HOTL worktree, `false` uses the current checkout and may create/switch to the target branch, and `host` uses the current feature branch exactly as provided by the host tool. |
 | `progress` | verbose | no | Enable verbose progress view — prints full step list at each step transition |
 | `report_detail` | full | no | Include all verify output in the execution report, not just failures |
 | `dirty_worktree` | allow | no | Proceed even if non-HOTL files are uncommitted (HOTL artifacts are always excluded automatically) |
@@ -156,7 +156,9 @@ Execution skills (loop-execution, executing-plans, subagent-execution) run a bra
      c. use a custom execution branch
 
 5. Determine isolation mode
+   - If `worktree: host` → use the current checkout and current feature branch exactly as provided by the host tool; reject `main` and `master`
    - If `worktree: false` → stay in the current checkout and use a dedicated branch there
+   - If running inside a named linked git worktree and neither `branch:` nor `worktree:` is set → default to host mode to avoid stacking a second worktree
    - Otherwise → use an isolated git worktree by default
 
 6. Check if the target branch/worktree already exists
@@ -168,10 +170,23 @@ Execution skills (loop-execution, executing-plans, subagent-execution) run a bra
    - Returns JSON with: `branch`, `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, `source_branch`, `source_head`, `worktree_path`
    - By default → create a linked git worktree with the branch, copy the current workflow into it, and execute from that worktree
    - If `worktree: false` → create/switch to the dedicated branch in the current checkout and execute from the repo root
-   - If `branch:` matches the currently checked-out branch while worktree isolation is still enabled, STOP and tell the user to use `worktree: false` for same-branch continuity
+   - If `worktree: host` → keep the current branch and execute from the current checkout; if `branch:` is set, it must match the current branch
+   - If `branch:` matches the currently checked-out branch while worktree isolation is still enabled, STOP and tell the user to use `worktree: false` or `worktree: host` for same-branch continuity
 8. Change into `execution_root`
    - Every later git command, runtime call, helper call, and review command for that run must execute from this directory
 ```
+
+### Common Branch Scenarios
+
+| Starting checkout | Workflow frontmatter | What HOTL does |
+|---|---|---|
+| Normal repo on `main` | no `branch`, no `worktree` | Creates a HOTL worktree on derived branch `hotl/<slug>` from current `HEAD` |
+| Normal repo on `feature/enhance-worktree` | no `branch`, no `worktree` | Execution skills pause and ask whether to use the current branch, a HOTL worktree, or a custom branch |
+| Codex or other linked worktree on `feature/enhance-worktree` | no `branch`, no `worktree` | Uses host mode automatically: executes in the current linked worktree on `feature/enhance-worktree` |
+| Any checkout on `main` or `master` | `worktree: host` | Rejected; use `worktree: true` or switch to a feature branch |
+| Any checkout | `worktree: true` | Creates a separate HOTL-managed worktree unless the target branch is already checked out |
+| Any checkout | `worktree: false` | Uses the current checkout and creates/switches to the target branch if needed |
+| Any checkout | `worktree: host` | Uses the current checkout's current branch; `branch:` must be absent or match that branch |
 
 ### Design Principles
 

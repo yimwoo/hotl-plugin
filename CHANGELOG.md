@@ -4,6 +4,9 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `worktree: host` workflow frontmatter mode. HOTL can now use the current checkout's current feature branch exactly as provided by Codex or another host tool, and defaults to that mode when execution starts inside an unpinned named linked git worktree.
+
 ### Changed
 - `docs/` now tracks only user-facing documentation in this repo. Repo-local planning, design, research, backlog, and initiative work-product docs under `docs/` are gitignored so releases stop shipping internal development artifacts.
 

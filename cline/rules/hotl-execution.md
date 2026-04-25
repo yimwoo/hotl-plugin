@@ -48,6 +48,8 @@ This helper returns JSON with `branch`, `repo_root`, `execution_root`, `workflow
 
 - By default, it creates a linked worktree, copies the current workflow into it, and returns that worktree as `execution_root`.
 - If `worktree: false`, it creates/switches to the dedicated branch in the current checkout and returns the repo root as `execution_root`.
+- If `worktree: host`, it keeps the current feature branch exactly as provided by the host tool and returns the current checkout as `execution_root`; `main` and `master` are rejected.
+- If already running inside a named linked git worktree and the workflow does not set `branch:` or `worktree:`, the helper uses host mode automatically to avoid stacking another worktree.
 - After that, every git command, runtime call, helper call, and review command for the run MUST execute from `execution_root`.
 
 ### Typed Verification

@@ -67,6 +67,10 @@ frontmatter_value() {
     printf '%s\n' "$frontmatter" | { grep -i "^${key}:" || true; } | head -1 | sed "s/^[[:space:]]*${key}:[[:space:]]*//I"
 }
 
+frontmatter_token() {
+    printf '%s' "$1" | sed 's/[[:space:]]#.*$//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]'
+}
+
 is_hotl_transient_path() {
     case "$1" in
         hotl-workflow-*.md|docs/plans/*-workflow.md|docs/designs/*.md|docs/plans/*-design.md|docs/plans/*-plan.md|.hotl|.hotl/*)
@@ -111,10 +115,27 @@ fi
 frontmatter=$(sed -n '/^---$/,/^---$/p' "$workflow_abs" | sed '1d;$d')
 slug=$(slug_from_workflow "$workflow_abs")
 branch=$(frontmatter_value "$frontmatter" "branch")
-[ -z "$branch" ] && branch="hotl/${slug}"
-worktree_enabled=$(frontmatter_value "$frontmatter" "worktree")
-[ -z "$worktree_enabled" ] && worktree_enabled="true"
+branch_was_set=1
+if [ -z "$branch" ]; then
+    branch_was_set=0
+    branch="hotl/${slug}"
+fi
+worktree_enabled=$(frontmatter_token "$(frontmatter_value "$frontmatter" "worktree")")
+worktree_was_set=1
+if [ -z "$worktree_enabled" ]; then
+    worktree_was_set=0
+    worktree_enabled="true"
+fi
 dirty_worktree_mode=$(frontmatter_value "$frontmatter" "dirty_worktree")
+
+case "$worktree_enabled" in
+    true|false|host) ;;
+    *)
+        echo "ERROR: Invalid worktree mode '$worktree_enabled'." >&2
+        echo "       Expected one of: true, false, host." >&2
+        exit 1
+        ;;
+esac
 
 repo_root=""
 execution_root=""
@@ -187,6 +208,18 @@ if ! git -C "$repo_root" rev-parse HEAD >/dev/null 2>&1; then
     exit 0
 fi
 
+git_dir="$(git -C "$repo_root" rev-parse --path-format=absolute --git-dir)"
+git_common_dir="$(git -C "$repo_root" rev-parse --path-format=absolute --git-common-dir)"
+is_linked_worktree=0
+if [ "$git_dir" != "$git_common_dir" ]; then
+    is_linked_worktree=1
+fi
+
+if [ "$worktree_was_set" -eq 0 ] && [ "$branch_was_set" -eq 0 ] && [ "$is_linked_worktree" -eq 1 ] && [ -n "$source_branch" ]; then
+    worktree_enabled="host"
+    branch="$source_branch"
+fi
+
 workflow_rel="${workflow_abs#${repo_root}/}"
 if [ "$workflow_rel" = "$workflow_abs" ]; then
     echo "ERROR: Workflow file must live inside the git repo: $workflow_abs" >&2
@@ -200,14 +233,34 @@ if [ -n "$dirty_paths" ] && [ "$dirty_worktree_mode" != "allow" ]; then
     exit 1
 fi
 
-if [ "$worktree_enabled" = "true" ]; then
+if [ "$worktree_enabled" = "host" ]; then
+    if [ -z "$source_branch" ]; then
+        echo "ERROR: worktree: host requires the current checkout to be on a named branch." >&2
+        exit 1
+    fi
+    case "$source_branch" in
+        main|master)
+            echo "ERROR: worktree: host cannot execute directly on protected branch '$source_branch'." >&2
+            echo "       Use worktree: true for an isolated HOTL worktree, or switch to a feature branch first." >&2
+            exit 1
+            ;;
+    esac
+    if [ "$branch_was_set" -eq 1 ] && [ "$branch" != "$source_branch" ]; then
+        echo "ERROR: worktree: host uses the current checkout branch, but branch is '$branch'." >&2
+        echo "       Current branch is '$source_branch'. Remove branch:, set it to '$source_branch', or use worktree: true." >&2
+        exit 1
+    fi
+    branch="$source_branch"
+    execution_root="$repo_root"
+    workflow_target="$workflow_abs"
+elif [ "$worktree_enabled" = "true" ]; then
     branch_safe=$(sanitize_for_path "$branch")
     worktree_base="$(dirname "$repo_root")/.hotl-worktrees/$(basename "$repo_root")"
     worktree_path="${worktree_base}/${branch_safe}"
 
     if [ -n "$source_branch" ] && [ "$branch" = "$source_branch" ]; then
         echo "ERROR: Execution branch '$branch' is already checked out in the current checkout." >&2
-        echo "       To continue on this exact branch, set both 'branch: $source_branch' and 'worktree: false'." >&2
+        echo "       To continue on this exact branch, set 'branch: $source_branch' with 'worktree: false' or 'worktree: host'." >&2
         echo "       Otherwise choose a different execution branch or omit branch: to use HOTL's default isolated branch." >&2
         exit 1
     fi

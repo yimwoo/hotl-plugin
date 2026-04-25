@@ -29,7 +29,7 @@ success_criteria: 429 after threshold, configurable per-endpoint, all tests pass
 risk_level: medium
 auto_approve: true
 branch: feat/add-rate-limiter   # optional — defaults to hotl/<slug>
-worktree: false                 # optional opt-out — default is isolated worktree execution
+# worktree: host                # optional: only when a host tool already put this task on a feature-branch worktree
 ---
 
 ## Steps
@@ -74,11 +74,14 @@ Before executing any steps, HOTL resolves a dedicated execution root so work nev
 - Override: set `branch: feat/add-auth` in the workflow frontmatter
 - Default isolation: create a git worktree, copy the workflow into it, and execute from that isolated checkout
 - Opt out: set `worktree: false` to stay in the current checkout on a dedicated branch
+- Host checkout: set `worktree: host` to execute on the current feature branch exactly as provided by Codex or another host tool; if HOTL is already running inside a named linked git worktree and no `branch:` or `worktree:` is set, host mode is used automatically
+- Protected branches: `worktree: host` is rejected on `main` and `master`
 
 **Authoring implication:**
 - Do not make verify steps depend on a branch prefix like `feature/` or `pv6-ui/` unless the workflow explicitly pins `branch:` to that pattern
 - If you need to verify the workflow file or another repo-relative artifact exists, use the repo-relative path; HOTL copies the workflow into the isolated worktree at the same relative location
 - If you want execution to stay on the exact current branch, set both `branch: <current-branch>` and `worktree: false`
+- If a host tool such as Codex already created the worktree and you want HOTL to use it, set `worktree: host` or leave both `branch:` and `worktree:` unset inside that linked worktree
 - If the workflow was authored on a non-`main`/`master` branch and does not pin `branch:` or `worktree:`, execution should pause and ask whether to continue on the current branch or use HOTL's isolated execution branch/worktree
 
 **Safety checks:**

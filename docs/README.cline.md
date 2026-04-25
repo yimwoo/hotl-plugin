@@ -110,7 +110,7 @@ intent: one sentence goal
 success_criteria: how you know it's done
 risk_level: low | medium | high
 auto_approve: true | false
-worktree: false   # optional opt-out — default is isolated worktree execution
+# worktree: host  # optional: use only when the host tool already put this task on a feature-branch worktree
 ---
 
 ## Steps

@@ -238,6 +238,15 @@ if [ "$FILE_TYPE" = "workflow" ]; then
             esac
         fi
 
+        # worktree validation (optional field)
+        if echo "$FRONTMATTER" | grep -qi '^worktree:'; then
+            WORKTREE_MODE=$(echo "$FRONTMATTER" | grep -i '^worktree:' | head -1 | sed 's/.*worktree:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+            case "$WORKTREE_MODE" in
+                true|false|host) ;;
+                *) error "worktree must be true, false, or host if set (got: '$WORKTREE_MODE')" ;;
+            esac
+        fi
+
         # dirty_worktree validation (optional field)
         if echo "$FRONTMATTER" | grep -qi 'dirty_worktree:'; then
             DIRTY_WT=$(echo "$FRONTMATTER" | grep -i 'dirty_worktree:' | head -1 | sed 's/.*dirty_worktree:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')

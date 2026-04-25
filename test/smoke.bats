@@ -498,8 +498,10 @@ print(match.group(1) if match else '')
     grep -q 'set both `branch: <current-branch>` and `worktree: false`' "$REPO_ROOT/skills/writing-plans/SKILL.md"
 }
 
-@test "workflow-format describes worktree false as current checkout, not current branch" {
-    grep -q 'stay in the current checkout (on a dedicated branch if needed)' "$REPO_ROOT/docs/workflow-format.md"
+@test "workflow-format describes worktree isolation modes" {
+    grep -q '`false` uses the current checkout and may create/switch to the target branch' "$REPO_ROOT/docs/workflow-format.md"
+    grep -q '`host` uses the current feature branch' "$REPO_ROOT/docs/workflow-format.md"
+    grep -q 'Uses host mode automatically' "$REPO_ROOT/docs/workflow-format.md"
 }
 
 @test "execution docs describe continuity chooser and source metadata" {
