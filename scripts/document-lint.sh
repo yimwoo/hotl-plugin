@@ -21,15 +21,33 @@ error() {
     ERRORS=$((ERRORS + 1))
 }
 
+contains_ci() {
+    local content="$1"
+    local pattern="$2"
+    grep -qi -- "$pattern" <<< "$content"
+}
+
+contains_ere() {
+    local content="$1"
+    local pattern="$2"
+    grep -Eq -- "$pattern" <<< "$content"
+}
+
+first_match_ci() {
+    local content="$1"
+    local pattern="$2"
+    grep -im 1 -- "$pattern" <<< "$content"
+}
+
 # ── Detect file type ─────────────────────────────────────────────────────────
 
-if echo "$FILE" | grep -Eq '(^|/)docs/designs/[^/]+\.md$'; then
+if contains_ere "$FILE" '(^|/)docs/designs/[^/]+\.md$'; then
     FILE_TYPE="design"
-elif echo "$FILENAME" | grep -Eq '\-(design|plan)\.md$'; then
+elif contains_ere "$FILENAME" '\-(design|plan)\.md$'; then
     FILE_TYPE="design"
-elif echo "$FILE" | grep -Eq '(^|/)docs/plans/[^/]+-workflow\.md$'; then
+elif contains_ere "$FILE" '(^|/)docs/plans/[^/]+-workflow\.md$'; then
     FILE_TYPE="workflow"
-elif echo "$FILENAME" | grep -q '^hotl-workflow-.*\.md$'; then
+elif contains_ere "$FILENAME" '^hotl-workflow-.*\.md$'; then
     FILE_TYPE="workflow"
 else
     echo "SKIP: $FILENAME is not a HOTL design doc or workflow file" >&2
@@ -45,15 +63,15 @@ CONTENT="$(cat "$FILE")"
 
 is_step_header() {
     local line="$1"
-    echo "$line" | grep -Eq '^### [0-9]+\.|^- \[[ xX]\] \*\*Step [0-9]+:'
+    contains_ere "$line" '^### [0-9]+\.|^- \[[ xX]\] \*\*Step [0-9]+:'
 }
 
 step_name_from_line() {
     local line="$1"
-    if echo "$line" | grep -Eq '^### [0-9]+\.'; then
-        echo "$line" | sed -E 's/^### [0-9]+\. //'
+    if contains_ere "$line" '^### [0-9]+\.'; then
+        sed -E 's/^### [0-9]+\. //' <<< "$line"
     else
-        echo "$line" | sed -E 's/^- \[[ xX]\] \*\*Step [0-9]+:[[:space:]]*(.*)\*\*$/\1/'
+        sed -E 's/^- \[[ xX]\] \*\*Step [0-9]+:[[:space:]]*(.*)\*\*$/\1/' <<< "$line"
     fi
 }
 
@@ -62,15 +80,16 @@ validate_verify_block() {
     local step_block="$2"
 
     # Check if verify: exists
-    if ! printf '%s\n' "$step_block" | grep -qi '^verify:'; then
+    if ! contains_ci "$step_block" '^verify:'; then
         return 0
     fi
 
     # Get verify line and check if scalar (value on same line)
     local verify_line
-    verify_line=$(printf '%s\n' "$step_block" | grep -i '^verify:' | head -1)
+    verify_line=$(first_match_ci "$step_block" '^verify:')
     local verify_value
-    verify_value=$(echo "$verify_line" | sed 's/^[Vv]erify:[[:space:]]*//')
+    verify_value="${verify_line#*:}"
+    verify_value="${verify_value#"${verify_value%%[![:space:]]*}"}"
 
     if [ -n "$verify_value" ]; then
         # Scalar form — valid as type:shell shorthand
@@ -81,12 +100,12 @@ validate_verify_block() {
     local in_verify=0
     local verify_block=""
     while IFS= read -r line; do
-        if [ "$in_verify" -eq 0 ] && echo "$line" | grep -qi '^verify:$'; then
+        if [ "$in_verify" -eq 0 ] && contains_ci "$line" '^verify:$'; then
             in_verify=1
             continue
         fi
         if [ "$in_verify" -eq 1 ]; then
-            if echo "$line" | grep -Eq '^[[:space:]]'; then
+            if contains_ere "$line" '^[[:space:]]'; then
                 verify_block="${verify_block}${line}
 "
             elif [ -z "$line" ]; then
@@ -103,30 +122,30 @@ validate_verify_block() {
     fi
 
     # Validate type field(s) exist
-    if ! printf '%s\n' "$verify_block" | grep -qi 'type:'; then
+    if ! contains_ci "$verify_block" 'type:'; then
         error "Step '$step_name' has structured verify block but missing 'type:' field"
         return 0
     fi
 
     # Validate each type value is valid
     local types
-    types=$(printf '%s\n' "$verify_block" | grep -i 'type:' | sed 's/.*type:[[:space:]]*//' | tr -d ' ')
+    types=$(grep -i -- 'type:' <<< "$verify_block" | sed 's/.*type:[[:space:]]*//' | tr -d ' ')
     while IFS= read -r vtype; do
         [ -z "$vtype" ] && continue
         case "$vtype" in
             shell)
-                printf '%s\n' "$verify_block" | grep -qi 'command:' || error "Step '$step_name' verify type:shell missing 'command:' field"
+                contains_ci "$verify_block" 'command:' || error "Step '$step_name' verify type:shell missing 'command:' field"
                 ;;
             browser)
-                printf '%s\n' "$verify_block" | grep -qi 'url:' || error "Step '$step_name' verify type:browser missing 'url:' field"
-                printf '%s\n' "$verify_block" | grep -qi 'check:' || error "Step '$step_name' verify type:browser missing 'check:' field"
+                contains_ci "$verify_block" 'url:' || error "Step '$step_name' verify type:browser missing 'url:' field"
+                contains_ci "$verify_block" 'check:' || error "Step '$step_name' verify type:browser missing 'check:' field"
                 ;;
             human-review)
-                printf '%s\n' "$verify_block" | grep -qi 'prompt:' || error "Step '$step_name' verify type:human-review missing 'prompt:' field"
+                contains_ci "$verify_block" 'prompt:' || error "Step '$step_name' verify type:human-review missing 'prompt:' field"
                 ;;
             artifact)
-                printf '%s\n' "$verify_block" | grep -qi 'path:' || error "Step '$step_name' verify type:artifact missing 'path:' field"
-                printf '%s\n' "$verify_block" | grep -qi 'kind:' || error "Step '$step_name' verify type:artifact missing 'assert.kind' field"
+                contains_ci "$verify_block" 'path:' || error "Step '$step_name' verify type:artifact missing 'path:' field"
+                contains_ci "$verify_block" 'kind:' || error "Step '$step_name' verify type:artifact missing 'assert.kind' field"
                 ;;
             *)
                 error "Step '$step_name' has invalid verify type '$vtype' (expected: shell, browser, human-review, artifact)"
@@ -139,12 +158,12 @@ check_step_block() {
     local step_name="$1"
     local step_block="$2"
 
-    printf '%s\n' "$step_block" | grep -qi '^action:' || error "Step '$step_name' missing 'action:' field"
-    printf '%s\n' "$step_block" | grep -qi '^loop:' || error "Step '$step_name' missing 'loop:' field"
+    contains_ci "$step_block" '^action:' || error "Step '$step_name' missing 'action:' field"
+    contains_ci "$step_block" '^loop:' || error "Step '$step_name' missing 'loop:' field"
 
-    if printf '%s\n' "$step_block" | grep -qi '^loop:.*until'; then
-        printf '%s\n' "$step_block" | grep -qi '^verify:' || error "Step '$step_name' has loop:until but missing 'verify:' field"
-        printf '%s\n' "$step_block" | grep -qi '^max_iterations:' || error "Step '$step_name' has loop:until but missing 'max_iterations:' field"
+    if contains_ci "$step_block" '^loop:.*until'; then
+        contains_ci "$step_block" '^verify:' || error "Step '$step_name' has loop:until but missing 'verify:' field"
+        contains_ci "$step_block" '^max_iterations:' || error "Step '$step_name' has loop:until but missing 'max_iterations:' field"
     fi
 
     # Validate typed verify blocks if present
@@ -152,8 +171,8 @@ check_step_block() {
 
     if [ -n "${RISK:-}" ] && [ "$RISK" = "high" ]; then
         SECURITY_KEYWORDS="auth\|encrypt\|secret\|password\|token\|billing\|permission"
-        if printf '%s\n' "$step_block" | grep -qi "$SECURITY_KEYWORDS"; then
-            printf '%s\n' "$step_block" | grep -qi '^gate:.*human' || error "Step '$step_name' has security keywords with risk_level:high but missing 'gate: human'"
+        if contains_ci "$step_block" "$SECURITY_KEYWORDS"; then
+            contains_ci "$step_block" '^gate:.*human' || error "Step '$step_name' has security keywords with risk_level:high but missing 'gate: human'"
         fi
     fi
 }
@@ -163,33 +182,33 @@ check_step_block() {
 if [ "$FILE_TYPE" = "design" ]; then
 
     # Intent Contract
-    if ! echo "$CONTENT" | grep -qi 'intent contract\|## intent'; then
+    if ! contains_ci "$CONTENT" 'intent contract\|## intent'; then
         error "Missing Intent Contract section"
     else
-        echo "$CONTENT" | grep -qi 'intent:' || error "Intent Contract missing 'intent:' field"
-        echo "$CONTENT" | grep -qi 'constraints:' || error "Intent Contract missing 'constraints:' field"
-        echo "$CONTENT" | grep -qi 'success_criteria:' || error "Intent Contract missing 'success_criteria:' field"
-        echo "$CONTENT" | grep -qi 'risk_level:' || error "Intent Contract missing 'risk_level:' field"
+        contains_ci "$CONTENT" 'intent:' || error "Intent Contract missing 'intent:' field"
+        contains_ci "$CONTENT" 'constraints:' || error "Intent Contract missing 'constraints:' field"
+        contains_ci "$CONTENT" 'success_criteria:' || error "Intent Contract missing 'success_criteria:' field"
+        contains_ci "$CONTENT" 'risk_level:' || error "Intent Contract missing 'risk_level:' field"
     fi
 
     # Verification Contract
-    if ! echo "$CONTENT" | grep -qi 'verification contract\|## verification'; then
+    if ! contains_ci "$CONTENT" 'verification contract\|## verification'; then
         error "Missing Verification Contract section"
     else
-        echo "$CONTENT" | grep -qi 'verify\|check\|confirm\|run test' || error "Verification Contract has no verify steps"
+        contains_ci "$CONTENT" 'verify\|check\|confirm\|run test' || error "Verification Contract has no verify steps"
     fi
 
     # Governance Contract
-    if ! echo "$CONTENT" | grep -qi 'governance contract\|## governance'; then
+    if ! contains_ci "$CONTENT" 'governance contract\|## governance'; then
         error "Missing Governance Contract section"
     else
-        echo "$CONTENT" | grep -qi 'approval_gates\|approval gates' || error "Governance Contract missing 'approval_gates' field"
-        echo "$CONTENT" | grep -qi 'rollback:' || error "Governance Contract missing 'rollback' field"
+        contains_ci "$CONTENT" 'approval_gates\|approval gates' || error "Governance Contract missing 'approval_gates' field"
+        contains_ci "$CONTENT" 'rollback:' || error "Governance Contract missing 'rollback' field"
     fi
 
     # risk_level validation
-    if echo "$CONTENT" | grep -qi 'risk_level:'; then
-        RISK=$(echo "$CONTENT" | grep -i 'risk_level:' | head -1 | sed 's/.*risk_level:[[:space:]]*//' | tr -d '`' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+    if contains_ci "$CONTENT" 'risk_level:'; then
+        RISK=$(first_match_ci "$CONTENT" 'risk_level:' | sed 's/.*risk_level:[[:space:]]*//' | tr -d '`' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
         case "$RISK" in
             low|medium|high) ;;
             *) error "risk_level must be low, medium, or high (got: '$RISK')" ;;
@@ -202,18 +221,19 @@ fi
 if [ "$FILE_TYPE" = "workflow" ]; then
 
     # Frontmatter check
-    if ! echo "$CONTENT" | head -1 | grep -q '^---'; then
+    FIRST_LINE="${CONTENT%%$'\n'*}"
+    if [[ ! "$FIRST_LINE" =~ ^--- ]]; then
         error "Missing YAML frontmatter (file must start with ---)"
     else
         # Extract frontmatter (between first and second ---)
-        FRONTMATTER=$(echo "$CONTENT" | sed -n '/^---$/,/^---$/p')
-        echo "$FRONTMATTER" | grep -qi 'intent:' || error "Frontmatter missing 'intent:' field"
-        echo "$FRONTMATTER" | grep -qi 'success_criteria:' || error "Frontmatter missing 'success_criteria:' field"
-        echo "$FRONTMATTER" | grep -qi 'risk_level:' || error "Frontmatter missing 'risk_level:' field"
+        FRONTMATTER=$(sed -n '/^---$/,/^---$/p' <<< "$CONTENT")
+        contains_ci "$FRONTMATTER" 'intent:' || error "Frontmatter missing 'intent:' field"
+        contains_ci "$FRONTMATTER" 'success_criteria:' || error "Frontmatter missing 'success_criteria:' field"
+        contains_ci "$FRONTMATTER" 'risk_level:' || error "Frontmatter missing 'risk_level:' field"
 
         # risk_level validation
-        if echo "$FRONTMATTER" | grep -qi 'risk_level:'; then
-            RISK=$(echo "$FRONTMATTER" | grep -i 'risk_level:' | head -1 | sed 's/.*risk_level:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+        if contains_ci "$FRONTMATTER" 'risk_level:'; then
+            RISK=$(first_match_ci "$FRONTMATTER" 'risk_level:' | sed 's/.*risk_level:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
             case "$RISK" in
                 low|medium|high) ;;
                 *) error "risk_level must be low, medium, or high (got: '$RISK')" ;;
@@ -221,8 +241,8 @@ if [ "$FILE_TYPE" = "workflow" ]; then
         fi
 
         # progress validation (optional field)
-        if echo "$FRONTMATTER" | grep -qi 'progress:'; then
-            PROGRESS=$(echo "$FRONTMATTER" | grep -i 'progress:' | head -1 | sed 's/.*progress:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+        if contains_ci "$FRONTMATTER" 'progress:'; then
+            PROGRESS=$(first_match_ci "$FRONTMATTER" 'progress:' | sed 's/.*progress:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
             case "$PROGRESS" in
                 verbose) ;;
                 *) error "progress must be 'verbose' if set (got: '$PROGRESS')" ;;
@@ -230,8 +250,8 @@ if [ "$FILE_TYPE" = "workflow" ]; then
         fi
 
         # report_detail validation (optional field)
-        if echo "$FRONTMATTER" | grep -qi 'report_detail:'; then
-            REPORT_DETAIL=$(echo "$FRONTMATTER" | grep -i 'report_detail:' | head -1 | sed 's/.*report_detail:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+        if contains_ci "$FRONTMATTER" 'report_detail:'; then
+            REPORT_DETAIL=$(first_match_ci "$FRONTMATTER" 'report_detail:' | sed 's/.*report_detail:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
             case "$REPORT_DETAIL" in
                 full) ;;
                 *) error "report_detail must be 'full' if set (got: '$REPORT_DETAIL')" ;;
@@ -239,8 +259,8 @@ if [ "$FILE_TYPE" = "workflow" ]; then
         fi
 
         # worktree validation (optional field)
-        if echo "$FRONTMATTER" | grep -qi '^worktree:'; then
-            WORKTREE_MODE=$(echo "$FRONTMATTER" | grep -i '^worktree:' | head -1 | sed 's/.*worktree:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+        if contains_ci "$FRONTMATTER" '^worktree:'; then
+            WORKTREE_MODE=$(first_match_ci "$FRONTMATTER" '^worktree:' | sed 's/.*worktree:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
             case "$WORKTREE_MODE" in
                 true|false|host) ;;
                 *) error "worktree must be true, false, or host if set (got: '$WORKTREE_MODE')" ;;
@@ -248,8 +268,8 @@ if [ "$FILE_TYPE" = "workflow" ]; then
         fi
 
         # dirty_worktree validation (optional field)
-        if echo "$FRONTMATTER" | grep -qi 'dirty_worktree:'; then
-            DIRTY_WT=$(echo "$FRONTMATTER" | grep -i 'dirty_worktree:' | head -1 | sed 's/.*dirty_worktree:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
+        if contains_ci "$FRONTMATTER" 'dirty_worktree:'; then
+            DIRTY_WT=$(first_match_ci "$FRONTMATTER" 'dirty_worktree:' | sed 's/.*dirty_worktree:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')
             case "$DIRTY_WT" in
                 allow) ;;
                 *) error "dirty_worktree must be 'allow' if set (got: '$DIRTY_WT')" ;;
@@ -259,7 +279,7 @@ if [ "$FILE_TYPE" = "workflow" ]; then
 
     # Step structure checks
     # Accept both legacy numbered headings and checkbox-style step bullets.
-    STEP_COUNT=$(printf '%s\n' "$CONTENT" | grep -Ec '^### [0-9]+\.|^- \[[ xX]\] \*\*Step [0-9]+:' || true)
+    STEP_COUNT=$(grep -Ec -- '^### [0-9]+\.|^- \[[ xX]\] \*\*Step [0-9]+:' <<< "$CONTENT" || true)
     if [ "$STEP_COUNT" -eq 0 ]; then
         error "No steps found (expected either '### N. Step name' or '- [ ] **Step N: Step name**')"
     else
