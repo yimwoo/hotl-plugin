@@ -4,6 +4,16 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.15.1] - 2026-05-09
+
+### Changed
+- README quick start is reorganized around install path, first-run prompts, and the canonical HOTL artifacts.
+- Codex, Cline, OpenCode, adapter, command, and workflow-format docs now consistently describe canonical workflows as `docs/plans/YYYY-MM-DD-<slug>-workflow.md`, with root `hotl-workflow-*.md` treated as legacy compatibility.
+
+### Fixed
+- Cline native-skills documentation now matches the installer: 1 global operating-model rule plus 10 native skills.
+- Workflow examples in user-facing docs now use linter-compatible column-zero step fields.
+
 ## [2.15.0] - 2026-05-09
 
 ### Added

@@ -18,7 +18,7 @@ The Human-on-the-Loop (HOTL) model applies to **implementation tasks** — new f
 ### The HOTL Workflow (implementation tasks only)
 
 1. **Brainstorm** — explore intent, ask questions, propose approaches, define contracts
-2. **Plan** — create a `hotl-workflow-<slug>.md` with atomic steps
+2. **Plan** — create `docs/plans/YYYY-MM-DD-<slug>-workflow.md` with atomic steps
 3. **Execute** — run the plan step by step with verification
 4. **Review** — a first-class lifecycle stage embedded in execution:
    - Executors invoke `requesting-code-review` at defined checkpoints (batch boundaries, pre-completion)
@@ -59,7 +59,7 @@ When the user triggers a workflow, read the full skill file from disk for detail
 
 ### Workflow Files
 
-Plans are saved as `hotl-workflow-<slug>.md` in the project root. Each step includes:
+Workflow files are saved as `docs/plans/YYYY-MM-DD-<slug>-workflow.md`. Legacy root files such as `hotl-workflow-<slug>.md` remain readable during migration, but new writes should use `docs/plans/`. Each step includes:
 - `action` — what to do
 - `loop` — false or "until [condition]"
 - `verify` — command or typed verification block to confirm success

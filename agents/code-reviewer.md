@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: |
-  Use after completing a step or batch of implementation work. Reviews against the hotl-workflow-*.md plan and HOTL contracts. Flags BLOCK/WARN/NOTE issues with file:line references.
+  Use after completing a step or batch of implementation work. Reviews against the HOTL workflow and HOTL contracts. Flags BLOCK/WARN/NOTE issues with file:line references.
 model: inherit
 ---
 

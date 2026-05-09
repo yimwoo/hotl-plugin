@@ -4,7 +4,7 @@
 
 **Full skill:** Read `__HOTL_HOME__/skills/document-review/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 
-**Classification:** files matching `docs/plans/*-design.md`, `docs/plans/*-plan.md`, or `hotl-workflow-*.md` are HOTL-owned artifacts and MUST go through Phase 1 (lint) + Phase 2 (AI review). Other markdown files skip Phase 1 and get a generic review only.
+**Classification:** files matching canonical `docs/designs/*.md` or `docs/plans/*-workflow.md`, or legacy `docs/plans/*-design.md`, `docs/plans/*-plan.md`, or `hotl-workflow-*.md`, are HOTL-owned artifacts and MUST go through Phase 1 (lint) + Phase 2 (AI review). Other markdown files skip Phase 1 and get a generic review only.
 
 ### MANDATORY — TWO PHASES, BOTH REQUIRED
 
@@ -28,7 +28,7 @@ bash __SCRIPTS_HOME__/document-lint.sh <file>
 - Governance Contract with approval_gates and rollback
 - risk_level is low, medium, or high
 
-**What lint checks for workflow files (hotl-workflow-*.md):**
+**What lint checks for workflow files (`docs/plans/*-workflow.md` and legacy `hotl-workflow-*.md`):**
 - YAML frontmatter with intent, success_criteria, risk_level
 - Every step has action and loop fields
 - Every looped step has verify and max_iterations

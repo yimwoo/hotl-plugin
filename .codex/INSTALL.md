@@ -1,45 +1,85 @@
 # Installing the HOTL Plugin for Codex
 
-Install HOTL in Codex via native skill discovery. HOTL is a Human-on-the-Loop AI coding workflow that adds structured design, workflow execution, review, and verification skills to Codex.
+Install HOTL in Codex as a Codex plugin. HOTL is a Human-on-the-Loop AI coding workflow that adds structured design, workflow execution, review, and verification skills to Codex.
 
-If you want the recommended Codex plugin install with UI screenshots, use
-[`docs/README.codex.md`](../docs/README.codex.md).
+The plugin install works for both Codex CLI and Codex app users. CLI-only users
+do not need the app: after the installer registers HOTL, use `/plugins` in
+Codex CLI to install or enable it. Native skill discovery is still available as
+a fallback for older Codex builds and local HOTL development.
 
 ## Prerequisites
 
 - Git
+- A Codex build with plugin support
 
 ## Installation
 
+### Plugin Install
+
+1. Clone the HOTL repository:
+
+```bash
+git clone https://github.com/yimwoo/hotl-plugin.git /tmp/hotl-plugin
+```
+
+2. Register HOTL as a local Codex plugin:
+
+```bash
+bash /tmp/hotl-plugin/install.sh --codex-plugin
+```
+
+3. Restart Codex.
+
+4. In Codex CLI, open the plugin directory and install HOTL:
+
+```text
+codex
+/plugins
+```
+
+Switch to **Local Plugins**, open **HOTL**, and select `Install plugin`. If HOTL
+is already installed but disabled, press `Space` to enable it.
+
+Codex app users can use the same installer, then open **Plugins**, switch to
+**Local Plugins**, and install HOTL there.
+
+## Native Skills Fallback
+
+Use this path for older Codex versions or HOTL development.
+
 ### macOS / Linux
 
-1. **Clone the HOTL repository:**
-   ```bash
-   git clone https://github.com/yimwoo/hotl-plugin.git ~/.codex/hotl
-   ```
+1. Clone the HOTL repository:
 
-2. **Create the skills symlink:**
-   ```bash
-   mkdir -p ~/.agents/skills
-   ln -s ~/.codex/hotl/skills ~/.agents/skills/hotl
-   ```
+```bash
+git clone https://github.com/yimwoo/hotl-plugin.git ~/.codex/hotl
+```
 
-3. **Restart Codex** to discover the skills.
+2. Create the skills symlink:
+
+```bash
+mkdir -p ~/.agents/skills
+ln -s ~/.codex/hotl/skills ~/.agents/skills/hotl
+```
+
+3. Restart Codex to discover the skills.
 
 ### Windows (PowerShell)
 
-1. **Clone the HOTL repository:**
-   ```powershell
-   git clone https://github.com/yimwoo/hotl-plugin.git "$env:USERPROFILE\.codex\hotl"
-   ```
+1. Clone the HOTL repository:
 
-2. **Create the skills junction:**
-   ```powershell
-   New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
-   cmd /c mklink /J "$env:USERPROFILE\.agents\skills\hotl" "$env:USERPROFILE\.codex\hotl\skills"
-   ```
+```powershell
+git clone https://github.com/yimwoo/hotl-plugin.git "$env:USERPROFILE\.codex\hotl"
+```
 
-3. **Restart Codex** to discover the skills.
+2. Create the skills junction:
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.agents\skills"
+cmd /c mklink /J "$env:USERPROFILE\.agents\skills\hotl" "$env:USERPROFILE\.codex\hotl\skills"
+```
+
+3. Restart Codex to discover the skills.
 
 ## Stable Channel
 
@@ -48,6 +88,19 @@ If you want to modify HOTL itself, use a separate clone or worktree elsewhere
 and keep this install on `main`.
 
 ## Verify
+
+### Plugin Install
+
+Start Codex and open `/plugins`. HOTL should appear under **Local Plugins** and
+show as installed/enabled after you complete the install step.
+
+You can also confirm that the installer registered the source checkout:
+
+```bash
+test -d ~/.codex/plugins/hotl-source && test -f ~/.agents/plugins/marketplace.json
+```
+
+### Native Skills Fallback
 
 **macOS / Linux:**
 ```bash
@@ -91,6 +144,22 @@ workflow file, continue with the matching skill name instead:
 
 ## Updating
 
+### Plugin Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
+```
+
+Or update only the plugin checkout:
+
+```bash
+bash ~/.codex/plugins/hotl-source/update.sh --codex-plugin
+```
+
+Restart Codex after updating so it reloads the plugin files.
+
+### Native Skills Fallback
+
 **macOS / Linux:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/yimwoo/hotl-plugin/main/update.sh | bash
@@ -127,6 +196,15 @@ local Codex changes without creating that backup.
 Restart Codex after updating so it re-discovers the latest skill files.
 
 ## Uninstalling
+
+### Plugin Install
+
+```bash
+rm -rf ~/.codex/plugins/hotl-source
+# Edit ~/.agents/plugins/marketplace.json and remove the hotl entry
+```
+
+### Native Skills Fallback
 
 **macOS / Linux:**
 ```bash

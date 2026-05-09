@@ -9,13 +9,14 @@ auto_approve: false
     Reusable phase-kickoff workflow.
 
     How to use:
-      1. Copy this file to the root of your project as
-         `hotl-workflow-{{SLUG}}-phase-{{PHASE_ID}}-kickoff.md`
-         (substitute real values for {{SLUG}} and {{PHASE_ID}}).
+      1. Copy this file to your project's workflow directory as
+         `docs/plans/YYYY-MM-DD-{{SLUG}}-phase-{{PHASE_ID}}-kickoff-workflow.md`
+         (substitute a real date plus real values for {{SLUG}} and {{PHASE_ID}}).
       2. Replace every {{SLUG}} and {{PHASE_ID}} token in the frontmatter,
          action lines, and verify lines below.
       3. Run via `/hotl:loop <copied-filename>` or `/hotl:execute-plan
-         <copied-filename>`. Each of the three steps is gate: human —
+         <copied-filename>` in Claude Code, or the equivalent HOTL execution
+         skill in Codex/Cline. Each of the three steps is gate: human —
          you will be asked to approve after every artifact is produced.
 
     What it does:

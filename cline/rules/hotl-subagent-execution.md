@@ -1,6 +1,6 @@
 ## HOTL Subagent Execution
 
-**When to use:** When you have a `hotl-workflow-<slug>.md` and want same-session execution with delegated subagent steps.
+**When to use:** When you have a HOTL workflow, preferably `docs/plans/YYYY-MM-DD-<slug>-workflow.md`, and want same-session execution with delegated subagent steps.
 
 **Full skill:** Read `__HOTL_HOME__/skills/subagent-execution/SKILL.md` for the complete process. If unavailable, follow the condensed version below.
 

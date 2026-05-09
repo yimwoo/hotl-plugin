@@ -101,7 +101,7 @@
     <path d="M44 1114 l4 -5 l4 5" fill="none" stroke="#7a7670" stroke-width="2"/>
     <text x="88" y="1117" font-size="21" font-weight="700" fill="#151515">Loop Execution</text>
     <text x="234" y="1117" font-size="18" fill="#716d68">Skill</text>
-    <text x="88" y="1152" font-size="17" fill="#5f5b56">Use when executing a hotl-workflow-*.md — reads steps, loops until success...</text>
+    <text x="88" y="1152" font-size="17" fill="#5f5b56">Use when executing a HOTL workflow — reads steps, loops until success...</text>
     <rect x="890" y="1107" width="40" height="28" rx="14" fill="#0b66d3"/>
     <circle cx="914" cy="1121" r="11" fill="#ffffff"/>
 

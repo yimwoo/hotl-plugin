@@ -4,7 +4,7 @@ Follow the Human-on-the-Loop operating model.
 
 ## Before implementing features
 - Define intent, constraints, and success criteria first
-- Create `hotl-workflow-<slug>.md` with steps and verification commands
+- Create `docs/plans/YYYY-MM-DD-<slug>-workflow.md` with steps and verification commands
 - Identify risk level (low/medium/high)
 
 ## During implementation

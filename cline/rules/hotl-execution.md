@@ -1,6 +1,6 @@
 ## HOTL Execution
 
-**When to use:** When you have a `hotl-workflow-<slug>.md` to execute.
+**When to use:** When you have a HOTL workflow to execute, preferably `docs/plans/YYYY-MM-DD-<slug>-workflow.md`.
 
 **Full skills:** Read `__HOTL_HOME__/skills/executing-plans/SKILL.md` (linear), `__HOTL_HOME__/skills/loop-execution/SKILL.md` (autonomous), or `__HOTL_HOME__/skills/subagent-execution/SKILL.md` (delegated same-session execution) for complete processes. If unavailable, follow the condensed version below.
 
@@ -14,14 +14,17 @@
 ### Workflow Resolution
 
 1. If the user specifies a filename → use it
-2. Else look for `hotl-workflow-*.md` in project root:
+2. Else look for canonical workflows in `docs/plans/*-workflow.md`:
+   - One match → use it
+   - Multiple → if one is clearly the newest revision for the same semantic slug, prefer it; otherwise list and ask user to pick
+3. If no canonical workflow exists, look for legacy `hotl-workflow-*.md` in project root:
    - One match → use it
    - Multiple → list and ask user to pick
    - None → ask if they want to create one
 
 ### Dirty Worktree Handling
 
-Preflight automatically excludes HOTL-owned artifacts (`hotl-workflow-*.md`, `docs/plans/*-design.md`, `docs/plans/*-plan.md`, `.hotl/`) from dirty worktree checks. If only those files are dirty, execution proceeds normally.
+Preflight automatically excludes HOTL-owned artifacts (`docs/plans/*-workflow.md`, `hotl-workflow-*.md`, `docs/designs/*.md`, legacy `docs/plans/*-design.md`, legacy `docs/plans/*-plan.md`, `.hotl/`) from dirty worktree checks. If only those files are dirty, execution proceeds normally.
 
 For non-HOTL dirty files: if `dirty_worktree: allow` is set in the workflow frontmatter, proceed without prompting. Otherwise, pause and ask the user to clean up, stash, or approve.
 

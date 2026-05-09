@@ -19,6 +19,7 @@ bash ~/.cline/hotl/install-cline.sh
 
 1. HOTL skills install to `~/.cline/hotl/`
 2. HOTL rules install to `~/Documents/Cline/Rules/` (Cline's global rules directory)
+3. HOTL scripts and runtime install to `~/Documents/Cline/Scripts/`
 
 Rules apply to **all projects** automatically. No per-project setup needed. Start a new Cline task to activate.
 
@@ -27,7 +28,7 @@ Rules apply to **all projects** automatically. No per-project setup needed. Star
 Tell Cline what you need:
 
 - **"brainstorm this feature"** — design with contracts before coding
-- **"plan the implementation"** — create a workflow file with steps and gates
+- **"plan the implementation"** — create `docs/plans/YYYY-MM-DD-<slug>-workflow.md` with steps and gates
 - **"execute the plan"** — run the workflow with checkpoints
 - **"use TDD"** — RED-GREEN-REFACTOR cycle
 - **"debug this"** — systematic 4-phase debugging

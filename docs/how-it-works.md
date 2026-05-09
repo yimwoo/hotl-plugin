@@ -35,27 +35,28 @@ branch: feat/add-rate-limiter   # optional — defaults to hotl/<slug>
 ## Steps
 
 - [ ] **Step 1: Write failing tests**
-  action: Write tests for rate limit behavior
-  loop: false
-  verify: pytest tests/test_rate_limit.py -v
+action: Write tests for rate limit behavior
+loop: false
+verify: pytest tests/test_rate_limit.py -v
 
 - [ ] **Step 2: Implement rate limiting**
-  action: Add rate limiting middleware
-  loop: until tests pass
-  max_iterations: 5
-  verify: pytest tests/test_rate_limit.py -v
+action: Add rate limiting middleware
+loop: until tests pass
+max_iterations: 5
+verify: pytest tests/test_rate_limit.py -v
 ```
 
 Each step has an action, an optional loop condition, a verify command, and an optional gate (`human` or `auto`). See [workflow-format.md](workflow-format.md) for the full specification.
 
 ## 3. Review Before Execution
 
-HOTL reviews both design docs and workflow files before execution starts:
+HOTL validates workflow files before execution starts:
 
-- **Structural lint** — `scripts/document-lint.sh` checks formatting and required fields
-- **AI review** — `hotl:document-review` evaluates design/workflow quality
+- **Built-in self-check** — `writing-plans` reviews step sizing, verify coverage, gate placement, loop safety, and ordering before offering execution.
+- **Structural lint** — execution preflight runs `scripts/document-lint.sh` before any git mutation or step execution.
+- **Optional document review** — `hotl:document-review` can run qualitative AI review for design docs, workflow files, hand-authored plans, or other docs when you explicitly ask for it.
 
-Lint failures are hard blockers. AI review produces one of:
+Lint failures are hard blockers. Optional document review produces one of:
 
 | Verdict | Meaning |
 | --- | --- |
@@ -63,7 +64,7 @@ Lint failures are hard blockers. AI review produces one of:
 | `REVISE` | Issues found — fix before proceeding |
 | `HUMAN_OVERRIDE_REQUIRED` | Requires explicit human approval |
 
-Execution does not start from a structurally broken or obviously weak workflow.
+Execution does not start from a structurally broken workflow.
 
 ## 4. Git Execution Isolation
 
@@ -85,8 +86,9 @@ Before executing any steps, HOTL resolves a dedicated execution root so work nev
 - If the workflow was authored on a non-`main`/`master` branch and does not pin `branch:` or `worktree:`, execution should pause and ask whether to continue on the current branch or use HOTL's isolated execution branch/worktree
 
 **Safety checks:**
-- Uncommitted changes block execution (no auto-stash — you decide what to do)
-- Existing branch/worktree collisions currently stop with a clear error; interactive reuse/recreate prompts are not implemented yet
+- HOTL-owned artifacts such as `docs/designs/`, `docs/plans/*-workflow.md`, and `.hotl/` are excluded from dirty-worktree blocking.
+- Non-HOTL uncommitted changes block execution unless the workflow explicitly sets `dirty_worktree: allow`.
+- Existing branch/worktree collisions currently stop with a clear error; interactive reuse/recreate prompts are not implemented yet.
 - Repos without git or with no commits skip branching and execute in place
 
 Every workflow execution starts clean, on its own isolated execution root, with no risk to the main branch.
@@ -94,7 +96,7 @@ HOTL records the `execution_root`, `worktree_path`, `source_branch`, and `source
 
 ## 5. Execute
 
-All execution modes share one engine: the **HOTL execution state machine** (resolve → preflight → lint → execute → verify → loop → gate → summarize). They differ in how steps run and how often human checkpoints occur.
+All execution modes share one engine: the **HOTL execution state machine** (resolve → lint/preflight → execute → verify → loop → gate → summarize). They differ in how steps run and how often human checkpoints occur.
 
 ### Loop Execution (universal engine)
 

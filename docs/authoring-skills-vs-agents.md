@@ -196,7 +196,7 @@ subagents aren't available.
 name: code-reviewer
 description: |
   Use after completing a step or batch of implementation work. Reviews against
-  the hotl-workflow-*.md plan and HOTL contracts. Flags BLOCK/WARN/NOTE issues.
+  the HOTL workflow and HOTL contracts. Flags BLOCK/WARN/NOTE issues.
 model: inherit
 ---
 ```

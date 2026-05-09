@@ -13,7 +13,7 @@ Every execution report (`.hotl/reports/<run-id>.md`) must contain these 5 requir
 ```markdown
 # Execution Report: <run-id>
 
-**Workflow:** hotl-workflow-<slug>.md
+**Workflow:** docs/plans/YYYY-MM-DD-<slug>-workflow.md
 **Source Workflow:** /abs/path/to/original/workflow.md
 **Intent:** <intent from frontmatter>
 **Branch:** <branch name>

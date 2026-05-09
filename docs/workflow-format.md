@@ -1,6 +1,8 @@
 # Workflow File Format Reference
 
-The workflow file (`hotl-workflow-<slug>.md`) defines work to be executed by the `loop-execution` skill. The `<slug>` is a short kebab-case name derived from the intent (e.g., `hotl-workflow-add-rate-limiting.md`). This naming convention prevents file conflicts when multiple agents work on the same project.
+Canonical workflow files live at `docs/plans/YYYY-MM-DD-<slug>-workflow.md` and define work to be executed by `loop-execution`, `executing-plans`, or `subagent-execution`. The `<slug>` is a short kebab-case semantic identity derived from the intent. The date makes revisions sortable; HOTL still derives the execution branch from the semantic slug, for example `docs/plans/2026-04-22-add-rate-limiting-workflow.md` becomes `hotl/add-rate-limiting`.
+
+Legacy root files such as `hotl-workflow-add-rate-limiting.md` remain readable during migration, but new workflow files should use `docs/plans/`.
 
 ## Frontmatter Fields
 
@@ -10,7 +12,7 @@ The workflow file (`hotl-workflow-<slug>.md`) defines work to be executed by the
 | `success_criteria` | string | yes | How you know the workflow is done |
 | `risk_level` | low\|medium\|high | yes | Determines auto-approve behavior |
 | `auto_approve` | boolean | no (default: false) | Skip `gate: human` for non-high-risk steps |
-| `branch` | string | no | Override branch name (default: derived as `hotl/<slug>` from workflow filename) |
+| `branch` | string | no | Override branch name (default: derived as `hotl/<slug>` from the canonical or legacy workflow filename) |
 | `worktree` | true\|false\|host | no (default: true, or host inside an unpinned named linked worktree) | Choose the execution checkout. `true` creates an isolated HOTL worktree, `false` uses the current checkout and may create/switch to the target branch, and `host` uses the current feature branch exactly as provided by the host tool. |
 | `progress` | verbose | no | Enable verbose progress view — prints full step list at each step transition |
 | `report_detail` | full | no | Include all verify output in the execution report, not just failures |
@@ -120,15 +122,16 @@ else:
 
 ## Branch/Worktree Preflight
 
-Execution skills (loop-execution, executing-plans, subagent-execution) run a branch/worktree preflight **after document review passes** and **before step 1**. This preflight resolves an isolated execution root so work does not land in the wrong checkout or on `main`/`master`.
+Execution skills (loop-execution, executing-plans, subagent-execution) run structural lint and branch/worktree preflight after resolving the workflow file and before step 1. This preflight resolves an isolated execution root so work does not land in the wrong checkout or on `main`/`master`.
 
 ### Branch Name Derivation
 
 | Scenario | Branch Name |
 |---|---|
 | `branch: feat/add-auth` in frontmatter | `feat/add-auth` |
-| No `branch:`, file is `hotl-workflow-add-auth.md` | `hotl/add-auth` |
-| No `branch:`, file is `hotl-workflow-fix-login-timeout.md` | `hotl/fix-login-timeout` |
+| No `branch:`, file is `docs/plans/2026-04-22-add-auth-workflow.md` | `hotl/add-auth` |
+| No `branch:`, file is `docs/plans/2026-04-22-fix-login-timeout-workflow.md` | `hotl/fix-login-timeout` |
+| No `branch:`, legacy file is `hotl-workflow-add-auth.md` | `hotl/add-auth` |
 
 ### Preflight Steps
 
@@ -138,7 +141,15 @@ Execution skills (loop-execution, executing-plans, subagent-execution) run a bra
    - Yes → continue
 
 2. Check for uncommitted changes
-   - Dirty → HARD-FAIL. Show choices:
+   - First, exclude HOTL-owned transient artifacts from the dirty check:
+     - `docs/plans/*-workflow.md`
+     - `hotl-workflow-*.md`
+     - `docs/designs/*.md`
+     - `docs/plans/*-design.md` and `docs/plans/*-plan.md`
+     - `.hotl/`
+   - If only HOTL artifacts are dirty → treat as clean, continue
+   - If non-HOTL files are dirty and `dirty_worktree: allow` is set → proceed without prompting
+   - Otherwise → HARD-FAIL. Show choices:
      a. Clean up manually, then re-run
      b. Stash manually, then re-run
      c. Explicitly approve HOTL to stash and continue
@@ -146,7 +157,9 @@ Execution skills (loop-execution, executing-plans, subagent-execution) run a bra
 
 3. Determine branch name
    - If branch: field exists in frontmatter → use it
-   - Otherwise → derive hotl/<slug> from hotl-workflow-<slug>.md
+   - Otherwise → derive `hotl/<slug>` from the workflow filename:
+     - Canonical: strip `YYYY-MM-DD-` prefix and `-workflow.md` suffix from `docs/plans/YYYY-MM-DD-<slug>-workflow.md`
+     - Legacy: strip `hotl-workflow-` prefix and `.md` suffix from `hotl-workflow-<slug>.md`
 
 4. Capture authoring origin
    - Record the current branch name (if any) and current HEAD commit as the workflow's authoring origin
@@ -193,7 +206,7 @@ Before creating or reusing an execution branch/worktree, resume-aware executors 
 ### Design Principles
 
 - **No auto-stash.** Hidden state mutation weakens governance.
-- **Existing branch always prompts.** Even at the same HEAD — a branch at the same commit may have different intent.
+- **Existing branch/worktree collisions stop clearly.** Interactive reuse/recreate is not implemented yet; resolve the collision manually, then re-run.
 - **Non-git repos skip entirely.** HOTL works for POCs and new projects without git ceremony.
 - **Structural lint runs before any git mutation.** Catches format issues before execution begins.
 

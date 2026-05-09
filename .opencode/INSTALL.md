@@ -40,7 +40,7 @@ use skill tool to load hotl/brainstorming
 ### Available Skills
 
 - `hotl:brainstorming` — Design a feature with HOTL contracts before writing code
-- `hotl:writing-plans` — Create a `hotl-workflow-<slug>.md` plan
+- `hotl:writing-plans` — Create `docs/plans/YYYY-MM-DD-<slug>-workflow.md`
 - `hotl:loop-execution` — Execute workflow files with auto-approve
 - `hotl:executing-plans` — Linear execution with checkpoints
 - `hotl:tdd` — RED-GREEN-REFACTOR cycle

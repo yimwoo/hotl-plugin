@@ -14,7 +14,7 @@ Before reviewing, gather:
 
 1. **Base branch** (fallback ladder): PR base → `origin/HEAD` → `main` → `master`
 2. **Review scope**: committed branch diff plus staged/unstaged changes on feature branches; staged/unstaged/`HEAD~1` on base branch
-3. **Workflow file**: most recently modified `hotl-workflow-*.md` if present
+3. **Workflow file**: first look for canonical `docs/plans/*-workflow.md`; if none exists, fall back to the most recently modified legacy `hotl-workflow-*.md`
 4. **Contracts**: from workflow frontmatter if available
 5. **Verification evidence**: `.hotl/state/*.json` and `.hotl/reports/*.md` if present; otherwise report "not available"
 

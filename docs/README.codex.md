@@ -1,19 +1,35 @@
 # HOTL Plugin for Codex
 
-HOTL for Codex can be installed either as a native Codex plugin or as native skills. Plugin install is the recommended path for reusable, versioned team setup; native skills remain the lightweight option for local development and older Codex builds. Both modes give you the same HOTL skills to brainstorm design docs, write executable workflows, execute, review, and verify changes with more structure.
+HOTL for Codex can be installed either as a Codex plugin or as native skills. Plugin install is the recommended path for reusable, versioned team setup; native skills remain the lightweight option for local development and older Codex builds. Both modes give you the same HOTL skills to brainstorm design docs, write executable workflows, execute, review, and verify changes with more structure.
+
+Codex plugin install has two separate steps:
+
+1. Make HOTL available through a marketplace.
+2. Install and enable HOTL from the Codex plugin directory.
+
+The HOTL installer handles the marketplace step. CLI-only users complete the
+install from Codex CLI with `/plugins`; Codex app users can complete the same
+install from the app's Plugins screen. If both surfaces use the same Codex
+profile, installing or enabling HOTL once applies to that shared profile.
+
+Official Codex plugin docs:
+
+- [Use and install plugins](https://developers.openai.com/codex/plugins)
+- [Build plugins and marketplaces](https://developers.openai.com/codex/plugins/build)
 
 ## Installation
 
 | Mode | Best for | Updates managed by |
 |---|---|---|
-| **Plugin Install** (recommended) | Stable versioned team installs | Codex plugin lifecycle |
+| **Plugin Install** (recommended) | Stable versioned team installs for Codex CLI and app users | Codex plugin lifecycle + HOTL updater |
 | **Native Skills Install** (fallback / development) | Fast iteration, contributors, older Codex | `update.sh` |
 
 ### Plugin Install (Recommended)
 
 Requires a Codex version with plugin support. The installer clones the HOTL repo
-to a source checkout at `~/.codex/plugins/hotl-source/` and registers it in
-`~/.agents/plugins/marketplace.json` as a local Codex plugin.
+to a source checkout at `~/.codex/plugins/hotl-source/`, registers it in
+`~/.agents/plugins/marketplace.json` as a local Codex plugin, and refreshes the
+Codex plugin cache when a cache already exists.
 
 1. Clone the repo (or use an existing checkout):
 
@@ -30,27 +46,54 @@ bash /tmp/hotl-plugin/install.sh --codex-plugin
 This clones HOTL to `~/.codex/plugins/hotl-source/` and writes a marketplace
 entry with `"source": "local"` pointing at that checkout.
 
-3. Restart Codex.
+3. Restart Codex so it re-reads the marketplace entry.
 
-4. Open the Codex plugin directory and finish the install in the UI:
+4. Finish the install in Codex CLI or the Codex app.
 
-   1. Switch the source filter to **Local Plugins**.
+#### Codex CLI
 
-      ![Codex plugin source set to Local Plugins](assets/codex/plugin-install-step-1-local-plugins.svg)
+Start Codex and open the plugin directory:
 
-   2. Find **HOTL** in the list and click the `+` button to open the install dialog.
+```text
+codex
+/plugins
+```
 
-      ![HOTL plugin card in the Local Plugins list](assets/codex/plugin-install-step-2-pick-hotl.svg)
+In the CLI plugin browser:
 
-   3. Review the plugin details and click **Install HOTL**.
+1. Switch to the **Local Plugins** marketplace.
+2. Open **HOTL**.
+3. Select `Install plugin`.
+4. If HOTL is already installed but disabled, press `Space` on the installed
+   plugin to enable it.
+5. Start a new thread and ask Codex to use HOTL with `@hotl`, or invoke a
+   specific bundled skill with `$hotl:skill-name`.
 
-      ![HOTL install dialog in Codex](assets/codex/plugin-install-step-3-confirm.svg)
+#### Codex App
 
-   4. After installation, confirm the HOTL plugin page opens and shows **Try in chat**.
+If you use the Codex app, open **Plugins** and finish the same install there:
 
-      ![HOTL plugin page after installation](assets/codex/plugin-install-step-4-installed.svg)
+1. Switch the source filter to **Local Plugins**.
 
-   If the plugin list is long, use the search box to filter for `HOTL`.
+   ![Codex plugin source set to Local Plugins](assets/codex/plugin-install-step-1-local-plugins.svg)
+
+2. Find **HOTL** in the list and click the `+` button to open the install dialog.
+
+   ![HOTL plugin card in the Local Plugins list](assets/codex/plugin-install-step-2-pick-hotl.svg)
+
+3. Review the plugin details and click **Install HOTL**.
+
+   ![HOTL install dialog in Codex](assets/codex/plugin-install-step-3-confirm.svg)
+
+4. After installation, confirm the HOTL plugin page opens and shows **Try in chat**.
+
+   ![HOTL plugin page after installation](assets/codex/plugin-install-step-4-installed.svg)
+
+If the plugin list is long, use the search box to filter for `HOTL`.
+
+The CLI and app use the same Codex plugin configuration when they run under the
+same Codex profile, so you do not need to install HOTL separately in both
+surfaces.
 
 **For contributors** testing the plugin from a working copy, use `--local`
 to point the marketplace at your current checkout without cloning:
@@ -60,7 +103,9 @@ bash install.sh --codex-plugin --local
 ```
 
 This writes a repo-local marketplace entry at `.agents/plugins/marketplace.json`
-pointing at your checkout directory.
+pointing at your checkout directory. Restart Codex, then use `/plugins` in the
+CLI or the app Plugins screen to install or enable HOTL from that local
+marketplace entry.
 
 **Generated marketplace entry shape:**
 
@@ -69,7 +114,7 @@ pointing at your checkout directory.
   "name": "hotl",
   "source": {
     "source": "local",
-    "path": "~/.codex/plugins/hotl-source"
+    "path": "./.codex/plugins/hotl-source"
   },
   "policy": {
     "installation": "AVAILABLE",
@@ -135,8 +180,10 @@ should track `origin/main`. Do not do feature work inside that directory. If you
 want to develop HOTL itself, use a separate clone or worktree somewhere else and
 keep `~/.codex/hotl` for the version Codex discovers.
 
-For the **Plugin Install**, Codex manages the cached copy. Updates come through
-Codex's plugin lifecycle.
+For the **Plugin Install**, HOTL keeps the source checkout at
+`~/.codex/plugins/hotl-source/`. Codex reads the marketplace entry and caches the
+installed plugin under `~/.codex/plugins/cache/`. Use the HOTL updater to refresh
+the source checkout and cache.
 
 ### Coexisting With Native Skills
 

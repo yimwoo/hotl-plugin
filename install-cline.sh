@@ -169,7 +169,7 @@ echo "  Workflows apply to ALL projects in Cline — no per-project setup needed
 echo ""
 echo "Available workflows — just tell Cline:"
 echo "  \"brainstorm this feature\"     — design with HOTL contracts before coding"
-echo "  \"plan the implementation\"     — create a hotl-workflow-<slug>.md"
+echo "  \"plan the implementation\"     — create docs/plans/YYYY-MM-DD-<slug>-workflow.md"
 echo "  \"execute the plan\"            — run the workflow with checkpoints"
 echo "  \"subagent execute the plan\"   — delegate reviewed workflow steps in-session"
 echo "  \"use TDD\"                     — RED-GREEN-REFACTOR cycle"

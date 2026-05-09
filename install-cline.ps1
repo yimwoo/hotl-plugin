@@ -169,7 +169,7 @@ Write-Host "  Workflows apply to ALL projects in Cline - no per-project setup ne
 Write-Host ""
 Write-Host "Available workflows - just tell Cline:"
 Write-Host '  "brainstorm this feature"     - design with HOTL contracts before coding'
-Write-Host '  "plan the implementation"     - create a hotl-workflow-<slug>.md'
+Write-Host '  "plan the implementation"     - create docs/plans/YYYY-MM-DD-<slug>-workflow.md'
 Write-Host '  "execute the plan"            - run the workflow with checkpoints'
 Write-Host '  "subagent execute the plan"   - delegate reviewed workflow steps in-session'
 Write-Host '  "use TDD"                     - RED-GREEN-REFACTOR cycle'

@@ -179,7 +179,7 @@ powershell -ExecutionPolicy Bypass -File "$env:USERPROFILE\.cline\hotl\install-c
 
 This installs:
 - 1 global rule: `hotl-operating-model.md` (always-on task router)
-- 11 native skills to `~/.cline/skills/hotl/` (macOS/Linux) or `%USERPROFILE%\.cline\skills\hotl\` (Windows)
+- 10 native skills to `~/.cline/skills/hotl/` (macOS/Linux) or `%USERPROFILE%\.cline\skills\hotl\` (Windows)
 
 The install mode is persisted in `~/.cline/hotl/.cline-install-mode`. Updates automatically refresh the correct mode.
 
