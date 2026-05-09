@@ -976,6 +976,7 @@ cmd_step() {
     local action="$2"
     shift 2
     local run_id="${HOTL_RUN_ID:-}"
+    local block_reason=""
 
     case "$action" in
         start|verify|retry)
@@ -987,6 +988,20 @@ cmd_step() {
                     echo "ERROR: Unknown option for step $action: $1" >&2
                     exit 1
                 fi
+            fi
+            ;;
+        block)
+            while [ $# -gt 0 ]; do
+                case "$1" in
+                    --reason) block_reason="$2"; shift 2 ;;
+                    --run-id) run_id="$2"; shift 2 ;;
+                    *) echo "ERROR: Unknown option for block: $1" >&2; exit 1 ;;
+                esac
+            done
+
+            if [ -z "$block_reason" ]; then
+                echo "ERROR: --reason is required for block" >&2
+                exit 1
             fi
             ;;
     esac
@@ -1213,28 +1228,11 @@ cmd_step() {
             ;;
 
         block)
-            local reason=""
-            while [ $# -gt 0 ]; do
-                case "$1" in
-                    --reason) reason="$2"; shift 2 ;;
-                    --run-id) run_id="$2"; shift 2 ;;
-                    *) echo "ERROR: Unknown option for block: $1" >&2; exit 1 ;;
-                esac
-            done
-
-            if [ -z "$reason" ]; then
-                echo "ERROR: --reason is required for block" >&2
-                exit 1
-            fi
-
-            state_file=$(find_active_state "$run_id")
-            report=$(report_path_from_state "$state_file")
-
             local step_name
             step_name=$(jq -r ".steps[$((step_num - 1))].name" "$state_file")
 
             local updated
-            updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg reason "$reason" '
+            updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg reason "$block_reason" '
                 .status = "blocked" |
                 .last_update = $ts |
                 .steps[$num - 1].status = "blocked" |
@@ -1245,9 +1243,9 @@ cmd_step() {
             report_update_step_row "$report" "$step_num" "✗ Blocked" "-"
             report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** blocked"
             report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
-            report_append_event "$report" "**[$time_short]** ✗ Step $step_num: Blocked — $reason"
+            report_append_event "$report" "**[$time_short]** ✗ Step $step_num: Blocked — $block_reason"
 
-            echo "blocked step $step_num: $reason"
+            echo "blocked step $step_num: $block_reason"
             ;;
 
         *)

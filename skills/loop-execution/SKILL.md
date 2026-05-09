@@ -121,7 +121,7 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
 6. For each step in order:
 
    a. Start step via runtime:
-      - Run: `hotl-rt step N start`
+      - Run: `hotl-rt step N start --run-id <run-id>`
       - This persists step start (status, timestamp, attempts) to state and report
       - Only after the runtime call succeeds should chat show "→ Step N"
 
@@ -130,7 +130,7 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
    c. Execute the action (agent implements the work)
 
    d. Verify via runtime:
-      - Run: `hotl-rt step N verify`
+      - Run: `hotl-rt step N verify --run-id <run-id>`
       - The runtime runs the verify command, captures stdout/stderr, and atomically transitions the step to done or failed
       - If the verify type is unsupported, the runtime blocks the step with a clear reason
       - For type: browser — if browser tooling unavailable, downgrade to type: human-review
@@ -143,10 +143,10 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
          → PAUSE immediately. Do not start later steps or finalize the run.
          → Show the review prompt to the human and ask: "Continue? (yes/no/show-details)"
          → If the human says yes/approve/continue:
-             Run: `hotl-rt gate N approved --mode human`
+             Run: `hotl-rt gate N approved --mode human --run-id <run-id>`
              Then continue to the next step
          → If the human says no/reject:
-             Run: `hotl-rt gate N rejected --mode human`
+             Run: `hotl-rt gate N rejected --mode human --run-id <run-id>`
              STOP and surface the report path
          → If the human asks for details:
              Show the relevant test/report context, then wait again
@@ -154,12 +154,12 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
 
       f. If loop: false
          → STOP, report to human
-         → Run: `hotl-rt step N block --reason "verify failed"` if not already marked failed by verify
+         → Run: `hotl-rt step N block --reason "verify failed" --run-id <run-id>` if not already marked failed by verify
          → Show last verify output. Wait for human guidance.
 
       g. If loop: until [condition]
          → if iterations < max_iterations:
-             Run: `hotl-rt step N retry` then `hotl-rt step N start`
+             Run: `hotl-rt step N retry --run-id <run-id>` then `hotl-rt step N start --run-id <run-id>`
              log "↻ Retrying ([n]/[max])...", retry the action
          → if iterations = max_iterations: STOP
              Report: "Step N reached max iterations ([max]). [condition] not met."
@@ -172,17 +172,17 @@ This is the canonical HOTL execution state machine. Other execution modes (e.g.,
 
    i. If gate: human
       → if auto_approve: true AND risk_level != high:
-          Run: `hotl-rt gate N approved --mode auto`
+          Run: `hotl-rt gate N approved --mode auto --run-id <run-id>`
           log "⚡ Auto-approved: Step N gate (risk: [risk_level])"
           continue
       → else:
           PAUSE. Show summary of what was done in this step.
           Ask: "Gate reached at Step N. Continue? (yes/no/show-details)"
           Wait for human response.
-          Run: `hotl-rt gate N approved --mode human` or `hotl-rt gate N rejected --mode human`
+          Run: `hotl-rt gate N approved --mode human --run-id <run-id>` or `hotl-rt gate N rejected --mode human --run-id <run-id>`
 
    j. If gate: auto
-      → Run: `hotl-rt gate N approved --mode auto`
+      → Run: `hotl-rt gate N approved --mode auto --run-id <run-id>`
       → always continue, log "⚡ Auto-approved: Step N gate"
 
 6. All steps complete:

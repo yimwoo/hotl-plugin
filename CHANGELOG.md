@@ -4,11 +4,16 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.14.0] - 2026-05-09
+
 ### Added
 - `worktree: host` workflow frontmatter mode. HOTL can now use the current checkout's current feature branch exactly as provided by Codex or another host tool, and defaults to that mode when execution starts inside an unpinned named linked git worktree.
 
 ### Changed
 - `docs/` now tracks only user-facing documentation in this repo. Repo-local planning, design, research, backlog, and initiative work-product docs under `docs/` are gitignored so releases stop shipping internal development artifacts.
+
+### Fixed
+- `hotl-rt step N block --reason ... --run-id <run-id>` now honors the explicit run target before checking `.hotl/state/`, so deliberate handoff/block operations work when multiple HOTL runs exist in the same execution root.
 
 ## [2.12.0] - 2026-04-22
 

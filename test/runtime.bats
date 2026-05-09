@@ -460,6 +460,23 @@ EOF
     [[ "$output" == *"--reason is required"* ]]
 }
 
+@test "step block accepts explicit run id when multiple runs exist" {
+    RUN_ID_A=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    RUN_ID_B=$("$HOTL_RT" init fixtures/hotl-workflow-retry-sample.md)
+
+    run "$HOTL_RT" step 1 block --reason "targeted block"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Multiple HOTL runs found"* ]]
+
+    "$HOTL_RT" step 1 block --reason "targeted block" --run-id "$RUN_ID_A"
+
+    [ "$(jq -r '.status' ".hotl/state/${RUN_ID_A}.json")" = "blocked" ]
+    [ "$(jq -r '.steps[0].status' ".hotl/state/${RUN_ID_A}.json")" = "blocked" ]
+    [ "$(jq -r '.steps[0].block_reason' ".hotl/state/${RUN_ID_A}.json")" = "targeted block" ]
+    [ "$(jq -r '.status' ".hotl/state/${RUN_ID_B}.json")" = "running" ]
+    [ "$(jq -r '.steps[0].status' ".hotl/state/${RUN_ID_B}.json")" = "pending" ]
+}
+
 # ── gate ────────────────────────────────────────────────────────────────────
 
 @test "gate records approved decision" {
