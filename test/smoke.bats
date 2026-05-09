@@ -114,6 +114,7 @@ make_fake_codex_plugin_source() {
     printf 'source renderer\n' > "$source_dir/scripts/render-execution-summary.sh"
     printf 'source finalize\n' > "$source_dir/scripts/finalize-codex-summary.sh"
     printf 'source current step\n' > "$source_dir/scripts/show-codex-current-step.sh"
+    printf 'source run locator\n' > "$source_dir/scripts/hotl-locate-run.sh"
     printf 'source update check\n' > "$source_dir/scripts/check-update.sh"
     printf 'source skill\n' > "$source_dir/skills/sample.txt"
     printf '9.9.9\n' > "$source_dir/VERSION"
@@ -515,6 +516,13 @@ print(match.group(1) if match else '')
     [ -x "$REPO_ROOT/scripts/hotl-prepare-execution-root.sh" ]
 }
 
+@test "resume run locator script exists and execution docs use it before preflight" {
+    [ -x "$REPO_ROOT/scripts/hotl-locate-run.sh" ]
+    grep -q 'hotl-locate-run.sh --workflow' "$REPO_ROOT/skills/loop-execution/SKILL.md"
+    grep -q 'hotl-locate-run.sh --workflow' "$REPO_ROOT/skills/resuming/SKILL.md"
+    grep -q 'Branch/Worktree Preflight' "$REPO_ROOT/skills/loop-execution/SKILL.md"
+}
+
 @test "execution docs describe explicit run-id pinning" {
     grep -q -- '--run-id <run-id>' "$REPO_ROOT/skills/loop-execution/SKILL.md"
     grep -q -- '--run-id <run-id>' "$REPO_ROOT/docs/workflow-format.md"
@@ -723,6 +731,7 @@ print(match.group(1) if match else '')
     [ -f "$cache_dir/scripts/render-execution-summary.sh" ]
     [ -f "$cache_dir/scripts/finalize-codex-summary.sh" ]
     [ -f "$cache_dir/scripts/show-codex-current-step.sh" ]
+    [ -f "$cache_dir/scripts/hotl-locate-run.sh" ]
     [ -f "$cache_dir/scripts/check-update.sh" ]
 }
 
@@ -751,5 +760,6 @@ print(match.group(1) if match else '')
     [ "$(cat "$cache_dir/scripts/render-execution-summary.sh")" = "source renderer" ]
     [ "$(cat "$cache_dir/scripts/finalize-codex-summary.sh")" = "source finalize" ]
     [ "$(cat "$cache_dir/scripts/show-codex-current-step.sh")" = "source current step" ]
+    [ "$(cat "$cache_dir/scripts/hotl-locate-run.sh")" = "source run locator" ]
     [ "$(cat "$cache_dir/scripts/check-update.sh")" = "source update check" ]
 }

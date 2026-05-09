@@ -26,11 +26,18 @@ Resolve which workflow file to execute:
 
 ### Interrupted Run Detection
 
-After resolving the workflow file, check `.hotl/state/*.json` for interrupted runs matching that workflow:
+After resolving the workflow file, locate interrupted runs **before** Branch/Worktree Preflight. Use `scripts/hotl-locate-run.sh --workflow <workflow-file>` when available. This helper scans the current checkout, linked git worktrees, and HOTL's default `.hotl-worktrees/<repo>/` directory, so it can find state created inside an isolated execution worktree even when the new session starts from the authoring checkout.
+
+If the helper is unavailable, manually scan these locations for `.hotl/state/*.json` and match `workflow_path` or `source_workflow_path` against the resolved workflow:
+1. Current checkout
+2. `git worktree list --porcelain` roots for the repo
+3. `$(dirname <repo-root>)/.hotl-worktrees/$(basename <repo-root>)/*`
 
 - **One interrupted run found** → ask: "Found an interrupted run (step N/M). Resume from step N, or start fresh?"
 - **Multiple interrupted runs found** → list all with run_id, step progress, branch, age. Ask which to resume or start fresh. **Never silently choose.**
 - **No interrupted runs** → proceed normally (new run)
+
+If the user chooses resume, do not run Branch/Worktree Preflight again. Load the matched sidecar, change into its recorded `execution_root`, and follow `skills/resuming/SKILL.md` with the original `run_id`.
 
 ## Branch/Worktree Preflight
 
@@ -218,7 +225,7 @@ See `skills/resuming/SKILL.md` for the full sidecar schema, stale run detection,
 
 ### Path Resolution
 
-To find `hotl-rt` and HOTL scripts (`document-lint.sh`, `render-execution-summary.sh`, etc.), resolve in this order:
+To find `hotl-rt` and HOTL scripts (`document-lint.sh`, `hotl-locate-run.sh`, `render-execution-summary.sh`, etc.), resolve in this order:
 
 1. **Session context (Claude Code):** the session-start hook injects the plugin base path — use it to construct full paths like `bash <plugin-path>/runtime/hotl-rt init <workflow-file>`
 2. **Codex native-skills install:** resolve from `~/.codex/hotl/runtime/hotl-rt` and `~/.codex/hotl/scripts/`

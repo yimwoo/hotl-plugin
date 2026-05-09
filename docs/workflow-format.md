@@ -161,6 +161,8 @@ Execution skills (loop-execution, executing-plans, subagent-execution) run a bra
    - If running inside a named linked git worktree and neither `branch:` nor `worktree:` is set → default to host mode to avoid stacking a second worktree
    - Otherwise → use an isolated git worktree by default
 
+Before creating or reusing an execution branch/worktree, resume-aware executors run `scripts/hotl-locate-run.sh --workflow <workflow-file>`. The locator scans the current checkout, linked git worktrees, and HOTL's default `.hotl-worktrees/<repo>/` directory for matching `.hotl/state/*.json`. If it finds an interrupted run, resume from the sidecar's recorded `execution_root` and `run_id` instead of creating a new worktree.
+
 6. Check if the target branch/worktree already exists
    - Current helper behavior: branch/worktree collisions stop with a clear error; interactive reuse/recreate is not implemented yet
    - If a collision occurs, pause and ask the user whether to resolve it manually, delete and recreate manually, or abort

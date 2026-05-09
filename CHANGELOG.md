@@ -4,6 +4,14 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.15.0] - 2026-05-09
+
+### Added
+- `scripts/hotl-locate-run.sh` — worktree-aware HOTL run locator for resume flows. It finds interrupted state in the current checkout, linked git worktrees, and HOTL-managed `.hotl-worktrees/` execution roots.
+
+### Fixed
+- Resume guidance now locates interrupted isolated-worktree runs before branch/worktree preflight, so a fresh session started from the authoring checkout can resume the existing execution worktree instead of being pushed toward start-fresh/recreate paths.
+
 ## [2.14.0] - 2026-05-09
 
 ### Added
