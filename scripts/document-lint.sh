@@ -39,6 +39,197 @@ first_match_ci() {
     grep -im 1 -- "$pattern" <<< "$content"
 }
 
+detect_design_type() {
+    local filepath="$1"
+    local fname
+    fname="$(basename "$filepath")"
+
+    # Valid design types
+    local valid_types="feature phase initiative architecture contract reference"
+
+    # 1. Try YAML frontmatter: design_type field between FIRST --- (must be line 1)
+    #    and the next --- only. Stops the range early so body fences using ---
+    #    cannot spoof detection (e.g. an architecture doc demonstrating a phase
+    #    doc would otherwise be reclassified).
+    if [ -f "$filepath" ]; then
+        local first_line
+        first_line="$(head -n 1 "$filepath")"
+        if [ "$first_line" = "---" ]; then
+            local frontmatter
+            frontmatter="$(awk 'NR==1 && /^---$/ {flag=1; next} flag && /^---$/ {exit} flag {print}' "$filepath")"
+            if [ -n "$frontmatter" ]; then
+                local dt
+                dt="$(grep -i '^design_type:' <<< "$frontmatter" | head -1 | sed 's/.*design_type:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')"
+                if [ -n "$dt" ]; then
+                    for vt in $valid_types; do
+                        if [ "$dt" = "$vt" ]; then
+                            echo "$dt"
+                            return 0
+                        fi
+                    done
+                fi
+            fi
+        fi
+    fi
+
+    # 2. Filename pattern fallback
+    # Dated pattern: YYYY-MM-DD-<slug>-design.md
+    if contains_ere "$fname" '^[0-9]{4}-[0-9]{2}-[0-9]{2}-.*-design\.md$'; then
+        # Extract slug between date and -design.md
+        local slug
+        slug="$(sed -E 's/^[0-9]{4}-[0-9]{2}-[0-9]{2}-(.*)-design\.md$/\1/' <<< "$fname")"
+        if contains_ere "$slug" '(^|-)phase-[0-9]+($|-)'; then
+            echo "phase"
+        else
+            echo "feature"
+        fi
+        return 0
+    fi
+
+    # Undated design doc (e.g. docs/designs/<topic>.md)
+    if contains_ere "$filepath" '(^|/)docs/designs/[^/]+\.md$'; then
+        echo "initiative"
+        return 0
+    fi
+
+    # 3. No match
+    return 1
+}
+
+check_implementation_leakage() {
+    local filepath="$1"
+    local resolved_type="$2"
+
+    # Only fires for feature and phase design types
+    case "$resolved_type" in
+        feature|phase) ;;
+        *) return 0 ;;
+    esac
+
+    # Extract body: skip frontmatter (lines before and including the second ---)
+    local in_frontmatter=0
+    local frontmatter_closed=0
+    local line_num=0
+    local body_lines=()
+    local body_line_nums=()
+
+    while IFS= read -r line; do
+        line_num=$((line_num + 1))
+        if [ "$frontmatter_closed" -eq 0 ]; then
+            if [ "$line" = "---" ]; then
+                in_frontmatter=$((in_frontmatter + 1))
+                if [ "$in_frontmatter" -ge 2 ]; then
+                    frontmatter_closed=1
+                fi
+            fi
+            continue
+        fi
+        body_lines+=("$line")
+        body_line_nums+=("$line_num")
+    done < "$filepath"
+
+    local i=0
+    local count=${#body_lines[@]}
+
+    # Pattern 1: file:line references
+    while [ "$i" -lt "$count" ]; do
+        local bline="${body_lines[$i]}"
+        local bnum="${body_line_nums[$i]}"
+        local match
+        match="$(grep -oE '\b\w+\.(py|ts|js|go|rs|java|cpp|sh):[0-9]+\b' <<< "$bline" | head -1)" || true
+        if [ -n "$match" ]; then
+            printf 'category=implementation-leakage severity=warning design_type=%s line=%d\n' "$resolved_type" "$bnum"
+            printf 'message="file:line reference '\''%s'\'' belongs in workflow, not design"\n' "$match"
+        fi
+        i=$((i + 1))
+    done
+
+    # Pattern 2: fenced code blocks with >10 content lines
+    i=0
+    while [ "$i" -lt "$count" ]; do
+        local bline="${body_lines[$i]}"
+        local bnum="${body_line_nums[$i]}"
+        if [[ "$bline" =~ ^\`\`\` ]]; then
+            local fence_open_line="$bnum"
+            local content_lines=0
+            i=$((i + 1))
+            while [ "$i" -lt "$count" ]; do
+                local inner="${body_lines[$i]}"
+                if [[ "$inner" =~ ^\`\`\` ]]; then
+                    break
+                fi
+                content_lines=$((content_lines + 1))
+                i=$((i + 1))
+            done
+            if [ "$content_lines" -gt 10 ]; then
+                printf 'category=implementation-leakage severity=warning design_type=%s line=%d\n' "$resolved_type" "$fence_open_line"
+                printf 'message="code block at line %d has %d content lines (>10); design shows shape, not impl"\n' "$fence_open_line" "$content_lines"
+            fi
+        fi
+        i=$((i + 1))
+    done
+
+    # Pattern 3: lines with 6 or more -- flag tokens
+    i=0
+    while [ "$i" -lt "$count" ]; do
+        local bline="${body_lines[$i]}"
+        local bnum="${body_line_nums[$i]}"
+        local dash_count
+        dash_count="$(grep -o '\-\-' <<< "$bline" | wc -l | tr -d ' ')" || true
+        if [ "$dash_count" -ge 6 ]; then
+            printf 'category=implementation-leakage severity=warning design_type=%s line=%d\n' "$resolved_type" "$bnum"
+            printf 'message="dense flag line at line %d (%d '\''--'\'' tokens); argv goes in workflow + tests"\n' "$bnum" "$dash_count"
+        fi
+        i=$((i + 1))
+    done
+}
+
+check_required_sections() {
+    local filepath="$1"
+    local resolved_type="$2"
+
+    # Only fires for feature and phase design types
+    case "$resolved_type" in
+        feature|phase) ;;
+        *) return 0 ;;
+    esac
+
+    # Extract body: skip frontmatter (lines before and including the second ---)
+    local in_frontmatter=0
+    local frontmatter_closed=0
+    local body=""
+
+    while IFS= read -r line; do
+        if [ "$frontmatter_closed" -eq 0 ]; then
+            if [ "$line" = "---" ]; then
+                in_frontmatter=$((in_frontmatter + 1))
+                if [ "$in_frontmatter" -ge 2 ]; then
+                    frontmatter_closed=1
+                fi
+            fi
+            continue
+        fi
+        body="${body}${line}
+"
+    done < "$filepath"
+
+    # Required top-level headings for feature/phase design docs
+    local required_headings="Intent Contract
+Verification Contract
+Governance Contract
+Scope
+Decisions
+Surface
+Risks & Open Questions"
+
+    while IFS= read -r heading; do
+        if ! grep -q "^## ${heading}" <<< "$body"; then
+            printf 'category=structure severity=warning design_type=%s\n' "$resolved_type"
+            printf 'message="missing required section: ## %s"\n' "$heading"
+        fi
+    done <<< "$required_headings"
+}
+
 # ── Detect file type ─────────────────────────────────────────────────────────
 
 if contains_ere "$FILE" '(^|/)docs/designs/[^/]+\.md$'; then
@@ -60,6 +251,17 @@ if [ ! -f "$FILE" ]; then
 fi
 
 CONTENT="$(cat "$FILE")"
+
+# ── Implementation-leakage check (warning-only) ─────────────────────────────
+
+if [ "$FILE_TYPE" = "design" ]; then
+    RESOLVED_DESIGN_TYPE=""
+    RESOLVED_DESIGN_TYPE="$(detect_design_type "$FILE")" || true
+    if [ "$RESOLVED_DESIGN_TYPE" = "feature" ] || [ "$RESOLVED_DESIGN_TYPE" = "phase" ]; then
+        check_implementation_leakage "$FILE" "$RESOLVED_DESIGN_TYPE"
+        check_required_sections "$FILE" "$RESOLVED_DESIGN_TYPE"
+    fi
+fi
 
 is_step_header() {
     local line="$1"
