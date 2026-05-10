@@ -4,6 +4,20 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- `document-lint.sh` now requires an explicit HOTL frontmatter marker (`design_type:` set to one of the six recognized values, or `hotl_managed: true`) before applying HOTL strict lint to design docs. Path-based detection alone (e.g., a `*-design.md` file in `docs/designs/`) no longer triggers HOTL lint — unmarked docs SKIP cleanly with a clear message and exit 0, routing through `hotl:document-review`'s generic-rubric AI review path instead. Workflow-file lint is unchanged.
+- `skills/document-review/SKILL.md` and `skills/brainstorming/SKILL.md` (plus the Cline mirror) updated to describe frontmatter as the deterministic signal — filename pattern is now a hint, not a classifier.
+- The brainstorming skill's "Save design doc" step now explicitly requires writing YAML frontmatter with the `design_type:` marker.
+
+### Fixed
+- Quoted YAML scalars in `design_type:` (e.g., `design_type: "feature"`) now correctly opt docs into HOTL lint instead of being silently SKIPped.
+
+### Removed
+- The `detect_design_type` "undated → initiative" filename fallback. Undated docs without an HOTL frontmatter marker now SKIP rather than auto-classifying as initiative.
+
+### Migration
+- Hand-authored design docs that previously relied on filename-pattern classification (e.g., bare `*-design.md` files in `docs/designs/` without frontmatter) will now SKIP. Add `design_type: <recognized-value>` (or `hotl_managed: true`) to opt them back into HOTL strict review. Docs created by `hotl:brainstorming` already include the marker.
+
 ## [2.16.0] - 2026-05-10
 
 ### Added

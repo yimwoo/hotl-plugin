@@ -1,4 +1,5 @@
 ---
+design_type: feature
 created_at: 2099-01-01
 status: fixture
 ---
