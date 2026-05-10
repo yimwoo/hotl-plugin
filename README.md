@@ -171,12 +171,12 @@ There is no `/hotl:*` command syntax in Codex. Instead, describe the task in nat
 | Execution | `loop-execution`, `executing-plans`, `subagent-execution`, `resuming`, `dispatch-agents` | Run workflows with verification, retries, persistence, and delegation |
 | Finish | `finishing-a-development-branch` | Close the execution lifecycle intentionally: merge back, publish for review, keep, or discard the execution checkout |
 | Quality & Review | `pr-reviewing`, `code-review`, `requesting-code-review`, `receiving-code-review`, `verification-before-completion` | Review changes and require evidence before completion. Both `code-review` and `pr-reviewing` reference shared [review checklists](docs/checklists/) for SOLID/architecture, security, performance/boundary conditions, and removal/simplification heuristics. |
-| Dev Practices | `tdd`, `systematic-debugging` | Apply test-first development and structured debugging workflows |
+| Dev Practices | `tdd`, `systematic-debugging`, `skill-authoring` | Apply test-first development, structured debugging, and disciplined skill/prompt authoring workflows |
 | Setup | `setup-project`, `using-hotl` | Generate adapter files and establish HOTL operating context |
 
 For detailed descriptions and phase mappings, see the [full skills reference](docs/skills.md).
 
-Want to create or modify HOTL skills? See [Authoring Skills vs Agents](docs/authoring-skills-vs-agents.md).
+Want to create or modify HOTL skills? Use `skill-authoring` first, then see [Authoring Skills vs Agents](docs/authoring-skills-vs-agents.md).
 
 ## Updating
 

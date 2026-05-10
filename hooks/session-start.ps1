@@ -47,15 +47,28 @@ $EscapedPluginPath = ConvertTo-JsonSafeString $PluginRoot
 
 $SessionContext = "<EXTREMELY_IMPORTANT>\nYou have HOTL superpowers.\n\n**Below is the full content of your 'hotl:using-hotl' skill - your introduction to using HOTL skills. For all other skills, use the 'Skill' tool:**\n\n$EscapedContent\n\n**HOTL Plugin Base Path:**\nWhen running hotl-rt or HOTL scripts (document-lint.sh, render-execution-summary.sh, finalize-codex-summary.sh, show-codex-current-step.sh), use this base path: $EscapedPluginPath\n\nExamples:\n  bash $EscapedPluginPath/runtime/hotl-rt init <workflow-file>\n  bash $EscapedPluginPath/scripts/render-execution-summary.sh --platform claude <json-file>\n  bash $EscapedPluginPath/scripts/document-lint.sh <workflow-file>\n</EXTREMELY_IMPORTANT>"
 
-$JsonOutput = @"
+if ($env:CURSOR_PLUGIN_ROOT) {
+    $JsonOutput = @"
 {
-  "additional_context": "$SessionContext",
+  "additional_context": "$SessionContext"
+}
+"@
+} elseif ($env:CLAUDE_PLUGIN_ROOT -and -not $env:COPILOT_CLI) {
+    $JsonOutput = @"
+{
   "hookSpecificOutput": {
     "hookEventName": "SessionStart",
     "additionalContext": "$SessionContext"
   }
 }
 "@
+} else {
+    $JsonOutput = @"
+{
+  "additionalContext": "$SessionContext"
+}
+"@
+}
 
 Write-Output $JsonOutput
 exit 0

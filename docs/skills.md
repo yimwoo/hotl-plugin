@@ -41,6 +41,7 @@ Want to create or modify HOTL abstractions? See [Authoring Skills vs Agents](aut
 | --- | --- | --- |
 | [`tdd`](../skills/tdd/SKILL.md) | Enforce RED-GREEN-REFACTOR cycle before writing any implementation code. | Execute |
 | [`systematic-debugging`](../skills/systematic-debugging/SKILL.md) | Structured debugging workflow — reproduce, isolate, fix, verify. Use before proposing fixes for any bug or test failure. | Execute |
+| [`skill-authoring`](../skills/skill-authoring/SKILL.md) | Create, edit, or review HOTL skills, agents, command prompts, and behavior-shaping instructions with trigger-only descriptions, routing updates, and verification. | Setup |
 
 ### Setup & Configuration
 

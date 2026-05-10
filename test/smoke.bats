@@ -201,20 +201,68 @@ assert_codex_prompt_resolves() {
     python3 -m json.tool "$REPO_ROOT/hooks/hooks.json" > /dev/null
 }
 
+@test "hooks/hooks-cursor.json is valid JSON" {
+    python3 -m json.tool "$REPO_ROOT/hooks/hooks-cursor.json" > /dev/null
+}
+
 @test "marketplace.json is valid JSON" {
     python3 -m json.tool "$REPO_ROOT/.claude-plugin/marketplace.json" > /dev/null
 }
 
 # ── session-start hook output ─────────────────────────────────────────────────
 
-@test "session-start outputs valid JSON with additional_context field" {
+@test "session-start outputs valid JSON with SDK additionalContext by default" {
     output=$("$REPO_ROOT/hooks/session-start")
     python3 -c "
 import json, sys
 data = json.loads(sys.stdin.read())
-assert 'additional_context' in data, 'missing additional_context field'
-assert len(data['additional_context']) > 0, 'additional_context is empty'
+assert 'additionalContext' in data, 'missing additionalContext field'
+assert 'additional_context' not in data, 'unexpected Cursor additional_context field'
+assert 'hookSpecificOutput' not in data, 'unexpected Claude hookSpecificOutput field'
+assert len(data['additionalContext']) > 0, 'additionalContext is empty'
 " <<< "$output"
+}
+
+@test "session-start emits Claude Code hook shape only when CLAUDE_PLUGIN_ROOT is set" {
+    output=$(env CLAUDE_PLUGIN_ROOT="$REPO_ROOT" "$REPO_ROOT/hooks/session-start")
+    python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+assert 'hookSpecificOutput' in data, 'missing hookSpecificOutput'
+assert data['hookSpecificOutput']['hookEventName'] == 'SessionStart'
+assert len(data['hookSpecificOutput']['additionalContext']) > 0
+assert 'additional_context' not in data, 'unexpected duplicate Cursor field'
+assert 'additionalContext' not in data, 'unexpected duplicate SDK field'
+" <<< "$output"
+}
+
+@test "session-start emits Cursor hook shape only when CURSOR_PLUGIN_ROOT is set" {
+    output=$(env CURSOR_PLUGIN_ROOT="$REPO_ROOT" CLAUDE_PLUGIN_ROOT="$REPO_ROOT" "$REPO_ROOT/hooks/session-start")
+    python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+assert 'additional_context' in data, 'missing Cursor additional_context field'
+assert len(data['additional_context']) > 0
+assert 'hookSpecificOutput' not in data, 'unexpected Claude hookSpecificOutput field'
+assert 'additionalContext' not in data, 'unexpected SDK additionalContext field'
+" <<< "$output"
+}
+
+@test "Claude hook config skips resume and uses double-quoted command path" {
+    python3 -c "
+import json, sys
+data = json.load(open(sys.argv[1]))
+entry = data['hooks']['SessionStart'][0]
+assert entry['matcher'] == 'startup|clear|compact'
+command = entry['hooks'][0]['command']
+assert command.startswith('\"'), command
+assert \"'\" not in command, command
+" "$REPO_ROOT/hooks/hooks.json"
+}
+
+@test "Cursor plugin manifest uses Cursor-specific hook config" {
+    hooks_path=$(python3 -c "import json; print(json.load(open('$REPO_ROOT/.cursor-plugin/plugin.json'))['hooks'])")
+    [ "$hooks_path" = "./hooks/hooks-cursor.json" ]
 }
 
 @test "check-update refreshes a fresh cache entry when cached latest is older than installed" {
@@ -270,7 +318,8 @@ EOF
     python3 -c "
 import json, sys
 data = json.loads(sys.stdin.read())
-assert 'HOTL update available:' not in data['additional_context']
+context = data.get('additionalContext') or data.get('additional_context') or data.get('hookSpecificOutput', {}).get('additionalContext', '')
+assert 'HOTL update available:' not in context
 assert 'sessionStartNotice' not in data.get('hookSpecificOutput', {})
 " <<< "$output"
 }
@@ -338,6 +387,23 @@ assert 'sessionStartNotice' not in data.get('hookSpecificOutput', {})
     [ "$ver" = "$codex_ver" ] || { echo "VERSION ($ver) != .codex-plugin/plugin.json ($codex_ver)"; return 1; }
 }
 
+@test "version bump tooling reports declared versions in sync" {
+    [ -x "$REPO_ROOT/scripts/bump-version.sh" ]
+    [ -f "$REPO_ROOT/.version-bump.json" ]
+
+    run bash "$REPO_ROOT/scripts/bump-version.sh" --check
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"All declared files are in sync"* ]]
+}
+
+@test "version bump audit ignores local generated registries" {
+    run bash "$REPO_ROOT/scripts/bump-version.sh" --audit
+
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"No undeclared files contain the version string."* ]]
+}
+
 @test ".codex-plugin/marketplace.json does not exist (installer generates entries)" {
     [ ! -f "$REPO_ROOT/.codex-plugin/marketplace.json" ]
 }
@@ -379,6 +445,14 @@ assert 'sessionStartNotice' not in data.get('hookSpecificOutput', {})
 
 @test "using-hotl skill index lists hotl:resuming" {
     grep -q "hotl:resuming" "$REPO_ROOT/skills/using-hotl/SKILL.md"
+}
+
+@test "skill-authoring skill is indexed and documented" {
+    [ -s "$REPO_ROOT/skills/skill-authoring/SKILL.md" ]
+    grep -q "name: skill-authoring" "$REPO_ROOT/skills/skill-authoring/SKILL.md"
+    grep -q "hotl:skill-authoring" "$REPO_ROOT/skills/using-hotl/SKILL.md"
+    grep -q "skill-authoring" "$REPO_ROOT/docs/skills.md"
+    grep -q "skill-authoring" "$REPO_ROOT/README.md"
 }
 
 @test "document-review checks Codex install paths for document-lint" {
@@ -478,6 +552,13 @@ print(match.group(1) if match else '')
     grep -q "Critical Invariants" "$REPO_ROOT/skills/subagent-execution/SKILL.md"
 }
 
+@test "subagent-execution defines delegated worker statuses" {
+    grep -q "DONE_WITH_CONCERNS" "$REPO_ROOT/skills/subagent-execution/SKILL.md"
+    grep -q "NEEDS_CONTEXT" "$REPO_ROOT/skills/subagent-execution/SKILL.md"
+    grep -q "BLOCKED" "$REPO_ROOT/skills/subagent-execution/SKILL.md"
+    grep -q "Never mark a delegated step complete from the worker report alone" "$REPO_ROOT/skills/subagent-execution/SKILL.md"
+}
+
 @test "workflow templates do not contain branch or worktree fields" {
     ! grep -q 'branch:' "$REPO_ROOT/workflows/feature.md"
     ! grep -q 'branch:' "$REPO_ROOT/workflows/bugfix.md"
@@ -497,6 +578,13 @@ print(match.group(1) if match else '')
     grep -q "Avoid brittle verify steps such as \`git branch --show-current" "$REPO_ROOT/skills/writing-plans/SKILL.md"
     grep -q 'copies the workflow into that worktree at the same relative path' "$REPO_ROOT/skills/writing-plans/SKILL.md"
     grep -q 'set both `branch: <current-branch>` and `worktree: false`' "$REPO_ROOT/skills/writing-plans/SKILL.md"
+}
+
+@test "writing-plans rejects placeholder-heavy workflow steps" {
+    grep -q "No Placeholders" "$REPO_ROOT/skills/writing-plans/SKILL.md"
+    grep -q "TBD" "$REPO_ROOT/skills/writing-plans/SKILL.md"
+    grep -q "similar to Step N" "$REPO_ROOT/skills/writing-plans/SKILL.md"
+    grep -q "undefined references" "$REPO_ROOT/skills/writing-plans/SKILL.md"
 }
 
 @test "workflow-format describes worktree isolation modes" {
@@ -573,6 +661,7 @@ print(match.group(1) if match else '')
     assert_codex_prompt_resolves 'Use $hotl:finishing-a-development-branch for run add-oauth-login-20260422T010203Z.'
     assert_codex_prompt_resolves 'Use $hotl:pr-reviewing to review https://github.com/org/repo/pull/123.'
     assert_codex_prompt_resolves 'Use HOTL for this task and choose the correct skill automatically.'
+    assert_codex_prompt_resolves 'Use $hotl:skill-authoring before editing a HOTL skill.'
 }
 
 @test "install.sh succeeds on a fresh HOME without pre-existing plugin directories" {

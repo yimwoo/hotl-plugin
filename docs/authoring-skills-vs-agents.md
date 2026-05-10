@@ -1,6 +1,6 @@
 # Authoring Skills vs Agents
 
-A canonical reference for writing HOTL skills and agents. Covers what each is, when to use which, repo conventions, common mistakes, real examples, and copy-paste templates.
+A canonical reference for writing HOTL skills and agents. Before changing behavior-shaping skill, agent, command, or adapter text, use [`skill-authoring`](../skills/skill-authoring/SKILL.md). This document covers what each abstraction is, when to use which, repo conventions, common mistakes, real examples, and copy-paste templates.
 
 **Quick links:** [Jump to Skill Template](#appendix-a-skill-template) | [Jump to Agent Template](#appendix-b-agent-template)
 
@@ -265,6 +265,7 @@ You are reviewing code changes in a PR.
 Before merging a new or modified skill or agent, verify:
 
 - [ ] **Correct abstraction?** Does the [decision table](#decision-framework-skill-vs-agent-vs-inline) confirm your choice of skill vs agent vs inline?
+- [ ] **Skill-authoring used?** Did you apply `hotl:skill-authoring` for behavior-shaping text changes?
 - [ ] **Skill index updated?** If you added a skill, is it listed in `skills/using-hotl/SKILL.md`?
 - [ ] **No name collision?** If you added both a command and a skill, do they have different names?
 - [ ] **Description is a trigger?** Does the `description` field say *when* to activate, not just *what* it does?

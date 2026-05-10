@@ -130,6 +130,7 @@ ones coming from `~/.agents/skills/hotl`.
 - `verification-before-completion` — Require test and command output before claiming success
 - `tdd` — RED-GREEN-REFACTOR cycle
 - `systematic-debugging` — 4-phase root cause process
+- `skill-authoring` — Create, edit, or review HOTL behavior-shaping skill and agent instructions
 
 ## Running A Saved Workflow In Codex
 

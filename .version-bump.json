@@ -1,0 +1,20 @@
+{
+  "files": [
+    { "path": "VERSION", "type": "text" },
+    { "path": ".claude-plugin/plugin.json", "type": "json", "field": "version" },
+    { "path": ".cursor-plugin/plugin.json", "type": "json", "field": "version" },
+    { "path": ".codex-plugin/plugin.json", "type": "json", "field": "version" },
+    { "path": ".claude-plugin/marketplace.json", "type": "json", "field": "plugins.0.version" }
+  ],
+  "audit": {
+    "exclude": [
+      ".git",
+      ".agents",
+      ".hotl",
+      ".worktrees",
+      "node_modules",
+      "CHANGELOG.md",
+      "scripts/bump-version.sh"
+    ]
+  }
+}

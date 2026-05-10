@@ -324,6 +324,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `requesting-code-review` — dispatched by executors at review checkpoints with git range, contracts, and verification evidence
 - `receiving-code-review` — governs how agents handle review findings: verify each claim against the codebase and HOTL contracts before acting (Verify → Evaluate → Respond → Implement)
 - `verification-before-completion` — require test and command output before claiming success
+- `skill-authoring` — create, edit, or review HOTL behavior-shaping skill and agent instructions
 
 ## Updating
 

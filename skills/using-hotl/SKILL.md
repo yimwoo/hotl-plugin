@@ -33,6 +33,7 @@ Use the `Skill` tool to invoke any of these when appropriate:
 | `hotl:finishing-a-development-branch` | After execution — merge back, publish/PR, keep, or discard the execution branch/worktree |
 | `hotl:tdd` | Before writing any implementation code |
 | `hotl:systematic-debugging` | When encountering any bug or unexpected behavior |
+| `hotl:skill-authoring` | When creating, editing, or reviewing HOTL skills, agents, commands, or behavior-shaping instructions |
 | `hotl:document-review` | Optional — review existing docs, external specs, or hand-authored plans |
 | `hotl:requesting-code-review` | Dispatched by executors at review checkpoints — standardizes what context the reviewer receives |
 | `hotl:receiving-code-review` | Invoked when review findings arrive — verify, evaluate against contracts, then implement |
