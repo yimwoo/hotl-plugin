@@ -890,3 +890,27 @@ print(match.group(1) if match else '')
     ! echo "$output" | grep -q "category=implementation-leakage"
     echo "$output" | grep -q "LINT PASSED"
 }
+
+@test "design lint resolves phase from phase-N filename slug" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-phase-7-bad-file-line-design.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "category=implementation-leakage"
+    echo "$output" | grep -q "design_type=phase"
+    echo "$output" | grep -q "cli.py:42"
+}
+
+@test "design lint emits zero false section warnings on frontmatter-less doc" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-no-frontmatter-feature-design.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "category=implementation-leakage"
+    echo "$output" | grep -q "cli.py:99"
+    ! echo "$output" | grep -q "category=structure"
+}
+
+@test "design lint does not flag wide markdown table rows" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-table-not-flag-design.md"
+    [ "$status" -eq 0 ]
+    ! echo "$output" | grep -q "category=implementation-leakage"
+    ! echo "$output" | grep -q "category=structure"
+    echo "$output" | grep -q "LINT PASSED:"
+}

@@ -113,6 +113,13 @@ check_implementation_leakage() {
     local body_lines=()
     local body_line_nums=()
 
+    # If file does not start with ---, there is no frontmatter; collect all lines as body.
+    local first_line
+    first_line="$(head -n 1 "$filepath")"
+    if [ "$first_line" != "---" ]; then
+        frontmatter_closed=1
+    fi
+
     while IFS= read -r line; do
         line_num=$((line_num + 1))
         if [ "$frontmatter_closed" -eq 0 ]; then
@@ -175,7 +182,7 @@ check_implementation_leakage() {
         local bline="${body_lines[$i]}"
         local bnum="${body_line_nums[$i]}"
         local dash_count
-        dash_count="$(grep -o '\-\-' <<< "$bline" | wc -l | tr -d ' ')" || true
+        dash_count="$(grep -oE '(^|[[:space:]])--[A-Za-z]' <<< "$bline" | wc -l | tr -d ' ')" || true
         if [ "$dash_count" -ge 6 ]; then
             printf 'category=implementation-leakage severity=warning design_type=%s line=%d\n' "$resolved_type" "$bnum"
             printf 'message="dense flag line at line %d (%d '\''--'\'' tokens); argv goes in workflow + tests"\n' "$bnum" "$dash_count"
@@ -198,6 +205,13 @@ check_required_sections() {
     local in_frontmatter=0
     local frontmatter_closed=0
     local body=""
+
+    # If file does not start with ---, there is no frontmatter; collect all lines as body.
+    local first_line
+    first_line="$(head -n 1 "$filepath")"
+    if [ "$first_line" != "---" ]; then
+        frontmatter_closed=1
+    fi
 
     while IFS= read -r line; do
         if [ "$frontmatter_closed" -eq 0 ]; then
