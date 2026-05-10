@@ -103,6 +103,32 @@ This file MUST exist before moving on.
 
 Before presenting for human approval, review the saved design doc for: missing constraints, vague success criteria, contract mismatches (do verification steps actually test the intent?), risk_level appropriateness, and scope creep. Fix any issues found. Lightweight: 1-2 passes by default, max 3 only if real issues are found. Do not ask the user to review — this is an internal quality pass.
 
+**Run document-lint** on the saved design doc as part of this self-check:
+
+```bash
+bash __HOTL_HOME__/scripts/document-lint.sh <saved-design-path>
+```
+
+The lint emits two stable warning shapes for feature/phase docs:
+
+```
+category=structure severity=warning design_type=<resolved>
+message="missing required section: ## <name>"
+
+category=implementation-leakage severity=warning design_type=<resolved> line=<n>
+message="<short description>"
+```
+
+Apply the **5-step self-check behavior** to surfaced warnings:
+
+1. Run `document-lint.sh` on the saved design doc.
+2. Surface warnings to the user before asking for approval.
+3. Fix warnings that clearly violate the design/plan boundary.
+4. Justify warnings that are intentional (e.g., a documented example).
+5. Do not block approval unless the user decides the warnings are blocking.
+
+Lint exits 0 even when these warnings are emitted (warning-only contract this pass). Initiative / architecture / contract / reference docs receive neither check; the lint emits no `category=structure` or `category=implementation-leakage` lines for them.
+
 ### Step 9: Hand off to writing-plans
 
 For `feature` and `phase` scope, tell the user the design is ready for `writing-plans`, which will create the dated workflow in `docs/plans/`.
@@ -125,3 +151,39 @@ For feature/phase scope, you MUST point the user to `writing-plans` as the next 
 - One question at a time — prefer multiple-choice when practical
 - YAGNI ruthlessly — remove unnecessary features
 - Always propose alternatives before settling on an approach
+
+## Doc-discipline rules
+
+For `design_type ∈ {feature, phase}` docs, write the body using these **seven required sections in fixed order**. Phase 1 lint enforces presence only; out-of-order or extra sections are not flagged this pass but the prose order below is the canonical convention:
+
+1. `## Intent Contract`
+2. `## Verification Contract`
+3. `## Governance Contract`
+4. `## Scope` (in / out, table form preferred)
+5. `## Decisions` (# / decision / choice / rejected alternatives, table form preferred)
+6. `## Surface` (APIs / storage / components / files-touched, paragraph each)
+7. `## Risks & Open Questions`
+
+Initiative / architecture / contract / reference docs are durable references; they may legitimately include deeper technical shape. The lint defers any rules for them this pass.
+
+### Implementation-leakage anti-patterns
+
+A design doc says **shape**; the workflow file and the code say **exact bytes**. The following patterns belong in `writing-plans` output (or in code itself), not in the design — the lint warns when they appear in feature/phase design bodies:
+
+| Pattern | Example | Why it doesn't belong in design |
+|---|---|---|
+| File:line references | `cli.py:16`, `auth.ts:204` | Line numbers rot the moment code moves; pin to workflow steps instead. |
+| Long fenced code blocks (>10 content lines) | a 30-line Python snippet | Design shows shape; full implementation goes in workflow tasks or code. |
+| Dense flag lines (≥6 `--` tokens) | `docker run --network=none --cap-drop=ALL --read-only --tmpfs /tmp ...` | Argv assertions go in workflow steps and tests, not design surface. |
+
+When a design doc must reference one of these (e.g., as an illustrative example), the warning is acceptable and the agent should justify it during the self-check (step 8) rather than rewrite the design.
+
+### Doc-type detection
+
+The lint resolves `design_type` for each design doc using a hybrid rule:
+
+1. **Frontmatter wins.** If the doc declares `design_type:` in YAML frontmatter (one of `feature | phase | initiative | architecture | contract | reference`), the lint uses that value.
+2. **Filename pattern fallback.** Otherwise, dated `YYYY-MM-DD-*-design.md` resolves to `phase` if the slug contains `phase-N`, else `feature`. Undated docs in `docs/designs/` resolve to `initiative`.
+
+To exempt an unusually named doc from the feature/phase rules, add `design_type: contract` (or `architecture` / `reference`) to its frontmatter.
+

@@ -852,3 +852,41 @@ print(match.group(1) if match else '')
     [ "$(cat "$cache_dir/scripts/hotl-locate-run.sh")" = "source run locator" ]
     [ "$(cat "$cache_dir/scripts/check-update.sh")" = "source update check" ]
 }
+
+# ── design document lint warnings ────────────────────────────────────────────
+
+@test "design lint warns on file:line refs in feature design" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-bad-file-line-design.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "category=implementation-leakage"
+    echo "$output" | grep -q "cli.py:16"
+}
+
+@test "design lint warns on code blocks over 10 lines in feature design" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-bad-code-block-design.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "category=implementation-leakage"
+    echo "$output" | grep -q "code block"
+}
+
+@test "design lint warns on dense flag lines in feature design" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-bad-flag-line-design.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "category=implementation-leakage"
+    echo "$output" | grep -q "dense flag"
+}
+
+@test "design lint warns on missing required section in feature design" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-bad-missing-section-design.md"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "category=structure"
+    echo "$output" | grep -q "Decisions"
+}
+
+@test "design lint emits no structure or leakage warnings on contract-type doc" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/ok-architecture-contract-design.md"
+    [ "$status" -eq 0 ]
+    ! echo "$output" | grep -q "category=structure"
+    ! echo "$output" | grep -q "category=implementation-leakage"
+    echo "$output" | grep -q "LINT PASSED"
+}

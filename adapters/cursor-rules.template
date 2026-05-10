@@ -27,3 +27,7 @@ BLOCK issues must be resolved before proceeding past a review checkpoint.
 
 Never claim work is done without running tests and showing output.
 Show test results. Show lint results. Evidence before assertions.
+
+## Design-doc structure rules
+
+Design-doc structure rules live in the canonical brainstorming skill (Claude Code: `skills/brainstorming/SKILL.md`; Cline: `cline/rules/hotl-brainstorming.md`). Feature/phase design docs use the seven required sections (Intent / Verification / Governance contracts plus Scope / Decisions / Surface / Risks & Open Questions); `document-lint.sh` warns on missing sections and on implementation leakage (file:line refs, code blocks > 10 lines, dense flag lines). Initiative / architecture / contract / reference docs are exempt this pass.
