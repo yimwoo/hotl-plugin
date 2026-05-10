@@ -1,14 +1,20 @@
 {
   "name": "hotl",
   "description": "Human-on-the-Loop operating model: skills, workflows, and adapters for AI-native development",
-  "version": "2.15.1",
+  "version": "2.15.2",
   "author": {
     "name": "yimwoo"
   },
   "homepage": "https://github.com/yimwoo/hotl-plugin",
   "repository": "https://github.com/yimwoo/hotl-plugin",
   "license": "MIT",
-  "keywords": ["hotl", "human-on-the-loop", "ai-native", "workflows", "skills"],
+  "keywords": [
+    "hotl",
+    "human-on-the-loop",
+    "ai-native",
+    "workflows",
+    "skills"
+  ],
   "skills": "./skills/",
   "commands": "./commands/",
   "hooks": "./hooks/hooks.json"
