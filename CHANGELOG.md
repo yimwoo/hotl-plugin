@@ -4,6 +4,8 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.17.0] - 2026-05-10
+
 ### Changed
 - `document-lint.sh` now requires an explicit HOTL frontmatter marker (`design_type:` set to one of the six recognized values, or `hotl_managed: true`) before applying HOTL strict lint to design docs. Path-based detection alone (e.g., a `*-design.md` file in `docs/designs/`) no longer triggers HOTL lint — unmarked docs SKIP cleanly with a clear message and exit 0, routing through `hotl:document-review`'s generic-rubric AI review path instead. Workflow-file lint is unchanged.
 - `skills/document-review/SKILL.md` and `skills/brainstorming/SKILL.md` (plus the Cline mirror) updated to describe frontmatter as the deterministic signal — filename pattern is now a hint, not a classifier.
