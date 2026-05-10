@@ -4,6 +4,24 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.16.0] - 2026-05-10
+
+### Added
+- Doc-discipline lint warnings for feature/phase design docs (`scripts/document-lint.sh`):
+  - `category=structure` warnings flag missing required sections from the seven-section list (Intent / Verification / Governance contracts plus Scope / Decisions / Surface / Risks & Open Questions).
+  - `category=implementation-leakage` warnings flag file:line references, fenced code blocks > 10 content lines, and dense flag-token lines (≥6 `--flag` tokens). Each leakage warning carries `line=<n>` for agent-actionability.
+  - Hybrid `design_type` detection: frontmatter `design_type:` field wins; filename pattern (`YYYY-MM-DD-*-design.md` → feature; `phase-N` slug → phase; undated → initiative) is the fallback.
+  - Initiative / architecture / contract / reference docs are exempt from both checks.
+  - Warnings are exit-0 (warning-only contract); existing FAIL-level lint behavior is unchanged.
+- New `## Doc-discipline rules` subsection in `skills/brainstorming/SKILL.md` and the Cline mirror (`cline/rules/hotl-brainstorming.md`) documenting the seven sections, the three anti-patterns, and the 5-step self-check behavior. Brainstorming step 8 now invokes `document-lint.sh` on the saved design doc and surfaces categorized warnings.
+- Adapter templates (`adapters/AGENTS.md.template`, `copilot-instructions.template`, `cursor-rules.template`) carry a one-paragraph pointer to the canonical rules plus the doctrine sentence ("design says shape; the workflow file and the code say exact bytes") and the warning-only contract ("never block on lint findings").
+- Eight new bats smoke-test cases (`test/smoke.bats` #69-#76) exercising the lint behaviors against fixtures under `test/fixtures/doc-discipline/`.
+
+### Fixed
+- `document-lint.sh` body extraction now correctly handles design docs that lack YAML frontmatter (line 1 ≠ `---`), so dated `*-design.md` files without frontmatter no longer produce false structure warnings on every section.
+- `document-lint.sh` dense-flag-line detection now requires a flag letter after `--`, so wide Markdown table separator rows (`|---|---|---|---|---|---|`) and long dash runs no longer trigger false positives. Real argv lines (`--network=none --cap-drop=ALL ...`) still match.
+- `detect_design_type` frontmatter parser anchored to line 1, preventing body YAML examples from spoofing the resolved type.
+
 ## [2.15.1] - 2026-05-09
 
 ### Changed
