@@ -97,6 +97,17 @@ Path depends on scope (decided in Step 2):
 - `phase` scope: save to `docs/designs/YYYY-MM-DD-phase-N-<slug>-design.md` (dated, tactical).
 - `initiative` scope: save to `<designs_dir>/<topic>.md` (undated, durable), where `<designs_dir>` is the value returned by the Step 2 resolver — default `docs/designs`.
 
+**Always write YAML frontmatter with the HOTL marker.** Every saved design doc MUST start with frontmatter declaring at minimum:
+
+```yaml
+---
+design_type: <feature|phase|initiative>   # match the scope chosen in step 2
+created_at: YYYY-MM-DD
+---
+```
+
+The `design_type` field is the deterministic signal that opts the doc into HOTL strict lint (`document-lint.sh` SKIPs unmarked docs). Without it, the doc is treated as non-HOTL and routes through generic AI review only.
+
 This file MUST exist before moving on.
 
 ### Step 8: Self-check the design doc
@@ -182,10 +193,7 @@ When a design doc must reference one of these (e.g., as an illustrative example)
 
 ### Doc-type detection
 
-The lint resolves `design_type` for each design doc using a hybrid rule:
-
-1. **Frontmatter wins.** If the doc declares `design_type:` in YAML frontmatter (one of `feature | phase | initiative | architecture | contract | reference`), the lint uses that value.
-2. **Filename pattern fallback.** Otherwise, dated `YYYY-MM-DD-*-design.md` resolves to `phase` if the slug contains `phase-N`, else `feature`. Undated docs in `docs/designs/` resolve to `initiative`.
-
-To exempt an unusually named doc from the feature/phase rules, add `design_type: contract` (or `architecture` / `reference`) to its frontmatter.
+1. **Frontmatter is the deterministic signal.** A doc is HOTL-managed only when its frontmatter declares `design_type:` (one of `feature | phase | initiative | architecture | contract | reference`) or `hotl_managed: true`. The brainstorming skill always writes the marker; ad-hoc docs in `docs/designs/` are treated as non-HOTL by default.
+2. **Filename pattern is a hint, not a classifier.** Dated `YYYY-MM-DD-*-design.md` is the conventional pattern for HOTL-authored docs, but the lint still requires a frontmatter marker before applying HOTL rules. Without a marker, `document-lint.sh` SKIPs cleanly with a clear message and exits 0.
+3. **Unmarked design-folder docs route to AI review.** `hotl:document-review` runs a generic-rubric AI review on them; `document-lint.sh` skips them. To opt a hand-authored doc into HOTL strict review, add `design_type: <recognized-value>` or `hotl_managed: true` to its frontmatter.
 

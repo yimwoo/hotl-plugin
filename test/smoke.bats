@@ -899,12 +899,17 @@ print(match.group(1) if match else '')
     echo "$output" | grep -q "cli.py:42"
 }
 
-@test "design lint emits zero false section warnings on frontmatter-less doc" {
-    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-no-frontmatter-feature-design.md"
+@test "design lint skips frontmatter-less feature-design doc post-opt-in" {
+    # Post-Phase-1.6: a *-design.md file with no frontmatter has no HOTL marker
+    # and SKIPs at the opt-in gate. The Phase 1.5 body-extraction fix that this
+    # test originally guarded is unreachable through the gate; coverage overlaps
+    # with test 78 but is kept as a regression guard against gate weakening.
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-no-frontmatter-feature-design.md" 2>&1
     [ "$status" -eq 0 ]
-    echo "$output" | grep -q "category=implementation-leakage"
-    echo "$output" | grep -q "cli.py:99"
+    echo "$output" | grep -q "SKIP:"
+    echo "$output" | grep -q "not a HOTL-managed"
     ! echo "$output" | grep -q "category=structure"
+    ! echo "$output" | grep -q "category=implementation-leakage"
 }
 
 @test "design lint does not flag wide markdown table rows" {
@@ -913,4 +918,37 @@ print(match.group(1) if match else '')
     ! echo "$output" | grep -q "category=implementation-leakage"
     ! echo "$output" | grep -q "category=structure"
     echo "$output" | grep -q "LINT PASSED:"
+}
+
+@test "design lint skips unmarked undated design-folder docs" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/unmarked-architecture-no-frontmatter-design.md" 2>&1
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "SKIP:"
+    echo "$output" | grep -q "not a HOTL-managed"
+    ! echo "$output" | grep -q "category=structure"
+    ! echo "$output" | grep -q "category=implementation-leakage"
+}
+
+@test "design lint skips dated *-design.md without HOTL marker" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-unmarked-no-frontmatter-design.md" 2>&1
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "SKIP:"
+    echo "$output" | grep -q "not a HOTL-managed"
+    ! echo "$output" | grep -q "category=structure"
+    ! echo "$output" | grep -q "category=implementation-leakage"
+}
+
+@test "design lint applies HOTL rules to docs marked via hotl_managed frontmatter" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-marked-via-hotl-managed-design.md" 2>&1
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "category=implementation-leakage"
+    echo "$output" | grep -q "cli.py:55"
+    echo "$output" | grep -q "LINT PASSED:"
+}
+
+@test "design lint accepts quoted YAML scalar for design_type marker" {
+    run bash "$REPO_ROOT/scripts/document-lint.sh" "$REPO_ROOT/test/fixtures/doc-discipline/2099-01-01-quoted-design-type-design.md" 2>&1
+    [ "$status" -eq 0 ]
+    echo "$output" | grep -q "LINT PASSED:"
+    ! echo "$output" | grep -q "SKIP:"
 }

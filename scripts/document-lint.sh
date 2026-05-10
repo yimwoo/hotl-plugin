@@ -60,6 +60,9 @@ detect_design_type() {
             if [ -n "$frontmatter" ]; then
                 local dt
                 dt="$(grep -i '^design_type:' <<< "$frontmatter" | head -1 | sed 's/.*design_type:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')"
+                # Strip surrounding YAML quoted-scalar quotes (Phase 1.6 review WARN).
+                dt="${dt#\"}"; dt="${dt%\"}"
+                dt="${dt#\'}"; dt="${dt%\'}"
                 if [ -n "$dt" ]; then
                     for vt in $valid_types; do
                         if [ "$dt" = "$vt" ]; then
@@ -86,13 +89,58 @@ detect_design_type() {
         return 0
     fi
 
-    # Undated design doc (e.g. docs/designs/<topic>.md)
-    if contains_ere "$filepath" '(^|/)docs/designs/[^/]+\.md$'; then
-        echo "initiative"
+    # Undated docs without frontmatter return non-zero so the opt-in marker gate
+    # can route them through AI review instead of HOTL strict lint. (Phase 1.6)
+
+    # 3. No match
+    return 1
+}
+
+# has_hotl_marker — opt-in gate (Phase 1.6).
+# Returns 0 if the file's frontmatter declares either:
+#   - design_type: <one of feature|phase|initiative|architecture|contract|reference>
+#   - hotl_managed: true
+# Returns 1 otherwise. Filename pattern alone is NOT a marker.
+has_hotl_marker() {
+    local filepath="$1"
+    local valid_types="feature phase initiative architecture contract reference"
+
+    if [ ! -f "$filepath" ]; then
+        return 1
+    fi
+
+    local first_line
+    first_line="$(head -n 1 "$filepath")"
+    if [ "$first_line" != "---" ]; then
+        return 1
+    fi
+
+    local frontmatter
+    frontmatter="$(awk 'NR==1 && /^---$/ {flag=1; next} flag && /^---$/ {exit} flag {print}' "$filepath")"
+    if [ -z "$frontmatter" ]; then
+        return 1
+    fi
+
+    # Check 1: design_type with a recognized value.
+    # Strip surrounding YAML quoted-scalar quotes so `design_type: "feature"` and
+    # `design_type: 'feature'` both opt in (Phase 1.6 review WARN).
+    local dt
+    dt="$(grep -i '^design_type:' <<< "$frontmatter" | head -1 | sed 's/.*design_type:[[:space:]]*//' | awk '{print $1}' | tr '[:upper:]' '[:lower:]')"
+    dt="${dt#\"}"; dt="${dt%\"}"
+    dt="${dt#\'}"; dt="${dt%\'}"
+    if [ -n "$dt" ]; then
+        for vt in $valid_types; do
+            if [ "$dt" = "$vt" ]; then
+                return 0
+            fi
+        done
+    fi
+
+    # Check 2: hotl_managed: true
+    if grep -qiE '^hotl_managed:[[:space:]]*true[[:space:]]*$' <<< "$frontmatter"; then
         return 0
     fi
 
-    # 3. No match
     return 1
 }
 
@@ -262,6 +310,17 @@ fi
 if [ ! -f "$FILE" ]; then
     error "File not found: $FILE"
     exit 1
+fi
+
+# Phase 1.6 opt-in gate: design docs need a frontmatter HOTL marker
+# (design_type: <recognized> OR hotl_managed: true) to receive HOTL strict lint.
+# Unmarked docs SKIP cleanly so document-review can route them to AI review.
+# Workflow files are NOT subject to this gate — they remain execution-critical.
+if [ "$FILE_TYPE" = "design" ]; then
+    if ! has_hotl_marker "$FILE"; then
+        echo "SKIP: $FILENAME is not a HOTL-managed design doc (no design_type or hotl_managed marker) — use hotl:document-review for AI review." >&2
+        exit 0
+    fi
 fi
 
 CONTENT="$(cat "$FILE")"
