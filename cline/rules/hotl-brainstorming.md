@@ -124,8 +124,10 @@ Apply the **5-step self-check behavior** to surfaced warnings:
 1. Run `document-lint.sh` on the saved design doc.
 2. Surface warnings to the user before asking for approval.
 3. Fix warnings that clearly violate the design/plan boundary.
-4. Justify warnings that are intentional (e.g., a documented example).
+4. Justify a warning only when the flagged content sits inside a clearly delimited example block — a Markdown blockquote (`> Example: ...`) or a section whose heading includes the word `Example`. All other findings must be fixed.
 5. Do not block approval unless the user decides the warnings are blocking.
+
+**Loop bound:** This 5-step procedure runs at most once per self-check pass; the parent self-check (step 8) caps the total at 3 passes before stopping.
 
 Lint exits 0 even when these warnings are emitted (warning-only contract this pass). Initiative / architecture / contract / reference docs receive neither check; the lint emits no `category=structure` or `category=implementation-leakage` lines for them.
 
