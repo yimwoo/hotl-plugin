@@ -132,6 +132,25 @@ ones coming from `~/.agents/skills/hotl`.
 - `systematic-debugging` — 4-phase root cause process
 - `skill-authoring` — Create, edit, or review HOTL behavior-shaping skill and agent instructions
 
+## Optional Codex Custom Agents
+
+HOTL includes Codex custom agent templates under `adapters/codex-agents/`. To
+make them available inside another project as `.codex/agents/*.toml`, run the
+installer from that project root:
+
+```bash
+bash ~/.codex/plugins/hotl-source/scripts/hotl-install-codex-agents.sh
+```
+
+For native skills installs:
+
+```bash
+bash ~/.codex/hotl/scripts/hotl-install-codex-agents.sh
+```
+
+Existing `.codex/agents/*.toml` files are skipped unless you explicitly pass
+`--force`.
+
 ## Running A Saved Workflow In Codex
 
 Codex does not use Claude-style `/hotl:*` slash commands. After HOTL writes a

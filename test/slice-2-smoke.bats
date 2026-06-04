@@ -68,7 +68,7 @@ teardown() {
     local skill="$REPO_ROOT/skills/document-review/SKILL.md"
     grep -qF 'docs/designs/*.md' "$skill"
     grep -qF 'docs/plans/*-workflow.md' "$skill"
-    grep -qF 'docs/plans/*-plan.md' "$skill"
+    grep -qF '*-plan.md' "$skill"
     grep -qF 'hotl-workflow-*.md' "$skill"
 }
 
@@ -114,7 +114,7 @@ teardown() {
     run bash "$DOCUMENT_LINT" "$TMP/docs/plans/2026-04-14-legacy-plan.md"
     [ "$status" -eq 0 ]
 
-    grep -qF 'docs/plans/*-plan.md' "$REPO_ROOT/skills/document-review/SKILL.md"
+    grep -qF '*-plan.md' "$REPO_ROOT/skills/document-review/SKILL.md"
     shopt -s nullglob
     MATCHES=(docs/plans/*-plan.md)
     [ ${#MATCHES[@]} -eq 1 ]

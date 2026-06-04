@@ -482,6 +482,23 @@ run_single_verify_check() {
             rm -f "$stdout_file" "$stderr_file"
             return "$exit_code"
             ;;
+        browser)
+            local url check
+            url=$(echo "$check_json" | jq -r '.url // ""')
+            check=$(echo "$check_json" | jq -r '.check // ""')
+
+            if [ -z "$url" ] || [ "$url" = "null" ]; then
+                VERIFY_BLOCK_REASON="browser verify missing url"
+                return 200
+            fi
+            if [ -z "$check" ] || [ "$check" = "null" ]; then
+                VERIFY_BLOCK_REASON="browser verify missing check"
+                return 200
+            fi
+
+            VERIFY_BLOCK_REASON="human review required: browser verify requested for ${url} - ${check}"
+            return 200
+            ;;
         artifact)
             local path assert_kind assert_value
             path=$(echo "$check_json" | jq -r '.path // ""')

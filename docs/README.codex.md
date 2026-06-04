@@ -222,6 +222,29 @@ Codex discovers them:
 In both cases, the `using-hotl` skill provides the HOTL skill index and routing
 guidance for the rest of the skill set. Codex uses the skill files directly.
 
+### Optional Codex Custom Agents
+
+HOTL also ships Codex custom agent templates under `adapters/codex-agents/` for
+roles such as reviewer, architect, researcher, QA, dev, and PM. Codex only
+discovers project-scoped custom agents when those TOML files live in the project
+being worked on as `.codex/agents/*.toml`, so plugin installation alone does not
+make them available in every target repository.
+
+To install the templates into a project, run the helper from that project root:
+
+```bash
+bash ~/.codex/plugins/hotl-source/scripts/hotl-install-codex-agents.sh
+```
+
+For native skills installs, use:
+
+```bash
+bash ~/.codex/hotl/scripts/hotl-install-codex-agents.sh
+```
+
+The helper creates `.codex/agents/`, copies HOTL's tracked templates into it,
+and skips existing files unless `--force` is explicitly provided.
+
 When a HOTL skill needs a bundled helper such as `document-lint.sh`,
 `render-execution-summary.sh`, or `runtime/hotl-rt`, resolve it from the HOTL
 install rather than from the repo being worked on. In Codex, the relevant

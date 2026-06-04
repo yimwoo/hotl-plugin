@@ -54,7 +54,7 @@ verify:
 
 ### browser
 
-Verify UI behavior via browser tooling. **Capability-gated:** if browser tooling is unavailable, execution downgrades to `human-review` with the `check` text as prompt. Never silently skipped.
+Verify UI behavior via browser tooling. **Capability-gated:** if browser tooling is unavailable inside the runtime, execution downgrades to `human-review` with the `url` and `check` text as the prompt. Never silently skipped. When the host agent has Browser, Computer Use, or equivalent UI tooling, the controller can perform that check before approving or rejecting the pause.
 
 ```yaml
 verify:

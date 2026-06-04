@@ -48,4 +48,4 @@ Want to create or modify HOTL abstractions? See [Authoring Skills vs Agents](aut
 | Skill | Description | Phase |
 | --- | --- | --- |
 | [`setup-project`](../skills/setup-project/SKILL.md) | Generate adapter files for the current project — creates AGENTS.md, .clinerules, cursor rules, or copilot instructions depending on tools the team uses. | Setup |
-| [`using-hotl`](../skills/using-hotl/SKILL.md) | Auto-loaded on session start. Establishes the skill index and HOTL operating principles. | Setup |
+| [`using-hotl`](../skills/using-hotl/SKILL.md) | Routing/index skill for choosing the right HOTL workflow stage. In Claude Code it is bootstrapped by the session-start hook; in Codex it remains explicitly invokable when routing guidance is needed. | Setup |

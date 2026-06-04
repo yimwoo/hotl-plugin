@@ -1,3 +1,7 @@
+---
+design_type: phase
+---
+
 # {{INITIATIVE_NAME}} — Phase {{PHASE_ID}} Design
 
 **Status:** Proposed — for review

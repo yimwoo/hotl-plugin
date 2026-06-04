@@ -182,10 +182,58 @@ assert_codex_prompt_resolves() {
     }
 }
 
+@test "using-hotl has conservative Codex invocation metadata" {
+    metadata="$REPO_ROOT/skills/using-hotl/agents/openai.yaml"
+
+    [ -f "$metadata" ]
+    grep -q 'allow_implicit_invocation: false' "$metadata"
+    grep -q 'display_name: "HOTL Router"' "$metadata"
+    ! grep -q 'Use when starting any conversation' "$REPO_ROOT/skills/using-hotl/SKILL.md"
+}
+
 # ── JSON validity ─────────────────────────────────────────────────────────────
 
 @test "plugin.json is valid JSON" {
     python3 -m json.tool "$REPO_ROOT/.claude-plugin/plugin.json" > /dev/null
+}
+
+@test "Claude plugin manifest declares core component paths" {
+    python3 - "$REPO_ROOT/.claude-plugin/plugin.json" <<'PY'
+import json
+import sys
+
+manifest = json.load(open(sys.argv[1]))
+expected = {
+    "skills": "./skills/",
+    "commands": "./commands/",
+    "agents": "./agents/",
+    "hooks": "./hooks/hooks.json",
+}
+for key, value in expected.items():
+    actual = manifest.get(key)
+    if actual != value:
+        raise SystemExit(f"{key} expected {value!r}, got {actual!r}")
+PY
+}
+
+@test "Claude code-reviewer agent is read-only by tool surface" {
+    agent="$REPO_ROOT/agents/code-reviewer.md"
+
+    grep -q '^tools: Read, Grep, Glob$' "$agent"
+    grep -q 'tool surface is intentionally read-only' "$agent"
+    ! grep -q '^tools: .*Write' "$agent"
+    ! grep -q '^tools: .*Edit' "$agent"
+}
+
+@test "Codex automation and CI templates are documented but inactive" {
+    [ -f "$REPO_ROOT/docs/codex-automations-and-ci.md" ]
+    [ -f "$REPO_ROOT/adapters/github-actions-codex-pr-review.template.yml" ]
+    [ -f "$REPO_ROOT/adapters/codex-pr-review-prompt.template.md" ]
+
+    grep -q 'openai/codex-action@v1' "$REPO_ROOT/adapters/github-actions-codex-pr-review.template.yml"
+    grep -q 'sandbox: read-only' "$REPO_ROOT/adapters/github-actions-codex-pr-review.template.yml"
+    grep -q '\$hotl:receiving-code-review' "$REPO_ROOT/docs/codex-automations-and-ci.md"
+    [ ! -f "$REPO_ROOT/.github/workflows/hotl-codex-pr-review.yml" ]
 }
 
 @test "Codex plugin manifest points skills at plugin-root-relative path" {

@@ -4,6 +4,22 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.18.0] - 2026-06-04
+
+### Added
+- Codex custom agent templates for `architect`, `dev`, `pm`, `qa`, `researcher`, and `reviewer` under `adapters/codex-agents/`, plus `scripts/hotl-install-codex-agents.sh` to install them into a target project's `.codex/agents/` directory without overwriting existing files unless `--force` is explicit.
+- Optional Codex automation and GitHub Actions PR-review templates, documented in `docs/codex-automations-and-ci.md`. The templates are inactive by default and are intended to be copied into target projects only after manual prompt validation.
+- Conservative Codex metadata for the `using-hotl` router skill so it remains explicitly invokable without broad implicit routing.
+
+### Changed
+- Claude plugin metadata now declares the bundled `agents/` path, and `update.sh` refreshes agents into the Claude plugin cache alongside skills, commands, hooks, scripts, and runtime files.
+- Claude `code-reviewer` now has an explicit read-only tool surface (`Read`, `Grep`, `Glob`).
+- `adapters/tactical-plan.template.md` now includes `design_type: phase` frontmatter so rendered tactical phase designs opt into current HOTL design lint.
+
+### Fixed
+- `verify: browser` runtime checks now pause as human-review requests with the target URL and check text instead of failing as unsupported verification types when browser tooling is unavailable inside `hotl-rt`.
+- Slice regression tests now match the current canonical workflow naming and doc-discipline frontmatter rules, allowing the full `bats test/*.bats` suite to pass.
+
 ## [2.17.0] - 2026-05-10
 
 ### Changed

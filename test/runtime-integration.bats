@@ -299,7 +299,24 @@ teardown() {
     [ "$EVENT_COUNT" -ge 2 ]
 }
 
-# ── Unsupported verify type: blocks loudly ──────────────────────────────────
+# ── Browser verify fallback and unsupported verify types ────────────────────
+
+@test "browser verify downgrades to human-review pause" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-browser-verify.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    REPORT=".hotl/reports/${RUN_ID}.md"
+
+    "$HOTL_RT" step 1 start
+    run "$HOTL_RT" step 1 verify
+    [ "$status" -ne 0 ]
+
+    [ "$(jq -r '.status' "$STATE")" = "paused" ]
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "blocked" ]
+    [ "$(jq -r '.steps[0].block_reason' "$STATE")" = "human review required: browser verify requested for http://localhost:3000 - page renders correctly" ]
+
+    grep -q '✗ Blocked' "$REPORT"
+    grep -q 'browser verify requested for http://localhost:3000 - page renders correctly' "$REPORT"
+}
 
 @test "unsupported verify type blocks with clear reason" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-unsupported-verify.md)
@@ -311,8 +328,8 @@ teardown() {
     [ "$status" -ne 0 ]
 
     [ "$(jq -r '.steps[0].status' "$STATE")" = "blocked" ]
-    jq -r '.steps[0].block_reason' "$STATE" | grep -q 'unsupported verify type: browser'
+    jq -r '.steps[0].block_reason' "$STATE" | grep -q 'unsupported verify type: unsupported-tool'
 
     grep -q '✗ Blocked' "$REPORT"
-    grep -q 'unsupported verify type: browser' "$REPORT"
+    grep -q 'unsupported verify type: unsupported-tool' "$REPORT"
 }

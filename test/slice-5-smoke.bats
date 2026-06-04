@@ -7,6 +7,7 @@
 setup() {
     REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
     HOTL_INIT_INITIATIVE="$REPO_ROOT/scripts/hotl-init-initiative.sh"
+    HOTL_INSTALL_CODEX_AGENTS="$REPO_ROOT/scripts/hotl-install-codex-agents.sh"
     HOTL_CONFIG_RESOLVE="$REPO_ROOT/scripts/hotl-config-resolve.sh"
     HOTL_RT="$REPO_ROOT/runtime/hotl-rt"
     TMP=$(mktemp -d)
@@ -159,6 +160,45 @@ teardown() {
     rm -rf "$fake_install"
 }
 
+# ── Group Q2: Codex custom agent installer behavior ────────────────────────
+
+@test "Q2.0: ships Codex agent templates from tracked adapters" {
+    grep -q 'adapters/codex-agents' "$HOTL_INSTALL_CODEX_AGENTS"
+
+    for agent in architect dev pm qa researcher reviewer; do
+        [ -f "$REPO_ROOT/adapters/codex-agents/${agent}.toml" ] \
+            || { echo "FAIL: missing adapters/codex-agents/${agent}.toml"; return 1; }
+        grep -q "name = \"${agent}\"" "$REPO_ROOT/adapters/codex-agents/${agent}.toml"
+    done
+}
+
+@test "Q2.1: installs HOTL Codex agent templates into project .codex/agents" {
+    run bash "$HOTL_INSTALL_CODEX_AGENTS"
+    [ "$status" -eq 0 ]
+
+    for agent in architect dev pm qa researcher reviewer; do
+        [ -f ".codex/agents/${agent}.toml" ] \
+            || { echo "FAIL: missing .codex/agents/${agent}.toml"; return 1; }
+        grep -q "name = \"${agent}\"" ".codex/agents/${agent}.toml"
+    done
+
+    [[ "$output" == *"Codex agent templates complete: 6 installed, 0 skipped"* ]]
+}
+
+@test "Q2.2: preserves existing Codex agent files unless force is explicit" {
+    mkdir -p .codex/agents
+    printf '%s\n' 'name = "reviewer"' 'description = "custom"' 'developer_instructions = "custom"' > .codex/agents/reviewer.toml
+
+    run bash "$HOTL_INSTALL_CODEX_AGENTS"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"SKIP: "*".codex/agents/reviewer.toml already exists"* ]]
+    grep -q 'description = "custom"' .codex/agents/reviewer.toml
+
+    run bash "$HOTL_INSTALL_CODEX_AGENTS" --force
+    [ "$status" -eq 0 ]
+    grep -q 'Reviews code for correctness' .codex/agents/reviewer.toml
+}
+
 # ── Group R: setup-project SKILL.md content ────────────────────────────────
 
 @test "R1: SKILL documents the opt-in question with 'no' as the default" {
@@ -185,6 +225,14 @@ teardown() {
 @test "R3: SKILL gates the scaffolder invocation on a yes/opt-in answer" {
     local skill="$REPO_ROOT/skills/setup-project/SKILL.md"
     grep -qiE 'opt.in|answered yes|if yes|only when.*yes|only if.*yes|only invoke.*yes' "$skill"
+}
+
+@test "R4: SKILL documents optional Codex custom agent install helper" {
+    local skill="$REPO_ROOT/skills/setup-project/SKILL.md"
+    grep -q 'hotl-install-codex-agents\.sh' "$skill"
+    grep -q 'adapters/codex-agents/' "$skill"
+    grep -q '\.codex/agents/\*\.toml' "$skill"
+    grep -qi 'Existing agent files are preserved' "$skill"
 }
 
 # ── Group S: small-user safety regression ──────────────────────────────────

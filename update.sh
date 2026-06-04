@@ -330,6 +330,11 @@ if is_git_work_tree "${CLAUDE_PLUGIN_DIR}"; then
                 rsync -a --delete "${CLAUDE_PLUGIN_DIR}/commands/" "${CACHE_VER_DIR}commands/"
             fi
 
+            # Sync agents
+            if [ -d "${CLAUDE_PLUGIN_DIR}/agents" ]; then
+                rsync -a --delete "${CLAUDE_PLUGIN_DIR}/agents/" "${CACHE_VER_DIR}agents/"
+            fi
+
             # Sync hooks
             if [ -d "${CLAUDE_PLUGIN_DIR}/hooks" ]; then
                 rsync -a --delete "${CLAUDE_PLUGIN_DIR}/hooks/" "${CACHE_VER_DIR}hooks/"
