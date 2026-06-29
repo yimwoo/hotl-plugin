@@ -1,7 +1,7 @@
 {
   "name": "hotl",
   "description": "Human-on-the-Loop operating model: skills, workflows, and adapters for AI-native development",
-  "version": "2.19.1",
+  "version": "2.19.2",
   "author": {
     "name": "yimwoo"
   },
@@ -17,8 +17,5 @@
   ],
   "skills": "./skills/",
   "commands": "./commands/",
-  "agents": [
-    "./agents/code-reviewer.md"
-  ],
   "hooks": "./hooks/hooks.json"
 }

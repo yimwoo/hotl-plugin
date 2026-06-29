@@ -206,14 +206,18 @@ manifest = json.load(open(sys.argv[1]))
 expected = {
     "skills": "./skills/",
     "commands": "./commands/",
-    "agents": ["./agents/code-reviewer.md"],
     "hooks": "./hooks/hooks.json",
 }
 for key, value in expected.items():
     actual = manifest.get(key)
     if actual != value:
         raise SystemExit(f"{key} expected {value!r}, got {actual!r}")
+
+if "agents" in manifest:
+    raise SystemExit("agents should use Claude's default plugin-root agents/ discovery")
 PY
+
+    [ -f "$REPO_ROOT/agents/code-reviewer.md" ]
 }
 
 @test "Claude code-reviewer agent is read-only by tool surface" {

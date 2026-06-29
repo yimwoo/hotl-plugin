@@ -4,6 +4,11 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.19.2] - 2026-06-29
+
+### Fixed
+- Restored Claude Code discovery of the bundled `code-reviewer` agent by relying on the documented default plugin-root `agents/` location instead of overriding it in the manifest.
+
 ## [2.19.1] - 2026-06-29
 
 ### Fixed
