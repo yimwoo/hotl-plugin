@@ -81,3 +81,19 @@ at `~/.codex/plugins/hotl-source` and refreshes the local Codex plugin cache
 under `~/.codex/plugins/cache/codex-plugins/hotl/` when present. On a fresh
 plugin install, HOTL seeds the `local/` cache directory so the cached bundle is
 already aligned with the source checkout before restart.
+
+Source/cache refresh and Codex plugin lifecycle metadata are separate. The
+updater does not rewrite the HOTL version in
+`~/.agents/plugins/marketplace.json` or reconcile the version recorded in
+Codex's installed-plugin configuration. When moving to a new released version
+and you want those records to match, rerun the installer and reconcile HOTL
+through the Codex plugin CLI or UI:
+
+```bash
+bash ~/.codex/plugins/hotl-source/install.sh --codex-plugin
+codex plugin add hotl@codex-plugins
+```
+
+If the CLI reports that HOTL is already installed rather than reconciling it,
+use the Plugins UI to update it, or remove and add the plugin again. Removing
+the installed plugin does not delete the source checkout.

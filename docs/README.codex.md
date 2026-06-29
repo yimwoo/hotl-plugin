@@ -5,12 +5,13 @@ HOTL for Codex can be installed either as a Codex plugin or as native skills. Pl
 Codex plugin install has two separate steps:
 
 1. Make HOTL available through a marketplace.
-2. Install and enable HOTL from the Codex plugin directory.
+2. Install and enable HOTL in Codex.
 
-The HOTL installer handles the marketplace step. CLI-only users complete the
-install from Codex CLI with `/plugins`; Codex app users can complete the same
-install from the app's Plugins screen. If both surfaces use the same Codex
-profile, installing or enabling HOTL once applies to that shared profile.
+The HOTL installer handles the marketplace step. CLI-only users can complete
+installation directly with `codex plugin add hotl@codex-plugins`, or use the
+interactive `/plugins` browser. Codex app users complete the same install from
+the app's Plugins screen. If both surfaces use the same Codex profile,
+installing or enabling HOTL once applies to that shared profile.
 
 Official Codex plugin docs:
 
@@ -28,8 +29,8 @@ Official Codex plugin docs:
 
 Requires a Codex version with plugin support. The installer clones the HOTL repo
 to a source checkout at `~/.codex/plugins/hotl-source/`, registers it in
-`~/.agents/plugins/marketplace.json` as a local Codex plugin, and refreshes the
-Codex plugin cache when a cache already exists.
+`~/.agents/plugins/marketplace.json` as a local Codex plugin, and either refreshes
+an existing Codex plugin cache or seeds one when no cache exists yet.
 
 1. Clone the repo (or use an existing checkout):
 
@@ -46,13 +47,19 @@ bash /tmp/hotl-plugin/install.sh --codex-plugin
 This clones HOTL to `~/.codex/plugins/hotl-source/` and writes a marketplace
 entry with `"source": "local"` pointing at that checkout.
 
-3. Restart Codex so it re-reads the marketplace entry.
-
-4. Finish the install in Codex CLI or the Codex app.
+3. Finish the install in Codex CLI or the Codex app, then start a new Codex
+   session.
 
 #### Codex CLI
 
-Start Codex and open the plugin directory:
+Install directly from the registered marketplace:
+
+```bash
+codex plugin add hotl@codex-plugins
+```
+
+To use the interactive plugin browser instead, start Codex and open the plugin
+directory:
 
 ```text
 codex
@@ -107,7 +114,9 @@ pointing at your checkout directory. Restart Codex, then use `/plugins` in the
 CLI or the app Plugins screen to install or enable HOTL from that local
 marketplace entry.
 
-**Generated marketplace entry shape:**
+**Essential generated marketplace fields:** the real entry also includes the
+plugin description, version, author, and Codex interface metadata from
+`.codex-plugin/plugin.json`.
 
 ```json
 {
@@ -124,7 +133,9 @@ marketplace entry.
 }
 ```
 
-Plugin updates are handled via `update.sh --codex-plugin` (see Updating below).
+`update.sh --codex-plugin` refreshes plugin source and cache contents. Marketplace
+version metadata and the Codex-installed version are separate lifecycle state;
+see Updating below when moving to a new HOTL release.
 
 ### Native Skills Install (Fallback / Development)
 
@@ -221,6 +232,28 @@ Codex discovers them:
 
 In both cases, the `using-hotl` skill provides the HOTL skill index and routing
 guidance for the rest of the skill set. Codex uses the skill files directly.
+
+### Governed Driver Selection
+
+`governed-execution` is the preferred workflow execution entry point. Its
+default `auto` mode is intentionally conservative: merely finding the `codex`
+executable does not prove that native execution is entitled, enabled, or usable,
+so HOTL selects the generic `hotl-rt` fallback unless native execution is
+explicitly enabled.
+
+Use either of these opt-in paths:
+
+```bash
+HOTL_CODEX_NATIVE=1 runtime/drivers/codex.sh preflight docs/plans/<workflow>.md
+runtime/drivers/codex.sh launch docs/plans/<workflow>.md --mode native
+```
+
+`--mode fallback` always selects the generic driver. Host permissions,
+sandboxes, managed policy, and approvals remain authoritative in every mode.
+Native host output never replaces the state-derived completion receipt. See
+[Host-Native Drivers](host-native-drivers.md), the
+[migration guide](migration-host-native.md), and the
+[portable workflow and receipt contract](contracts/portable-workflow-and-receipt.md).
 
 ### Optional Codex Custom Agents
 
@@ -321,6 +354,9 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `writing-plans` — create `docs/plans/YYYY-MM-DD-<slug>-workflow.md` files
 - `document-review` — run structural lint and qualitative review before execution
 - `governed-execution` — preferred native-or-fallback execution router with evidence receipts
+  - **Driver selection:** auto mode uses fallback unless `HOTL_CODEX_NATIVE=1` or `--mode native` explicitly opts into the experimental Codex driver
+  - **Portable governance:** sensitive actions, budgets, and verify-first recovery follow `docs/contracts/policy-budget-recovery.md`
+  - **Adoption tools:** `scripts/hotl-adoption-report.sh` is read-only; `scripts/hotl-memory-proposal.sh` only proposes memory candidates and never writes them directly
 - `loop-execution` — autonomous execution with retries
   - **Output contract:** `docs/contracts/execution-report-output.md` defines the execution report schema, status vocabulary, and platform rendering tables
   - **Optional dependency:** State persistence and resumable execution require [`jq`](https://jqlang.github.io/jq/). Without it, HOTL still works but runs without state files or durable reports.
@@ -447,10 +483,24 @@ Important:
 
 - `update.sh --codex-plugin` updates `~/.codex/plugins/hotl-source`
 - It also refreshes the local Codex plugin cache at `~/.codex/plugins/cache/codex-plugins/hotl/` when present
+- It does not rewrite the HOTL entry's version in `~/.agents/plugins/marketplace.json`
+  or reconcile the version recorded in Codex's installed-plugin configuration
 - If you still have the old copied-bundle install at `~/.codex/plugins/hotl`,
   the updater reports it and skips it; migrate with `bash install.sh --codex-plugin`
 
-Restart Codex after updating so it picks up the new plugin files.
+For a source/cache-only refresh, restart Codex after updating. When moving to a
+new released version and you also want marketplace and installed-version metadata
+to match, rerun the installer to rewrite the marketplace entry, then reconcile
+HOTL through the plugin CLI or UI:
+
+```bash
+bash ~/.codex/plugins/hotl-source/install.sh --codex-plugin
+codex plugin add hotl@codex-plugins
+```
+
+If the CLI reports that HOTL is already installed rather than reconciling it,
+use the Plugins UI to update it, or remove and add the plugin again. Removing the
+plugin does not remove the source checkout.
 
 ## Codex Manual Canary
 
@@ -507,13 +557,20 @@ Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\hotl"
 
 ### Plugin Install
 
-Remove the source checkout and marketplace entry:
+First remove the installed plugin and its active cache/configuration:
+
+```bash
+codex plugin remove hotl@codex-plugins
+```
+
+That is sufficient to stop using HOTL. To also remove the optional local source
+checkout and marketplace listing:
 
 **macOS / Linux:**
 
 ```bash
 rm -rf ~/.codex/plugins/hotl-source
-# Edit ~/.agents/plugins/marketplace.json and remove the hotl entry
+# Optionally edit ~/.agents/plugins/marketplace.json and remove only the hotl entry
 ```
 
 **Repo-local:** Delete `.agents/plugins/marketplace.json` or remove the `hotl` entry from it.

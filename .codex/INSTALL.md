@@ -3,9 +3,10 @@
 Install HOTL in Codex as a Codex plugin. HOTL is a Human-on-the-Loop AI coding workflow that adds structured design, workflow execution, review, and verification skills to Codex.
 
 The plugin install works for both Codex CLI and Codex app users. CLI-only users
-do not need the app: after the installer registers HOTL, use `/plugins` in
-Codex CLI to install or enable it. Native skill discovery is still available as
-a fallback for older Codex builds and local HOTL development.
+do not need the app: after the installer registers HOTL, use
+`codex plugin add hotl@codex-plugins`. The interactive `/plugins` browser remains
+available as an alternative. Native skill discovery is still available as a
+fallback for older Codex builds and local HOTL development.
 
 ## Prerequisites
 
@@ -28,9 +29,15 @@ git clone https://github.com/yimwoo/hotl-plugin.git /tmp/hotl-plugin
 bash /tmp/hotl-plugin/install.sh --codex-plugin
 ```
 
-3. Restart Codex.
+3. Install HOTL from the registered marketplace:
 
-4. In Codex CLI, open the plugin directory and install HOTL:
+```bash
+codex plugin add hotl@codex-plugins
+```
+
+4. Start a new Codex session.
+
+To use the interactive browser instead, open the plugin directory in Codex:
 
 ```text
 codex
@@ -91,8 +98,8 @@ and keep this install on `main`.
 
 ### Plugin Install
 
-Start Codex and open `/plugins`. HOTL should appear under **Local Plugins** and
-show as installed/enabled after you complete the install step.
+Run `codex plugin list`; HOTL should appear as installed and enabled. You can
+also open `/plugins` and confirm it under **Local Plugins**.
 
 You can also confirm that the installer registered the source checkout:
 
@@ -121,6 +128,7 @@ ones coming from `~/.agents/skills/hotl`.
 - `brainstorming` — Design a feature with HOTL contracts before writing code
 - `writing-plans` — Create `docs/plans/YYYY-MM-DD-<slug>-workflow.md`
 - `document-review` — Review design docs and workflow files before execution
+- `governed-execution` — Preferred experimental-native-or-generic-fallback execution router
 - `loop-execution` — Execute workflow files with auto-approve
 - `executing-plans` — Linear execution with checkpoints
 - `subagent-execution` — Execute reviewed workflows in-session with delegated subagent steps
@@ -156,6 +164,7 @@ Existing `.codex/agents/*.toml` files are skipped unless you explicitly pass
 Codex does not use Claude-style `/hotl:*` slash commands. After HOTL writes a
 workflow file, continue with the matching skill name instead:
 
+- Requests like `Use $hotl:governed-execution to run docs/plans/YYYY-MM-DD-<slug>-workflow.md` for preferred governed routing
 - Requests like `Use $hotl:loop-execution to run docs/plans/YYYY-MM-DD-<slug>-workflow.md` for autonomous execution
 - Requests like `Use $hotl:executing-plans to run docs/plans/YYYY-MM-DD-<slug>-workflow.md` for manual checkpoints
 - Requests like `Use $hotl:subagent-execution to run docs/plans/YYYY-MM-DD-<slug>-workflow.md` for delegated execution
@@ -174,6 +183,16 @@ Or update only the plugin checkout:
 
 ```bash
 bash ~/.codex/plugins/hotl-source/update.sh --codex-plugin
+```
+
+This refreshes source and cache contents. It does not rewrite marketplace or
+installed-version metadata. When moving to a new released version and you want
+those records to match, rerun the installer and reconcile the plugin through
+the CLI or Plugins UI:
+
+```bash
+bash ~/.codex/plugins/hotl-source/install.sh --codex-plugin
+codex plugin add hotl@codex-plugins
 ```
 
 Restart Codex after updating so it reloads the plugin files.
@@ -220,8 +239,14 @@ Restart Codex after updating so it re-discovers the latest skill files.
 ### Plugin Install
 
 ```bash
+codex plugin remove hotl@codex-plugins
+```
+
+To also remove the optional source checkout and marketplace listing:
+
+```bash
 rm -rf ~/.codex/plugins/hotl-source
-# Edit ~/.agents/plugins/marketplace.json and remove the hotl entry
+# Optionally edit ~/.agents/plugins/marketplace.json and remove only the hotl entry
 ```
 
 ### Native Skills Fallback

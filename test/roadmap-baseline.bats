@@ -189,10 +189,12 @@ copy_catalog() {
     [ "$status" -eq 0 ]
 }
 
-@test "baseline documentation links the generated capability matrix and no-routing boundary" {
+@test "baseline documentation separates the descriptive catalog from implemented driver routing" {
     grep -q 'Host Capability Baseline' "$REPO_ROOT/README.md"
     grep -q 'docs/host-capabilities.md' "$REPO_ROOT/README.md"
-    grep -q 'choose an execution' "$REPO_ROOT/README.md"
+    grep -q 'capability catalog itself is descriptive only' "$REPO_ROOT/README.md"
+    grep -q 'runtime/drivers/' "$REPO_ROOT/README.md"
+    grep -q 'experimental Codex and Claude Code native drivers' "$REPO_ROOT/README.md"
 }
 
 @test "baseline documentation describes the read-only tri-state probe" {
@@ -204,6 +206,28 @@ copy_catalog() {
 @test "baseline documentation indexes both new output contracts" {
     grep -q 'driver-conformance.md' "$REPO_ROOT/docs/contracts/README.md"
     grep -q 'evaluation-result-output.md' "$REPO_ROOT/docs/contracts/README.md"
+}
+
+@test "README guides document governed routing and portable controls" {
+    grep -q 'HOTL_CODEX_NATIVE=1' "$REPO_ROOT/README.md"
+    grep -q 'HOTL_CODEX_NATIVE=1' "$REPO_ROOT/docs/README.codex.md"
+    grep -q 'generic.*fallback' "$REPO_ROOT/docs/README.cline.md"
+    grep -q 'policy-budget-recovery.md' "$REPO_ROOT/README.md"
+    grep -q 'policy-budget-recovery.md' "$REPO_ROOT/docs/README.cline.md"
+}
+
+@test "Codex docs use the current plugin CLI lifecycle" {
+    grep -q 'codex plugin add hotl@codex-plugins' "$REPO_ROOT/README.md"
+    grep -q 'codex plugin add hotl@codex-plugins' "$REPO_ROOT/.codex/INSTALL.md"
+    grep -q 'codex plugin add hotl@codex-plugins' "$REPO_ROOT/docs/README.codex.md"
+    grep -q 'codex plugin remove hotl@codex-plugins' "$REPO_ROOT/docs/README.codex.md"
+}
+
+@test "contract index separates runtime vocabularies" {
+    grep -q 'Run status' "$REPO_ROOT/docs/contracts/README.md"
+    grep -q 'in_progress' "$REPO_ROOT/docs/contracts/README.md"
+    grep -q 'host_authority' "$REPO_ROOT/docs/contracts/README.md"
+    grep -q 'unset.*unknown.*within.*exceeded' "$REPO_ROOT/docs/contracts/README.md"
 }
 
 @test "baseline documentation records the Phase 1 additions in the changelog" {

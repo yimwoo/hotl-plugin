@@ -42,7 +42,7 @@ Tell Cline what you need in natural language. HOTL rules teach Cline to follow s
 | --- | --- |
 | "brainstorm this feature" | Asks clarifying questions one at a time, proposes 2-3 approaches, defines HOTL contracts (intent, verification, governance), saves a design doc in `docs/designs/` |
 | "plan the implementation" | Uses `writing-plans` semantics to create a dated workflow in `docs/plans/` with atomic steps, verify commands, and approval gates |
-| "execute the plan" | Runs the workflow step by step with human checkpoints every 3 steps |
+| "execute the plan" | Routes through `governed-execution`; Cline normally uses the conformant generic driver and the requested manual, loop, or delegated profile |
 | "subagent execute the plan" | Delegates implementation-friendly workflow steps to fresh subagents while keeping verification and gates in the controller |
 | "use TDD" | Follows RED-GREEN-REFACTOR — writes a failing test before any implementation code |
 | "debug this" | Systematic 4-phase process: reproduce, understand, hypothesize, fix and verify |
@@ -73,6 +73,11 @@ Each rule file contains:
 
 This hybrid approach works with any API provider and any model.
 
+For execution, `governed-execution` is the preferred router. HOTL currently
+ships host-native drivers for Codex and Claude Code, not Cline, so normal Cline
+sessions select the generic `hotl-rt` fallback. This keeps workflow state,
+verification, gates, receipts, and finish behavior portable across hosts.
+
 ## The HOTL Workflow
 
 ```text
@@ -99,6 +104,22 @@ Every workflow defines:
 | **low** | UI changes, new endpoints | Auto-approve |
 | **medium** | Schema changes, refactors | Proceed with caution |
 | **high** | Auth, encryption, privacy, billing | Always pauses for human approval |
+
+### Portable Governance and Recovery
+
+Governed execution records more than step completion:
+
+- `external_write`, `production_change`, and `secret_access` actions require a
+  persisted human decision before execution
+- Configured attempt, agent, cost, and elapsed-time budgets are evaluated from
+  observed runtime evidence; unavailable telemetry remains `unknown`
+- Interrupted or ambiguous runs use read-only, verify-first reconciliation
+- Completion is proven by a state-derived receipt, not a chat success message
+
+These durable controls require `jq`. See
+[`contracts/policy-budget-recovery.md`](contracts/policy-budget-recovery.md),
+[`contracts/portable-workflow-and-receipt.md`](contracts/portable-workflow-and-receipt.md),
+and [`host-native-drivers.md`](host-native-drivers.md).
 
 ## Workflow Files
 
@@ -220,10 +241,17 @@ Yes. HOTL rules are model-agnostic. They work with OCA, GPT-4/5, Claude, Gemini,
 No. Rules install globally to `~/Documents/Cline/Rules/` and apply to all projects.
 
 **Does it work offline / on corporate networks?**
-Yes. No external dependencies after installation. Everything is local Markdown files.
+The HOTL rules, skills, workflow files, and generic runtime are local and can be
+used without HOTL network services. Durable state, reports, receipts, budgets,
+and recovery require a local `jq` installation. Cline model access and any
+host-native or provider feature still depend on the selected provider and your
+organization's network and policy.
 
 **Can I customize the rules?**
-Yes. Edit the files in `~/Documents/Cline/Rules/` to add project-specific or team-specific guidelines.
+Yes, but HOTL updates replace the installed `hotl-*.md` copies in
+`~/Documents/Cline/Rules/`. Put project-specific guidance in the project's
+`.clinerules/`, or maintain team-wide HOTL changes in a fork/source checkout and
+reinstall from there.
 
 **Does it conflict with existing `.clinerules`?**
 No. Global rules in `~/Documents/Cline/Rules/` coexist with per-project `.clinerules/` files.

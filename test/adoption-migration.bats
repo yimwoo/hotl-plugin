@@ -40,7 +40,8 @@ teardown() { rm -rf "$TEST_DIR"; }
 
 @test "adoption report aggregates durable driver and executor evidence" {
     generic_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md --executor-mode loop)
-    codex_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md --executor-mode codex-native --driver codex --host codex)
+    cp fixtures/hotl-workflow-runtime-sample.md fixtures/hotl-workflow-runtime-codex.md
+    codex_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-codex.md --executor-mode codex-native --driver codex --host codex)
     report=$("$ADOPTION")
     [ "$(jq -r '.total_runs' <<< "$report")" = "2" ]
     [ "$(jq -r '.by_driver.generic' <<< "$report")" = "1" ]
