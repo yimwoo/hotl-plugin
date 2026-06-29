@@ -21,8 +21,8 @@ $ModeFile = Join-Path $HotlDir ".cline-install-mode"
 $HotlHomePath = Join-Path $env:USERPROFILE ".cline\hotl"
 $ScriptsHomePath = $GlobalScriptsDir
 
-# The 10 native Cline skills (by directory name)
-$NativeSkillNames = @("brainstorming", "writing-plans", "document-review", "executing-plans", "subagent-execution", "tdd", "systematic-debugging", "code-review", "pr-reviewing", "loop-execution")
+# The 11 native Cline skills (by directory name)
+$NativeSkillNames = @("brainstorming", "writing-plans", "document-review", "governed-execution", "executing-plans", "subagent-execution", "tdd", "systematic-debugging", "code-review", "pr-reviewing", "loop-execution")
 
 # The 9 legacy workflow rule files (all except hotl-operating-model.md)
 $LegacyWorkflowRules = @("hotl-brainstorming.md", "hotl-planning.md", "hotl-execution.md", "hotl-document-review.md", "hotl-subagent-execution.md", "hotl-tdd.md", "hotl-debugging.md", "hotl-code-review.md", "hotl-pr-review.md")
@@ -64,7 +64,7 @@ if (-not (Test-Path $GlobalRulesDir)) {
 }
 
 if ($InstallMode -eq "native-skills") {
-    # Native skills mode: 1 rule + 10 native skills
+    # Native skills mode: 1 rule + 11 native skills
 
     # Install only hotl-operating-model.md as a rule
     $OpModelSrc = Join-Path $RulesSrc "hotl-operating-model.md"

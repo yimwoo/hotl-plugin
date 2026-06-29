@@ -6,6 +6,8 @@ Use HOTL for feature work, refactors, and risky changes where "just start coding
 
 Adapter templates are also available for Cursor and GitHub Copilot.
 
+For host-native execution, HOTL exposes a portable boundary: `runtime/hotl-rt normalize` produces a read-only workflow contract, drivers share one lifecycle protocol, and `runtime/hotl-rt receipt` proves completion from persisted evidence rather than chat claims.
+
 ## Table of Contents
 
 - [Why HOTL](#why-hotl)
@@ -13,6 +15,8 @@ Adapter templates are also available for Cursor and GitHub Copilot.
 - [First HOTL Run](#first-hotl-run)
 - [The HOTL Workflow](#the-hotl-workflow)
 - [When To Use It](#smart-task-routing)
+- [Host Capability Baseline](#host-capability-baseline)
+- [Host-Native Drivers](docs/host-native-drivers.md)
 - [Commands & Usage](#commands--usage)
 - [Skills Overview](#skills-overview)
 - [Updating](#updating)
@@ -144,6 +148,25 @@ HOTL does not force ceremony on every task. It routes by intent:
 | Debugging ("why is this failing?") | Structured debugging — no brainstorm needed |
 | Building something new | Full workflow: brainstorm, write workflow, execute, verify |
 
+## Host Capability Baseline
+
+HOTL maintains a source-backed [host capability matrix](docs/host-capabilities.md)
+for the Codex, Claude Code, and generic fallback features that matter to governed
+execution. The canonical catalog lives at
+`runtime/capabilities/catalog.json`; regenerate the matrix with
+`scripts/hotl-capabilities.sh render` and inspect the current machine without
+changing it with `scripts/hotl-capabilities.sh probe`.
+
+The probe deliberately reports `unknown` when an installed host does not expose
+enough evidence to prove entitlement, rollout, administrator enablement, or
+usable permissions. Provider documentation, local detection, and HOTL
+conformance are separate claims.
+
+This Phase 1 catalog is descriptive only. It does **not** choose an execution
+driver, enable host features, change permissions, or route workflows. Native
+Codex and Claude Code adapters remain later roadmap phases; `hotl-rt` remains
+the conformant generic execution path.
+
 ## Commands & Usage
 
 ### Claude Code
@@ -169,7 +192,7 @@ There is no `/hotl:*` command syntax in Codex. Instead, describe the task in nat
 | Category | Skills | What they do |
 | --- | --- | --- |
 | Design & Planning | `brainstorming`, `writing-plans`, `document-review` | Clarify requirements, define contracts, write design docs, and create executable workflows |
-| Execution | `loop-execution`, `executing-plans`, `subagent-execution`, `resuming`, `dispatch-agents` | Run workflows with verification, retries, persistence, and delegation |
+| Execution | `governed-execution`, `loop-execution`, `executing-plans`, `subagent-execution`, `resuming`, `dispatch-agents` | Route governed workflows to native or fallback drivers with verification, retries, persistence, and delegation |
 | Finish | `finishing-a-development-branch` | Close the execution lifecycle intentionally: merge back, publish for review, keep, or discard the execution checkout |
 | Quality & Review | `pr-reviewing`, `code-review`, `requesting-code-review`, `receiving-code-review`, `verification-before-completion` | Review changes and require evidence before completion. Both `code-review` and `pr-reviewing` reference shared [review checklists](docs/checklists/) for SOLID/architecture, security, performance/boundary conditions, and removal/simplification heuristics. |
 | Dev Practices | `tdd`, `systematic-debugging`, `skill-authoring` | Apply test-first development, structured debugging, and disciplined skill/prompt authoring workflows |
@@ -217,6 +240,7 @@ scripts/         Utility scripts including document-lint.sh
 docs/            Published user-facing docs, setup guides, and references
 docs/contracts/  Output contracts (PR review, code review, execution report)
 docs/checklists/ Reusable review heuristics
+runtime/capabilities/ Source-backed host capability catalog
 ```
 
 Repo-local work-product docs such as `docs/designs/`, `docs/plans/`, `docs/research/`, `docs/reviews/`, and `docs/requirements/` are intentionally gitignored in this repo so releases only ship end-user documentation.

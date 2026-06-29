@@ -2,7 +2,34 @@
 
 This page expands on each phase of the HOTL workflow. For a quick overview, see the [main README](../README.md#the-hotl-workflow).
 
+Current workflow Markdown also has a host-neutral projection: `runtime/hotl-rt normalize <workflow> --json` is read-only, drivers consume that portable contract, and `runtime/hotl-rt receipt <run-id> --json` derives redacted completion evidence from durable state. See the [portable workflow and receipt contract](contracts/portable-workflow-and-receipt.md).
+
 ---
+
+## Host Capability Baseline
+
+HOTL separates three questions that agent tools often blur together:
+
+1. What capability does the provider document, and at what maturity?
+2. What can be detected safely in the current local environment?
+3. What behavior has HOTL proven conformant with its portable contracts?
+
+The versioned catalog at `runtime/capabilities/catalog.json` answers the first
+question with dated official-source provenance. The generated
+[host capability matrix](host-capabilities.md) renders those claims for humans.
+`scripts/hotl-capabilities.sh probe` performs only read-only local inspection and
+uses the tri-state results `available`, `unavailable`, and `unknown`; it does not
+edit configuration, authenticate, enable features, make network requests, or
+infer plan entitlement.
+
+The [driver conformance contract](contracts/driver-conformance.md) and its
+deterministic scenario manifest map current HOTL invariants to existing test
+evidence. Optional live evaluations use the
+[evaluation result contract](contracts/evaluation-result-output.md), preserve
+missing telemetry as JSON `null`, and never run as part of default CI.
+
+These baseline artifacts are descriptive in Phase 1. They do not route
+execution or replace the current `hotl-rt` state machine.
 
 ## 1. Brainstorm
 

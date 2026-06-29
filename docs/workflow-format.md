@@ -1,6 +1,6 @@
 # Workflow File Format Reference
 
-Canonical workflow files live at `docs/plans/YYYY-MM-DD-<slug>-workflow.md` and define work to be executed by `loop-execution`, `executing-plans`, or `subagent-execution`. The `<slug>` is a short kebab-case semantic identity derived from the intent. The date makes revisions sortable; HOTL still derives the execution branch from the semantic slug, for example `docs/plans/2026-04-22-add-rate-limiting-workflow.md` becomes `hotl/add-rate-limiting`.
+Canonical workflow files live at `docs/plans/YYYY-MM-DD-<slug>-workflow.md` and define work to be executed through `governed-execution` or an explicit `loop-execution`, `executing-plans`, or `subagent-execution` compatibility profile. The `<slug>` is a short kebab-case semantic identity derived from the intent. The date makes revisions sortable; HOTL still derives the execution branch from the semantic slug, for example `docs/plans/2026-04-22-add-rate-limiting-workflow.md` becomes `hotl/add-rate-limiting`.
 
 Legacy root files such as `hotl-workflow-add-rate-limiting.md` remain readable during migration, but new workflow files should use `docs/plans/`.
 
@@ -17,6 +17,13 @@ Legacy root files such as `hotl-workflow-add-rate-limiting.md` remain readable d
 | `progress` | verbose | no | Enable verbose progress view — prints full step list at each step transition |
 | `report_detail` | full | no | Include all verify output in the execution report, not just failures |
 | `dirty_worktree` | allow | no | Proceed even if non-HOTL files are uncommitted (HOTL artifacts are always excluded automatically) |
+| `policy_profile` | string | no (default: standard) | Portable policy label recorded in normalized workflows and receipts; it never weakens host policy |
+| `max_total_attempts` | number | no | Pause when the state-derived total step attempts exceeds this value |
+| `max_agents` | number | no | Compare against explicitly observed agent count; unknown remains unknown |
+| `max_cost_usd` | number | no | Compare against explicitly observed cost; unknown remains unknown |
+| `max_elapsed_minutes` | number | no | Compare against explicitly observed elapsed time; unknown remains unknown |
+
+Sensitive actions are not frontmatter permissions. Each `external_write`, `production_change`, or `secret_access` requires a bounded `hotl-rt action request` and an explicit human decision for that run. Host security controls remain authoritative.
 
 ## Step Fields
 

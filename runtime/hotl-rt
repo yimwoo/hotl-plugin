@@ -110,6 +110,18 @@ json_string_or_null() {
     fi
 }
 
+json_number_or_null() {
+    local value="${1:-}"
+    if [ -z "$value" ]; then
+        echo null
+    elif jq -en --arg value "$value" '$value | tonumber | select(. >= 0)' >/dev/null 2>&1; then
+        jq -cn --arg value "$value" '$value | tonumber'
+    else
+        echo "ERROR: Expected a numeric workflow value, got: $value" >&2
+        return 1
+    fi
+}
+
 # Resolve a run-specific state file. With multiple runs present, callers must
 # pass --run-id (or set HOTL_RUN_ID) rather than silently using the newest file.
 find_active_state() {
@@ -252,6 +264,8 @@ build_summary_payload() {
         execution_root: .execution_root,
         worktree_path: .worktree_path,
         executor_mode: .executor_mode,
+        driver: (.driver // "generic"),
+        host: (.host // "fallback"),
         status: .status,
         started_at: .started_at,
         last_update: .last_update,
@@ -639,15 +653,187 @@ ${VERIFY_STDERR}"
 
 # ── Subcommands ─────────────────────────────────────────────────────────────
 
+# Populate the caller's workflow metadata and step arrays. Bash uses dynamic
+# scope for these variables, allowing init and normalize to share one parser.
+parse_workflow_file() {
+    local workflow_file="$1"
+    local branch_override="${2:-}"
+    local frontmatter content
+
+    frontmatter=$(sed -n '/^---$/,/^---$/p' "$workflow_file" | sed '1d;$d')
+    fm_intent=$(echo "$frontmatter" | { grep -i '^intent:' || true; } | sed 's/^[Ii]ntent:[[:space:]]*//')
+    fm_success=$(echo "$frontmatter" | { grep -i '^success_criteria:' || true; } | sed 's/^[Ss]uccess_criteria:[[:space:]]*//')
+    fm_risk=$(echo "$frontmatter" | { grep -i '^risk_level:' || true; } | sed 's/^[Rr]isk_level:[[:space:]]*//')
+    [ -z "$fm_risk" ] && fm_risk="low"
+    fm_auto=$(echo "$frontmatter" | { grep -i '^auto_approve:' || true; } | sed 's/^[Aa]uto_approve:[[:space:]]*//')
+    [ -z "$fm_auto" ] && fm_auto="false"
+    case "$fm_risk" in low|medium|high) ;; *) echo "ERROR: risk_level must be low, medium, or high" >&2; return 1 ;; esac
+    case "$fm_auto" in true|false) ;; *) echo "ERROR: auto_approve must be true or false" >&2; return 1 ;; esac
+    fm_branch=$(echo "$frontmatter" | { grep -i '^branch:' || true; } | sed 's/^[Bb]ranch:[[:space:]]*//')
+    [ -z "$fm_branch" ] && fm_branch="hotl/${workflow_slug}"
+    [ -n "$branch_override" ] && fm_branch="$branch_override"
+    fm_policy_profile=$(echo "$frontmatter" | { grep -i '^policy_profile:' || true; } | sed 's/^[Pp]olicy_profile:[[:space:]]*//')
+    [ -z "$fm_policy_profile" ] && fm_policy_profile="standard"
+    fm_max_total_attempts=$(echo "$frontmatter" | { grep -i '^max_total_attempts:' || true; } | sed 's/^[Mm]ax_total_attempts:[[:space:]]*//')
+    fm_max_agents=$(echo "$frontmatter" | { grep -i '^max_agents:' || true; } | sed 's/^[Mm]ax_agents:[[:space:]]*//')
+    fm_max_cost_usd=$(echo "$frontmatter" | { grep -i '^max_cost_usd:' || true; } | sed 's/^[Mm]ax_cost_usd:[[:space:]]*//')
+    fm_max_elapsed_minutes=$(echo "$frontmatter" | { grep -i '^max_elapsed_minutes:' || true; } | sed 's/^[Mm]ax_elapsed_minutes:[[:space:]]*//')
+
+    content=$(cat "$workflow_file")
+    local current_step_num=""
+    local current_step_name=""
+    local current_block=""
+    local in_steps=0
+    local line
+
+    while IFS= read -r line; do
+        if echo "$line" | grep -Eq '^- \[[ xX]\] \*\*Step [0-9]+:'; then
+            if [ -n "$current_step_num" ]; then
+                _parse_step_block "$current_step_num" "$current_step_name" "$current_block"
+            fi
+            current_step_num=$(echo "$line" | sed -E 's/.*Step ([0-9]+):.*/\1/')
+            current_step_name=$(echo "$line" | sed -E 's/.*Step [0-9]+:[[:space:]]*(.*)\*\*$/\1/')
+            current_block=""
+            in_steps=1
+        elif echo "$line" | grep -Eq '^### [0-9]+\.'; then
+            if [ -n "$current_step_num" ]; then
+                _parse_step_block "$current_step_num" "$current_step_name" "$current_block"
+            fi
+            current_step_num=$(echo "$line" | sed -E 's/^### ([0-9]+)\..*/\1/')
+            current_step_name=$(echo "$line" | sed -E 's/^### [0-9]+\.[[:space:]]*//')
+            current_block=""
+            in_steps=1
+        elif [ "$in_steps" -eq 1 ]; then
+            current_block="${current_block}${line}
+"
+        fi
+    done <<< "$content"
+
+    if [ -n "$current_step_num" ]; then
+        _parse_step_block "$current_step_num" "$current_step_name" "$current_block"
+    fi
+
+    total_steps=${#step_numbers[@]}
+    if [ "$total_steps" -eq 0 ]; then
+        echo "ERROR: No steps found in workflow" >&2
+        return 1
+    fi
+}
+
+normalized_workflow_json() {
+    local workflow="$1"
+    local steps_json='[]'
+    local i loop_json gate_json
+
+    for i in "${!step_numbers[@]}"; do
+        if [ "${step_loops[$i]}" = "false" ]; then
+            loop_json=false
+        else
+            loop_json=$(jq -Rn --arg value "${step_loops[$i]}" '$value')
+        fi
+        gate_json=$(json_string_or_null "${step_gates[$i]/null/}")
+        steps_json=$(jq -cn \
+            --argjson existing "$steps_json" \
+            --argjson number "${step_numbers[$i]}" \
+            --arg name "${step_names[$i]}" \
+            --arg action "${step_actions[$i]}" \
+            --argjson loop "$loop_json" \
+            --argjson max_iterations "${step_max_iters[$i]}" \
+            --argjson verify "${step_verify_jsons[$i]}" \
+            --argjson gate "$gate_json" '
+            $existing + [{
+                number: $number,
+                name: $name,
+                action: $action,
+                loop: $loop,
+                max_iterations: $max_iterations,
+                verify: ($verify | del(.passed, .stdout, .stderr)),
+                gate: $gate
+            }]')
+    done
+
+    local max_total_attempts_json max_agents_json max_cost_json max_elapsed_json
+    max_total_attempts_json=$(json_number_or_null "$fm_max_total_attempts")
+    max_agents_json=$(json_number_or_null "$fm_max_agents")
+    max_cost_json=$(json_number_or_null "$fm_max_cost_usd")
+    max_elapsed_json=$(json_number_or_null "$fm_max_elapsed_minutes")
+
+    jq -cn \
+        --arg schema "hotl.workflow/v1" \
+        --arg path "$workflow" \
+        --arg slug "$workflow_slug" \
+        --arg intent "$fm_intent" \
+        --arg success "$fm_success" \
+        --arg risk "$fm_risk" \
+        --argjson auto_approve "$fm_auto" \
+        --arg branch "$fm_branch" \
+        --arg policy_profile "$fm_policy_profile" \
+        --argjson max_total_attempts "$max_total_attempts_json" \
+        --argjson max_agents "$max_agents_json" \
+        --argjson max_cost_usd "$max_cost_json" \
+        --argjson max_elapsed_minutes "$max_elapsed_json" \
+        --argjson steps "$steps_json" '{
+        schema: $schema,
+        source: {format: "hotl-markdown", path: $path},
+        workflow: {
+            slug: $slug,
+            intent: $intent,
+            success_criteria: $success,
+            risk_level: $risk,
+            auto_approve: $auto_approve,
+            branch: $branch,
+            policy: {
+                profile: $policy_profile,
+                sensitive_actions: "human",
+                budgets: {
+                    max_total_attempts: $max_total_attempts,
+                    max_agents: $max_agents,
+                    max_cost_usd: $max_cost_usd,
+                    max_elapsed_minutes: $max_elapsed_minutes
+                }
+            },
+            total_steps: ($steps | length),
+            steps: $steps
+        }
+    }'
+}
+
+cmd_normalize() {
+    if [ $# -lt 1 ]; then
+        echo "usage: hotl-rt normalize <workflow-file> [--json]" >&2
+        exit 1
+    fi
+    require_jq
+    local workflow="$1"
+    shift
+    if [ $# -gt 0 ] && { [ "$1" != "--json" ] || [ $# -gt 1 ]; }; then
+        echo "ERROR: Unknown option for normalize: $1" >&2
+        exit 1
+    fi
+    [ -f "$workflow" ] || { echo "ERROR: Workflow file not found: $workflow" >&2; exit 1; }
+
+    workflow=$(abspath_existing "$workflow")
+    local workflow_slug
+    workflow_slug=$(slug_from_workflow "$workflow")
+    local fm_intent fm_success fm_risk fm_auto fm_branch fm_policy_profile
+    local fm_max_total_attempts fm_max_agents fm_max_cost_usd fm_max_elapsed_minutes total_steps
+    local step_numbers=() step_names=() step_actions=() step_loops=()
+    local step_max_iters=() step_verify_jsons=() step_gates=()
+    parse_workflow_file "$workflow"
+    normalized_workflow_json "$workflow"
+}
+
 cmd_init() {
     if [ $# -lt 1 ]; then
-        echo "usage: hotl-rt init <workflow-file> [--executor-mode <mode>] [--repo-root <path>] [--execution-root <path>] [--source-workflow-path <path>] [--worktree-path <path>] [--branch <name>] [--source-branch <name>] [--source-head <sha>]" >&2
+        echo "usage: hotl-rt init <workflow-file> [--executor-mode <mode>] [--driver <id>] [--host <id>] [--repo-root <path>] [--execution-root <path>] [--source-workflow-path <path>] [--worktree-path <path>] [--branch <name>] [--source-branch <name>] [--source-head <sha>]" >&2
         exit 1
     fi
 
     local workflow="$1"
     shift
     local executor_mode="loop"
+    local driver="generic"
+    local host="fallback"
     local repo_root=""
     local execution_root=""
     local source_workflow_path=""
@@ -660,6 +846,14 @@ cmd_init() {
         case "$1" in
             --executor-mode)
                 executor_mode="$2"
+                shift 2
+                ;;
+            --driver)
+                driver="$2"
+                shift 2
+                ;;
+            --host)
+                host="$2"
                 shift 2
                 ;;
             --repo-root)
@@ -705,8 +899,9 @@ cmd_init() {
     require_jq
     ensure_dirs
 
-    local slug
+    local slug workflow_slug
     slug=$(slug_from_workflow "$workflow")
+    workflow_slug="$slug"
     workflow=$(abspath_existing "$workflow")
     [ -z "$source_workflow_path" ] && source_workflow_path="$workflow"
     source_workflow_path=$(abspath_existing "$source_workflow_path")
@@ -717,25 +912,8 @@ cmd_init() {
     local started_at
     started_at=$(now_iso)
 
-    # Parse frontmatter
-    local frontmatter
-    frontmatter=$(sed -n '/^---$/,/^---$/p' "$workflow" | sed '1d;$d')
-
-    local fm_intent fm_success fm_risk fm_auto fm_branch
-    fm_intent=$(echo "$frontmatter" | { grep -i '^intent:' || true; } | sed 's/^[Ii]ntent:[[:space:]]*//')
-    fm_success=$(echo "$frontmatter" | { grep -i '^success_criteria:' || true; } | sed 's/^[Ss]uccess_criteria:[[:space:]]*//')
-    fm_risk=$(echo "$frontmatter" | { grep -i '^risk_level:' || true; } | sed 's/^[Rr]isk_level:[[:space:]]*//')
-    [ -z "$fm_risk" ] && fm_risk="low"
-    fm_auto=$(echo "$frontmatter" | { grep -i '^auto_approve:' || true; } | sed 's/^[Aa]uto_approve:[[:space:]]*//')
-    [ -z "$fm_auto" ] && fm_auto="false"
-    fm_branch=$(echo "$frontmatter" | { grep -i '^branch:' || true; } | sed 's/^[Bb]ranch:[[:space:]]*//')
-    [ -z "$fm_branch" ] && fm_branch="hotl/${slug}"
-    [ -n "$branch_override" ] && fm_branch="$branch_override"
-
-    # Parse steps
-    local content
-    content=$(cat "$workflow")
-
+    local fm_intent fm_success fm_risk fm_auto fm_branch fm_policy_profile
+    local fm_max_total_attempts fm_max_agents fm_max_cost_usd fm_max_elapsed_minutes
     local step_numbers=()
     local step_names=()
     local step_actions=()
@@ -744,47 +922,8 @@ cmd_init() {
     local step_verify_jsons=()
     local step_gates=()
 
-    local current_step_num=""
-    local current_step_name=""
-    local current_block=""
-    local in_steps=0
-
-    while IFS= read -r line; do
-        # Detect step headers (checkbox or legacy)
-        if echo "$line" | grep -Eq '^- \[[ xX]\] \*\*Step [0-9]+:'; then
-            # Save previous step if any
-            if [ -n "$current_step_num" ]; then
-                _parse_step_block "$current_step_num" "$current_step_name" "$current_block"
-            fi
-            current_step_num=$(echo "$line" | sed -E 's/.*Step ([0-9]+):.*/\1/')
-            current_step_name=$(echo "$line" | sed -E 's/.*Step [0-9]+:[[:space:]]*(.*)\*\*$/\1/')
-            current_block=""
-            in_steps=1
-        elif echo "$line" | grep -Eq '^### [0-9]+\.'; then
-            if [ -n "$current_step_num" ]; then
-                _parse_step_block "$current_step_num" "$current_step_name" "$current_block"
-            fi
-            current_step_num=$(echo "$line" | sed -E 's/^### ([0-9]+)\..*/\1/')
-            current_step_name=$(echo "$line" | sed -E 's/^### [0-9]+\.[[:space:]]*//')
-            current_block=""
-            in_steps=1
-        elif [ "$in_steps" -eq 1 ]; then
-            current_block="${current_block}${line}
-"
-        fi
-    done <<< "$content"
-
-    # Save last step
-    if [ -n "$current_step_num" ]; then
-        _parse_step_block "$current_step_num" "$current_step_name" "$current_block"
-    fi
-
-    local total_steps=${#step_numbers[@]}
-
-    if [ "$total_steps" -eq 0 ]; then
-        echo "ERROR: No steps found in workflow" >&2
-        exit 1
-    fi
+    local total_steps
+    parse_workflow_file "$workflow" "$branch_override"
 
     # Build state JSON
     local steps_json="["
@@ -824,19 +963,27 @@ cmd_init() {
     intent_esc=$(echo "$fm_intent" | sed 's/\\/\\\\/g; s/"/\\"/g')
     success_esc=$(echo "$fm_success" | sed 's/\\/\\\\/g; s/"/\\"/g')
 
-    local workflow_json source_workflow_json branch_json repo_root_json execution_root_json executor_mode_json report_path_json
+    local workflow_json source_workflow_json branch_json repo_root_json execution_root_json executor_mode_json driver_json host_json report_path_json
     workflow_json=$(jq -Rn --arg value "$workflow" '$value')
     source_workflow_json=$(jq -Rn --arg value "$source_workflow_path" '$value')
     branch_json=$(jq -Rn --arg value "$fm_branch" '$value')
     repo_root_json=$(jq -Rn --arg value "$repo_root" '$value')
     execution_root_json=$(jq -Rn --arg value "$execution_root" '$value')
     executor_mode_json=$(jq -Rn --arg value "$executor_mode" '$value')
+    driver_json=$(jq -Rn --arg value "$driver" '$value')
+    host_json=$(jq -Rn --arg value "$host" '$value')
     report_path_json=$(jq -Rn --arg value "${execution_root}/${REPORT_DIR}/${run_id}.md" '$value')
     local worktree_json
     worktree_json=$(json_string_or_null "$worktree_path")
     local source_branch_json source_head_json
     source_branch_json=$(json_string_or_null "$source_branch")
     source_head_json=$(json_string_or_null "$source_head")
+    local max_total_attempts_json max_agents_json max_cost_json max_elapsed_json policy_profile_json
+    max_total_attempts_json=$(json_number_or_null "$fm_max_total_attempts")
+    max_agents_json=$(json_number_or_null "$fm_max_agents")
+    max_cost_json=$(json_number_or_null "$fm_max_cost_usd")
+    max_elapsed_json=$(json_number_or_null "$fm_max_elapsed_minutes")
+    policy_profile_json=$(jq -Rn --arg value "$fm_policy_profile" '$value')
     local state_json="{
   \"run_id\": \"${run_id}\",
   \"workflow_path\": ${workflow_json},
@@ -853,6 +1000,24 @@ cmd_init() {
   \"execution_root\": ${execution_root_json},
   \"worktree_path\": ${worktree_json},
   \"executor_mode\": ${executor_mode_json},
+  \"driver\": ${driver_json},
+  \"host\": ${host_json},
+  \"policy\": {
+    \"profile\": ${policy_profile_json},
+    \"sensitive_actions\": \"human\"
+  },
+  \"budgets\": {
+    \"limits\": {
+      \"total_attempts\": ${max_total_attempts_json},
+      \"agents\": ${max_agents_json},
+      \"cost_usd\": ${max_cost_json},
+      \"elapsed_minutes\": ${max_elapsed_json}
+    },
+    \"observed\": {\"agents\": null, \"cost_usd\": null, \"elapsed_minutes\": null},
+    \"exceeded\": []
+  },
+  \"external_actions\": [],
+  \"policy_pauses\": [],
   \"started_at\": \"${started_at}\",
   \"last_update\": \"${started_at}\",
   \"completed_at\": null,
@@ -938,7 +1103,8 @@ _parse_step_block() {
     verify_line=$(echo "$block" | { grep -i '^verify:' || true; } | head -1)
     if [ -n "$verify_line" ]; then
         local vval
-        vval=$(echo "$verify_line" | sed 's/^[Vv]erify:[[:space:]]*//')
+        vval="${verify_line#*:}"
+        vval="${vval#"${vval%%[![:space:]]*}"}"
         if [ -n "$vval" ]; then
             # Scalar form — type: shell
             verify_json=$(verify_object_shell "$vval")
@@ -1032,6 +1198,15 @@ cmd_step() {
     local time_short
     time_short=$(now_time)
 
+    if [ "$action" != block ]; then
+        local run_status
+        run_status=$(jq -r '.status' "$state_file")
+        if [ "$run_status" != running ]; then
+            echo "ERROR: Run is '$run_status'; resolve gates, policy pauses, or budgets before step $action" >&2
+            exit 1
+        fi
+    fi
+
     case "$action" in
         start)
             # Validate step exists and is pending or failed (for retry-then-start)
@@ -1048,7 +1223,7 @@ cmd_step() {
             # Update state JSON
             local updated
             updated=$(jq --arg ts "$ts" --argjson num "$step_num" '
-                .status = "running" |
+                .status = (if ([.policy_pauses[]?] | length) == 0 and ([.budgets.exceeded[]?] | length) == 0 then "running" else "paused" end) |
                 .current_step = $num |
                 .last_update = $ts |
                 .steps[$num - 1].status = "in_progress" |
@@ -1316,6 +1491,10 @@ cmd_gate() {
 
     local state_file
     state_file=$(find_active_state "$run_id")
+    if [ "$(jq -r '.risk_level' "$state_file")" = high ] && [ "$gate_mode" != human ]; then
+        echo "ERROR: High-risk workflows require human gate decisions" >&2
+        exit 1
+    fi
     local report
     report=$(report_path_from_state "$state_file")
     local ts
@@ -1336,7 +1515,6 @@ cmd_gate() {
         if [ "$decision" = "approved" ]; then
             review_note="human review approved"
             updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" --arg gate_mode "$gate_mode" --arg note "$review_note" '
-                .status = "running" |
                 .last_update = $ts |
                 .steps[$num - 1].status = "done" |
                 .steps[$num - 1].completed_at = $ts |
@@ -1345,7 +1523,8 @@ cmd_gate() {
                 .steps[$num - 1].gate_mode = $gate_mode |
                 .steps[$num - 1].verify.passed = true |
                 .steps[$num - 1].verify.stdout = $note |
-                .steps[$num - 1].verify.stderr = null
+                .steps[$num - 1].verify.stderr = null |
+                .status = (if ([.policy_pauses[]?] | length) == 0 and ([.budgets.exceeded[]?] | length) == 0 then "running" else "paused" end)
             ' "$state_file")
             status_text="✓ Approved"
         else
@@ -1367,7 +1546,7 @@ cmd_gate() {
         state_write "$state_file" "$updated"
         report_update_step_row "$report" "$step_num" "$status_text" "-"
         if [ "$decision" = "approved" ]; then
-            report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** running"
+            report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** $(jq -r '.status' "$state_file")"
         else
             report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** blocked"
         fi
@@ -1380,7 +1559,11 @@ cmd_gate() {
 
     local updated
     updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" --arg gate_mode "$gate_mode" '
-        .status = (if .status == "paused" and $decision == "approved" then "running" elif $decision == "rejected" then "blocked" else .status end) |
+        .status = (if .status == "paused" and $decision == "approved"
+                    and ([.policy_pauses[]?] | length) == 0
+                    and ([.budgets.exceeded[]?] | length) == 0
+                    and ([.steps[] | select(.status == "blocked")] | length) == 0
+                   then "running" elif $decision == "rejected" then "blocked" else .status end) |
         .last_update = $ts |
         .steps[$num - 1].gate_result = $decision |
         .steps[$num - 1].gate_mode = $gate_mode
@@ -1400,7 +1583,7 @@ cmd_gate() {
 
     report_update_step_row "$report" "$step_num" "$status_text" "-"
     if [ "$decision" = "approved" ]; then
-        report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** running"
+        report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** $(jq -r '.status' "$state_file")"
     else
         report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** blocked"
     fi
@@ -1439,7 +1622,9 @@ cmd_finalize() {
     local time_short
     time_short=$(now_time)
 
-    # Determine final status
+    # Preserve the legacy finalized status for compatibility. The governed
+    # completion authority is the evidence receipt, which remains insufficient
+    # when steps, gates, verification, actions, budgets, or finish are missing.
     local has_failed has_blocked
     has_failed=$(jq '[.steps[] | select(.status == "failed")] | length' "$state_file")
     has_blocked=$(jq '[.steps[] | select(.status == "blocked")] | length' "$state_file")
@@ -1562,6 +1747,14 @@ cmd_finish() {
                 echo "ERROR: Finish disposition '$disposition' requires a completed run. Current status: $status" >&2
                 exit 1
             fi
+            local pre_finish_receipt remaining_reasons
+            pre_finish_receipt=$(cmd_receipt "$(jq -r '.run_id' "$state_file")" --json)
+            remaining_reasons=$(jq '[.sufficiency.reasons[] | select(. != "finish_disposition_missing")] | length' <<< "$pre_finish_receipt")
+            if [ "$remaining_reasons" -ne 0 ]; then
+                echo "ERROR: Finish disposition '$disposition' requires sufficient completion evidence." >&2
+                jq -r '.sufficiency.reasons[] | select(. != "finish_disposition_missing") | "  - \(.)"' <<< "$pre_finish_receipt" >&2
+                exit 1
+            fi
             ;;
         kept|discarded)
             case "$status" in
@@ -1637,11 +1830,252 @@ cmd_summary() {
     if [ ! -f "$state_file" ]; then
         echo "ERROR: No state found for run: $run_id" >&2
         echo "Available runs:" >&2
-        ls "$STATE_DIR"/*.json 2>/dev/null | xargs -I{} basename {} .json >&2 || echo "  (none)" >&2
+        local available=0 candidate
+        shopt -s nullglob
+        for candidate in "$STATE_DIR"/*.json; do
+            basename "$candidate" .json >&2
+            available=1
+        done
+        shopt -u nullglob
+        [ "$available" -eq 1 ] || echo "  (none)" >&2
         exit 1
     fi
 
     build_summary_payload "$state_file"
+}
+
+cmd_receipt() {
+    if [ $# -lt 1 ]; then
+        echo "usage: hotl-rt receipt <run-id> [--json]" >&2
+        exit 1
+    fi
+    require_jq
+    local run_id="$1"
+    shift
+    if [ $# -gt 0 ] && { [ "$1" != "--json" ] || [ $# -gt 1 ]; }; then
+        echo "ERROR: Unknown option for receipt: $1" >&2
+        exit 1
+    fi
+    local state_file="${STATE_DIR}/${run_id}.json"
+    [ -f "$state_file" ] || { echo "ERROR: No state found for run: $run_id" >&2; exit 1; }
+
+    jq '
+        . as $state |
+        def verification_required:
+            if .verify == null then false
+            elif .verify.type == "shell" then ((.verify.command // "") | length) > 0
+            else true end;
+        def gate_required($risk): (.gate != null or $risk == "high" or .verify.type == "human-review");
+        def reasons:
+            ([if .status != "completed" then "run_not_completed" else empty end]
+            + [if ([.steps[] | select(.status != "done")] | length) > 0 then "steps_not_done" else empty end]
+            + [if ([.steps[] | select((verification_required) and (.verify.passed != true))] | length) > 0 then "verification_missing_or_failed" else empty end]
+            + [if ([.steps[] | select(gate_required($state.risk_level) and .gate_result != "approved")] | length) > 0 then "gate_evidence_missing_or_rejected" else empty end]
+            + [if $state.risk_level == "high" and ([.steps[] | select(.gate_mode != "human")] | length) > 0 then "high_risk_human_gate_missing" else empty end]
+            + [if ([.external_actions[]? | select(.status == "pending")] | length) > 0 then "sensitive_action_unresolved" else empty end]
+            + [if ([.budgets.exceeded[]?] | length) > 0 then "budget_exceeded" else empty end]
+            + [if (.finish.disposition // null) == null then "finish_disposition_missing" else empty end]);
+        (reasons) as $reasons |
+        {
+            schema: "hotl.receipt/v1",
+            generated_at: .last_update,
+            run: {
+                id: .run_id,
+                workflow_path: .workflow_path,
+                source_workflow_path: .source_workflow_path,
+                workflow_slug: .workflow_slug,
+                intent: .intent,
+                risk_level: .risk_level,
+                branch: .branch,
+                repo_root: .repo_root,
+                execution_root: .execution_root,
+                worktree_path: .worktree_path,
+                executor_mode: .executor_mode,
+                status: .status,
+                started_at: .started_at,
+                completed_at: .completed_at
+            },
+            implementation: {driver: (.driver // "generic"), host: (.host // "fallback")},
+            evidence: [.steps[] | {
+                step: .number,
+                name: .name,
+                status: .status,
+                attempts: .attempts,
+                verification: {
+                    required: verification_required,
+                    type: .verify.type,
+                    reference: (.verify.command // .verify.path // .verify.url // .verify.prompt // null),
+                    passed: .verify.passed
+                },
+                gate: {
+                    required: gate_required($state.risk_level),
+                    required_mode: (if $state.risk_level == "high" then "human" else null end),
+                    configured: .gate,
+                    result: .gate_result,
+                    mode: .gate_mode
+                },
+                block_reason: .block_reason
+            }],
+            policy: (.policy // {profile: "standard", sensitive_actions: "human"}),
+            budgets: (.budgets // {limits: {}, observed: {}, exceeded: []}),
+            external_actions: [.external_actions[]? | {
+                id: .id, kind: .kind, target: .target, status: .status,
+                requested_at: .requested_at, decided_at: .decided_at,
+                decision_mode: .decision_mode
+            }],
+            finish: .finish,
+            sufficiency: {sufficient: ($reasons | length == 0), reasons: $reasons},
+            redaction: {stdout_included: false, stderr_included: false, environment_included: false}
+        }
+    ' "$state_file"
+}
+
+cmd_action() {
+    [ $# -ge 1 ] || { echo "usage: hotl-rt action <request|decide> ..." >&2; exit 1; }
+    require_jq
+    local operation="$1"; shift
+    local run_id="${HOTL_RUN_ID:-}" state_file report ts updated
+
+    case "$operation" in
+        request)
+            [ $# -ge 1 ] || { echo "usage: hotl-rt action request <kind> --target <description> [--run-id <id>]" >&2; exit 1; }
+            local kind="$1" target=""; shift
+            while [ $# -gt 0 ]; do
+                case "$1" in --target) target="$2"; shift 2 ;; --run-id) run_id="$2"; shift 2 ;; *) echo "ERROR: Unknown action request option: $1" >&2; exit 1 ;; esac
+            done
+            case "$kind" in local_write|network_read|external_write|production_change|secret_access) ;; *) echo "ERROR: Unsupported action kind: $kind" >&2; exit 1 ;; esac
+            [ -n "$target" ] || { echo "ERROR: --target is required and must describe the bounded action" >&2; exit 1; }
+            state_file=$(find_active_state "$run_id")
+            [ "$(jq -r '.status' "$state_file")" != completed ] || { echo "ERROR: Cannot request an action for a completed run" >&2; exit 1; }
+            ts=$(now_iso)
+            local action_status="allowed" mode="policy"
+            case "$kind" in
+                external_write|production_change|secret_access) action_status="pending"; mode="human" ;;
+                network_read) action_status="host_authority"; mode="host" ;;
+            esac
+            local action_id
+            action_id="action-$(( $(jq '(.external_actions // []) | length' "$state_file") + 1 ))"
+            updated=$(jq --arg id "$action_id" --arg kind "$kind" --arg target "$target" --arg status "$action_status" --arg mode "$mode" --arg ts "$ts" '
+                .external_actions = ((.external_actions // []) + [{id:$id,kind:$kind,target:$target,status:$status,requested_at:$ts,decided_at:null,decision_mode:$mode}]) |
+                .policy_pauses = (if $status == "pending" then ((.policy_pauses // []) + [$id] | unique) else (.policy_pauses // []) end) |
+                .status = (if $status == "pending" and .status == "running" then "paused" else .status end) |
+                .last_update = $ts
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+            report=$(report_path_from_state "$state_file")
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            [ "$action_status" != pending ] || report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** $(jq -r '.status' "$state_file")"
+            report_append_event "$report" "**[$(now_time)]** Action $action_id requested: $kind ($action_status)"
+            jq -cn --arg id "$action_id" --arg status "$action_status" --arg mode "$mode" '{id:$id,status:$status,decision_mode:$mode}'
+            ;;
+        decide)
+            [ $# -ge 2 ] || { echo "usage: hotl-rt action decide <action-id> <approved|rejected> --mode human [--run-id <id>]" >&2; exit 1; }
+            local action_id="$1" decision="$2" decision_mode=""; shift 2
+            while [ $# -gt 0 ]; do
+                case "$1" in --mode) decision_mode="$2"; shift 2 ;; --run-id) run_id="$2"; shift 2 ;; *) echo "ERROR: Unknown action decision option: $1" >&2; exit 1 ;; esac
+            done
+            case "$decision" in approved|rejected) ;; *) echo "ERROR: Decision must be approved or rejected" >&2; exit 1 ;; esac
+            [ "$decision_mode" = human ] || { echo "ERROR: Sensitive action decisions require --mode human" >&2; exit 1; }
+            state_file=$(find_active_state "$run_id")
+            jq -e --arg id "$action_id" '.external_actions[]? | select(.id == $id and .status == "pending")' "$state_file" >/dev/null || { echo "ERROR: Pending action not found: $action_id" >&2; exit 1; }
+            ts=$(now_iso)
+            updated=$(jq --arg id "$action_id" --arg decision "$decision" --arg mode "$decision_mode" --arg ts "$ts" '
+                .external_actions |= map(if .id == $id then .status=$decision | .decided_at=$ts | .decision_mode=$mode else . end) |
+                .policy_pauses = [(.policy_pauses // [])[] | select(. != $id)] |
+                .status = (if $decision == "rejected" then "blocked"
+                    elif .status == "paused" and (.policy_pauses|length) == 0
+                      and ([.steps[] | select(.status == "blocked")] | length) == 0
+                      and ([.budgets.exceeded[]?] | length) == 0 then "running"
+                    else .status end) |
+                .last_update = $ts
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+            report=$(report_path_from_state "$state_file")
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** $(jq -r '.status' "$state_file")"
+            report_append_event "$report" "**[$(now_time)]** Action $action_id decision: $decision (human)"
+            jq -cn --arg id "$action_id" --arg decision "$decision" '{id:$id,status:$decision,decision_mode:"human"}'
+            ;;
+        *) echo "ERROR: Unknown action operation: $operation" >&2; exit 1 ;;
+    esac
+}
+
+cmd_budget() {
+    [ $# -ge 1 ] || { echo "usage: hotl-rt budget <record|check> ..." >&2; exit 1; }
+    require_jq
+    local operation="$1"; shift
+    local run_id="${HOTL_RUN_ID:-}" state_file updated ts
+    case "$operation" in
+        record)
+            [ $# -ge 2 ] || { echo "usage: hotl-rt budget record <agents|cost_usd|elapsed_minutes> <value> [--run-id <id>]" >&2; exit 1; }
+            local metric="$1" value="$2"; shift 2
+            [ $# -eq 0 ] || { [ "$1" = --run-id ] && [ $# -eq 2 ] || { echo "ERROR: Invalid budget record options" >&2; exit 1; }; run_id="$2"; }
+            case "$metric" in agents|cost_usd|elapsed_minutes) ;; *) echo "ERROR: Unsupported budget metric: $metric" >&2; exit 1 ;; esac
+            jq -en --arg value "$value" '$value | tonumber | select(. >= 0)' >/dev/null || { echo "ERROR: Budget observations must be non-negative numbers" >&2; exit 1; }
+            state_file=$(find_active_state "$run_id"); ts=$(now_iso)
+            local previous
+            previous=$(jq -r --arg metric "$metric" '.budgets.observed[$metric] // empty' "$state_file")
+            if [ -n "$previous" ] && ! jq -en --arg old "$previous" --arg new "$value" '($new|tonumber) >= ($old|tonumber)' >/dev/null; then
+                echo "ERROR: Budget observations are aggregate and cannot decrease ($metric: $previous -> $value)" >&2
+                exit 1
+            fi
+            updated=$(jq --arg metric "$metric" --arg value "$value" --arg ts "$ts" '.budgets.observed[$metric]=($value|tonumber) | .last_update=$ts' "$state_file")
+            state_write "$state_file" "$updated"
+            cmd_budget check --run-id "$(jq -r '.run_id' "$state_file")"
+            ;;
+        check)
+            if [ $# -gt 0 ]; then [ "$1" = --run-id ] && [ $# -eq 2 ] || { echo "ERROR: Invalid budget check options" >&2; exit 1; }; run_id="$2"; fi
+            state_file=$(find_active_state "$run_id"); ts=$(now_iso)
+            local evaluation
+            evaluation=$(jq '
+                (.budgets.limits // {}) as $limits |
+                (.budgets.observed // {}) as $observed |
+                ([.steps[].attempts] | add // 0) as $attempts |
+                [{metric:"total_attempts",limit:($limits.total_attempts//null),observed:$attempts},
+                 {metric:"agents",limit:($limits.agents//null),observed:($observed.agents//null)},
+                 {metric:"cost_usd",limit:($limits.cost_usd//null),observed:($observed.cost_usd//null)},
+                 {metric:"elapsed_minutes",limit:($limits.elapsed_minutes//null),observed:($observed.elapsed_minutes//null)}]
+                | map(. + {status:(if .limit==null then "unset" elif .observed==null then "unknown" elif .observed>.limit then "exceeded" else "within" end)})
+            ' "$state_file")
+            local exceeded
+            exceeded=$(jq '[.[] | select(.status=="exceeded") | .metric]' <<< "$evaluation")
+            updated=$(jq --argjson exceeded "$exceeded" --arg ts "$ts" '.budgets.exceeded=$exceeded | .status=(if ($exceeded|length)>0 and .status=="running" then "paused" else .status end) | .last_update=$ts' "$state_file")
+            state_write "$state_file" "$updated"
+            local budget_report
+            budget_report=$(report_path_from_state "$state_file")
+            report_update_line "$budget_report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            if [ "$(jq 'length' <<< "$exceeded")" -gt 0 ]; then
+                report_update_line "$budget_report" "^\*\*Status:\*\*.*" "**Status:** $(jq -r '.status' "$state_file")"
+                report_append_event "$budget_report" "**[$(now_time)]** Budget exceeded: $(jq -r 'join(", ")' <<< "$exceeded")"
+            fi
+            jq -cn --argjson metrics "$evaluation" '{metrics:$metrics,within_budget:([$metrics[]|select(.status=="exceeded")]|length==0),has_unknown:([$metrics[]|select(.status=="unknown")]|length>0)}'
+            ;;
+        *) echo "ERROR: Unknown budget operation: $operation" >&2; exit 1 ;;
+    esac
+}
+
+cmd_reconcile() {
+    [ $# -eq 1 ] || { echo "usage: hotl-rt reconcile <run-id>" >&2; exit 1; }
+    require_jq
+    local run_id="$1" state_file="${STATE_DIR}/$1.json"
+    [ -f "$state_file" ] || { echo "ERROR: No state found for run: $run_id" >&2; exit 1; }
+    local receipt
+    receipt=$(cmd_receipt "$run_id" --json)
+    jq -cn --argjson receipt "$receipt" '
+        ($receipt.external_actions | map(select(.status=="pending")) | length) as $pending_actions |
+        ($receipt.budgets.exceeded | length) as $exceeded |
+        ($receipt.evidence | map(select(.status=="failed")) | length) as $failed |
+        {schema:"hotl.reconciliation/v1",run_id:$receipt.run.id,status:$receipt.run.status,sufficient:$receipt.sufficiency.sufficient,
+         unresolved_actions:$pending_actions,exceeded_budgets:$receipt.budgets.exceeded,
+         next_action:(if $receipt.sufficiency.sufficient then "complete"
+          elif $pending_actions>0 then "await_action_decision"
+          elif $exceeded>0 then "adjust_budget_or_stop"
+          elif $receipt.run.status=="blocked" then "inspect_blocker"
+          elif $receipt.run.status=="paused" then "resume_after_gate_or_policy"
+          elif $failed>0 then "retry_or_block_failed_step"
+          elif $receipt.run.status=="completed" and ($receipt.sufficiency.reasons==["finish_disposition_missing"]) then "record_finish_disposition"
+          else "verify_next_incomplete_step" end),
+         reasons:$receipt.sufficiency.reasons}'
 }
 
 # ── log-decision ────────────────────────────────────────────────────────────
@@ -1688,7 +2122,8 @@ usage() {
 usage: hotl-rt <command> [args]
 
 commands:
-  init <workflow-file> [--executor-mode <mode>] [--repo-root <path>]
+  normalize <workflow-file> [--json]    Emit read-only normalized workflow JSON
+  init <workflow-file> [--executor-mode <mode>] [--driver <id>] [--host <id>] [--repo-root <path>]
        [--execution-root <path>] [--source-workflow-path <path>]
        [--worktree-path <path>] [--branch <name>]
                                         Initialize a run from a workflow file
@@ -1706,6 +2141,13 @@ commands:
        [--artifacts-preserved-at <path>] [--notes <text>] [--force]
                                         Record the post-execution disposition
   summary <run-id> [--json]             Read-only summary for any run
+  receipt <run-id> [--json]             Emit a state-derived evidence receipt
+  action request <kind> --target <text>  Record and gate a bounded action
+  action decide <id> <approved|rejected> --mode human
+                                        Record a sensitive-action decision
+  budget record <metric> <value>        Record observed budget telemetry
+  budget check [--run-id <run-id>]      Evaluate configured run budgets
+  reconcile <run-id>                    Recommend a verify-first recovery action
   log-decision <json>                   Append a JSON line to the configured
                                         decision log. No-op when
                                         decision_log_path is unset.
@@ -1724,12 +2166,17 @@ COMMAND="$1"
 shift
 
 case "$COMMAND" in
+    normalize)      cmd_normalize "$@" ;;
     init)           cmd_init "$@" ;;
     step)           cmd_step "$@" ;;
     gate)           cmd_gate "$@" ;;
     finalize)       cmd_finalize "$@" ;;
     finish)         cmd_finish "$@" ;;
     summary)        cmd_summary "$@" ;;
+    receipt)        cmd_receipt "$@" ;;
+    action)         cmd_action "$@" ;;
+    budget)         cmd_budget "$@" ;;
+    reconcile)      cmd_reconcile "$@" ;;
     log-decision)   cmd_log_decision "$@" ;;
     --help|-h|help) usage ;;
     *)

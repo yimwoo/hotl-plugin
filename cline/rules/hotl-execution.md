@@ -2,7 +2,7 @@
 
 **When to use:** When you have a HOTL workflow to execute, preferably `docs/plans/YYYY-MM-DD-<slug>-workflow.md`.
 
-**Full skills:** Read `__HOTL_HOME__/skills/executing-plans/SKILL.md` (linear), `__HOTL_HOME__/skills/loop-execution/SKILL.md` (autonomous), or `__HOTL_HOME__/skills/subagent-execution/SKILL.md` (delegated same-session execution) for complete processes. If unavailable, follow the condensed version below.
+**Full skills:** Prefer `__HOTL_HOME__/skills/governed-execution/SKILL.md` for native-or-fallback routing. Use `__HOTL_HOME__/skills/executing-plans/SKILL.md` (linear), `__HOTL_HOME__/skills/loop-execution/SKILL.md` (autonomous), or `__HOTL_HOME__/skills/subagent-execution/SKILL.md` (delegated same-session execution) as explicit compatibility profiles. If unavailable, follow the condensed version below.
 
 ### MANDATORY RULES
 

@@ -415,7 +415,7 @@ if (Test-GitWorkTree $ClineHotlDir) {
     }
 
     # Skill and rule name lists
-    $NativeSkillNames = @("brainstorming", "writing-plans", "document-review", "executing-plans", "subagent-execution", "tdd", "systematic-debugging", "code-review", "pr-reviewing", "loop-execution")
+    $NativeSkillNames = @("brainstorming", "writing-plans", "document-review", "governed-execution", "executing-plans", "subagent-execution", "tdd", "systematic-debugging", "code-review", "pr-reviewing", "loop-execution")
     $LegacyWorkflowRules = @("hotl-brainstorming.md", "hotl-planning.md", "hotl-execution.md", "hotl-document-review.md", "hotl-subagent-execution.md", "hotl-tdd.md", "hotl-debugging.md", "hotl-code-review.md", "hotl-pr-review.md")
 
     $HotlHomePath = Join-Path $env:USERPROFILE ".cline\hotl"
@@ -462,7 +462,7 @@ if (Test-GitWorkTree $ClineHotlDir) {
                 Copy-Item -Recurse -Force -Path $SkillSrc -Destination $SkillDst
             }
         }
-        Write-Host "  1 rule + 10 native skills refreshed."
+        Write-Host "  1 rule + 11 native skills refreshed."
     } else {
         Write-Host "  Refreshing Cline in legacy-rules mode..."
 

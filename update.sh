@@ -464,8 +464,8 @@ if is_git_work_tree "${CLINE_HOTL_DIR}"; then
         CLINE_MODE="$(cat "${CLINE_MODE_FILE}")"
     fi
 
-    # The 10 native Cline skills and 9 legacy workflow rule names
-    NATIVE_SKILLS="brainstorming writing-plans document-review executing-plans subagent-execution tdd systematic-debugging code-review pr-reviewing loop-execution"
+    # The 11 native Cline skills and 9 legacy workflow rule names
+    NATIVE_SKILLS="brainstorming writing-plans document-review governed-execution executing-plans subagent-execution tdd systematic-debugging code-review pr-reviewing loop-execution"
     LEGACY_WORKFLOW_RULES="hotl-brainstorming.md hotl-planning.md hotl-execution.md hotl-document-review.md hotl-subagent-execution.md hotl-tdd.md hotl-debugging.md hotl-code-review.md hotl-pr-review.md"
 
     replace_cline_placeholders() {
@@ -503,7 +503,7 @@ if is_git_work_tree "${CLINE_HOTL_DIR}"; then
                 ln -s "${skill_src}" "${skill_dst}"
             fi
         done
-        echo "  1 rule + 10 native skills refreshed."
+        echo "  1 rule + 11 native skills refreshed."
     else
         echo "  Refreshing Cline in legacy-rules mode..."
 

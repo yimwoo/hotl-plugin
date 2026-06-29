@@ -283,13 +283,15 @@ Please use HOTL to compare OAuth and API-key auth before writing code.
 
 Use `$hotl:writing-plans` to create `docs/plans/2026-04-22-add-rate-limiting-workflow.md`.
 
-After a workflow is saved, use `$hotl:loop-execution`, `$hotl:executing-plans`,
+After a workflow is saved, prefer `$hotl:governed-execution`, or use `$hotl:loop-execution`, `$hotl:executing-plans`,
 `$hotl:subagent-execution`, or `$hotl:resuming` with the workflow filename
 instead of Claude-style `/hotl:*` commands.
 
 Review `docs/plans/2026-04-22-add-rate-limiting-workflow.md` with HOTL and tell me if it is ready to execute.
 
 Use `$hotl:subagent-execution` to execute `docs/plans/2026-04-22-add-rate-limiting-workflow.md` in this session.
+
+Use `$hotl:governed-execution` to execute `docs/plans/2026-04-22-add-rate-limiting-workflow.md` with the best available governed driver.
 
 Use `$hotl:loop-execution` to execute `docs/plans/2026-04-22-add-rate-limiting-workflow.md` in this session.
 
@@ -318,6 +320,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `brainstorming` — design with HOTL contracts before implementation
 - `writing-plans` — create `docs/plans/YYYY-MM-DD-<slug>-workflow.md` files
 - `document-review` — run structural lint and qualitative review before execution
+- `governed-execution` — preferred native-or-fallback execution router with evidence receipts
 - `loop-execution` — autonomous execution with retries
   - **Output contract:** `docs/contracts/execution-report-output.md` defines the execution report schema, status vocabulary, and platform rendering tables
   - **Optional dependency:** State persistence and resumable execution require [`jq`](https://jqlang.github.io/jq/). Without it, HOTL still works but runs without state files or durable reports.

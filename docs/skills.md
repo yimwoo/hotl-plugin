@@ -18,6 +18,7 @@ Want to create or modify HOTL abstractions? See [Authoring Skills vs Agents](aut
 
 | Skill | Description | Phase |
 | --- | --- | --- |
+| [`governed-execution`](../skills/governed-execution/SKILL.md) | Preferred entry point that selects a Codex, Claude, or generic driver and an autonomous, manual, or delegated execution profile while preserving one evidence contract. | Execute |
 | [`loop-execution`](../skills/loop-execution/SKILL.md) | The canonical HOTL execution engine — mandatory live step visibility, platform-specific rendering (Codex: native progress card, Claude Code/Cline: chat logs + markdown table). Persists state for resume. | Execute |
 | [`executing-plans`](../skills/executing-plans/SKILL.md) | Loop execution with explicit human checkpoints between batches of tasks. | Execute |
 | [`subagent-execution`](../skills/subagent-execution/SKILL.md) | Delegated step runner over the loop execution engine — delegates eligible steps to fresh subagents while the controller keeps governance and verification. | Execute |

@@ -4,6 +4,26 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.19.0] - 2026-06-29
+
+### Added
+- Portable workflow normalization, the generic driver protocol, and redacted state-derived evidence receipts.
+- Experimental, opt-in Codex and Claude Code native drivers with conservative auto fallback and model-neutral execution envelopes.
+- Portable sensitive-action approvals, observed execution budgets, and read-only verify-first reconciliation.
+- A preferred `governed-execution` skill, deterministic host router, local adoption report, proposal-only memory helper, and compatibility migration guide.
+- A versioned, official-source-backed host capability catalog for Codex, Claude Code, and the HOTL generic fallback, plus a deterministically generated human capability matrix.
+- Read-only tri-state capability probing that preserves `unknown` when local entitlement, rollout, configuration, or usability cannot be proven.
+- Driver conformance and model-neutral evaluation result contracts, backed by an offline scenario manifest that maps portable HOTL invariants to deterministic tests.
+
+### Changed
+- Documented provider maturity, local detection, and HOTL conformance as separate claims. The Phase 1 catalog remains descriptive and does not route execution or change permissions.
+
+### Fixed
+- Kept independent gate, sensitive-action, and budget pause reasons from incorrectly resuming or overwriting one another.
+- Enforced human-mode decisions for high-risk gates and sufficient non-finish evidence before recording published or merged outcomes.
+- Made aggregate budget observations monotonic and ensured budget exceedance is reflected in durable reports and receipts.
+- Added `governed-execution` to Cline native-skills install and update paths on macOS, Linux, and Windows.
+
 ## [2.18.0] - 2026-06-04
 
 ### Added

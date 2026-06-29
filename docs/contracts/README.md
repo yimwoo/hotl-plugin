@@ -35,3 +35,7 @@ These rules apply to all contracts in this directory.
 | [pr-review-output.md](pr-review-output.md) | 9 | PR review schema — metadata, dimension verdicts, consolidated findings |
 | [code-review-output.md](code-review-output.md) | 6 | Code review schema — scope, dimensions, findings, coverage gaps, verdict |
 | [execution-report-output.md](execution-report-output.md) | 5 | Execution report — metadata, summary table, event log, final summary, verification |
+| [driver-conformance.md](driver-conformance.md) | Behavior families | Portable workflow invariants and deterministic evidence required from execution drivers |
+| [evaluation-result-output.md](evaluation-result-output.md) | Model-neutral record | Optional live evaluation identity, quality measurements, telemetry, and evidence |
+| [portable-workflow-and-receipt.md](portable-workflow-and-receipt.md) | JSON contracts | Normalized workflow, driver protocol, and state-derived completion receipt |
+| [policy-budget-recovery.md](policy-budget-recovery.md) | Governance controls | Sensitive-action decisions, observed budgets, and verify-first reconciliation |

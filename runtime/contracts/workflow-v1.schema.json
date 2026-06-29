@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yimwoo/hotl-plugin/runtime/contracts/workflow-v1.schema.json",
+  "title": "HOTL normalized workflow v1",
+  "type": "object",
+  "required": ["schema", "source", "workflow"],
+  "properties": {
+    "schema": {"const": "hotl.workflow/v1"},
+    "source": {"type": "object", "required": ["format", "path"]},
+    "workflow": {
+      "type": "object",
+      "required": ["slug", "intent", "success_criteria", "risk_level", "auto_approve", "branch", "policy", "total_steps", "steps"],
+      "properties": {
+        "risk_level": {"enum": ["low", "medium", "high"]},
+        "auto_approve": {"type": "boolean"},
+        "policy": {"type": "object", "required": ["profile", "sensitive_actions", "budgets"]},
+        "steps": {"type": "array", "minItems": 1}
+      }
+    }
+  }
+}

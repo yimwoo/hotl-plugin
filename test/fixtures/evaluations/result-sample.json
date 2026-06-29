@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-06-29T20:00:00Z",
+  "scenario_id": "successful-completion",
+  "scenario_revision": "2026-06-29",
+  "host": "hotl-fallback",
+  "execution_implementation": "fallback",
+  "resolved_model": null,
+  "effort_profile": null,
+  "adapter_version": null,
+  "terminal_outcome": "completed",
+  "contract_failures": [],
+  "post_completion_defects": 0,
+  "interventions": 0,
+  "retries": 0,
+  "telemetry": {
+    "duration_ms": 1250,
+    "agent_count": null,
+    "tokens": {
+      "source": "unavailable",
+      "input": null,
+      "output": null,
+      "cached": null
+    },
+    "cost": {
+      "source": "unavailable",
+      "usd": null
+    }
+  },
+  "evidence_refs": [
+    ".hotl/reports/example-run.md",
+    ".hotl/state/example-run.json"
+  ],
+  "notes": "Offline fallback baseline; model telemetry was not exposed."
+}

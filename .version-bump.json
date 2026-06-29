@@ -14,7 +14,9 @@
       ".worktrees",
       "node_modules",
       "CHANGELOG.md",
-      "scripts/bump-version.sh"
+      "scripts/bump-version.sh",
+      "catalog.json",
+      "host-capabilities.md"
     ]
   }
 }

@@ -52,7 +52,7 @@ When the user triggers a workflow, read the full skill file from disk for detail
 | "debug", "investigate", "why is this failing" | `__HOTL_HOME__/skills/systematic-debugging/SKILL.md` |
 | "brainstorm", "design this", "let's think about" | `__HOTL_HOME__/skills/brainstorming/SKILL.md` |
 | "plan", "write a plan", "create workflow" | `__HOTL_HOME__/skills/writing-plans/SKILL.md` |
-| "execute", "run the plan", "implement" | `__HOTL_HOME__/skills/executing-plans/SKILL.md` |
+| "execute", "run the plan", "implement" | `__HOTL_HOME__/skills/governed-execution/SKILL.md` (preferred) or `__HOTL_HOME__/skills/executing-plans/SKILL.md` |
 | "loop", "run autonomously" | `__HOTL_HOME__/skills/loop-execution/SKILL.md` |
 | "tdd", "test first", "red green refactor" | `__HOTL_HOME__/skills/tdd/SKILL.md` |
 | "review", "code review" | `__HOTL_HOME__/skills/code-review/SKILL.md` |

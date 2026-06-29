@@ -47,8 +47,8 @@ echo "${INSTALL_MODE}" > "${MODE_FILE}"
 
 # ── Step 2: Install rules and/or skills ───────────────────────────────────────
 
-# The 10 native Cline skills (by directory name)
-NATIVE_SKILLS="brainstorming writing-plans document-review executing-plans subagent-execution tdd systematic-debugging code-review pr-reviewing loop-execution"
+# The 11 native Cline skills (by directory name)
+NATIVE_SKILLS="brainstorming writing-plans document-review governed-execution executing-plans subagent-execution tdd systematic-debugging code-review pr-reviewing loop-execution"
 
 # The 9 legacy workflow rule files (all except hotl-operating-model.md)
 LEGACY_WORKFLOW_RULES="hotl-brainstorming.md hotl-planning.md hotl-execution.md hotl-document-review.md hotl-subagent-execution.md hotl-tdd.md hotl-debugging.md hotl-code-review.md hotl-pr-review.md"
@@ -65,7 +65,7 @@ replace_placeholders() {
 mkdir -p "${GLOBAL_RULES_DIR}"
 
 if [ "${INSTALL_MODE}" = "native-skills" ]; then
-    # Native skills mode: 1 rule + 10 native skills
+    # Native skills mode: 1 rule + 11 native skills
 
     # Install only hotl-operating-model.md as a rule
     if [ -f "${RULES_SRC}/hotl-operating-model.md" ]; then

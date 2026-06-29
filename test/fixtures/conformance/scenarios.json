@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "verified_at": "2026-06-29",
+  "scenarios": [
+    {
+      "id": "successful-completion",
+      "title": "Successful multi-step completion",
+      "invariant": "All steps verify before the run completes and the final artifacts report completion.",
+      "expected_terminal_status": "completed",
+      "gap": false,
+      "gap_reason": null,
+      "evidence": [
+        {"file": "test/runtime-integration.bats", "test": "happy path: all steps done, run completed"}
+      ]
+    },
+    {
+      "id": "retry-then-success",
+      "title": "Verification retry then success",
+      "invariant": "A failed verification can retry within its bound and preserves attempt history before success.",
+      "expected_terminal_status": "completed",
+      "gap": false,
+      "gap_reason": null,
+      "evidence": [
+        {"file": "test/runtime-integration.bats", "test": "retry path: fail then retry then pass"}
+      ]
+    },
+    {
+      "id": "failure-and-block",
+      "title": "Failure or explicit block prevents false completion",
+      "invariant": "Failed or blocked steps prevent a completed run and retain their reason.",
+      "expected_terminal_status": "blocked",
+      "gap": false,
+      "gap_reason": null,
+      "evidence": [
+        {"file": "test/runtime-integration.bats", "test": "failure path: step verify fails, run not auto-completed"},
+        {"file": "test/runtime-integration.bats", "test": "block path: step blocked with reason"}
+      ]
+    },
+    {
+      "id": "human-review-decisions",
+      "title": "Human review pauses and records approval or rejection",
+      "invariant": "Human review pauses before later work and the persisted decision controls the terminal state.",
+      "expected_terminal_status": "mixed",
+      "gap": false,
+      "gap_reason": null,
+      "evidence": [
+        {"file": "test/runtime-integration.bats", "test": "human-review pause plus explicit human gate flow completes end to end"},
+        {"file": "test/runtime.bats", "test": "gate rejected keeps human-review step blocked"}
+      ]
+    },
+    {
+      "id": "risk-sensitive-gates",
+      "title": "Risk-sensitive gate behavior",
+      "invariant": "Auto approval follows workflow policy for lower risk while high risk forces human approval.",
+      "expected_terminal_status": "mixed",
+      "gap": false,
+      "gap_reason": null,
+      "evidence": [
+        {"file": "test/execution-scenarios.bats", "test": "scenario 02: loop-execution describes auto-approve path"},
+        {"file": "test/execution-scenarios.bats", "test": "scenario 03: loop-execution states high risk forces human gates"}
+      ]
+    },
+    {
+      "id": "verification-fallback",
+      "title": "Browser fallback and unsupported verification",
+      "invariant": "Unavailable browser verification pauses for review and unknown verification types block clearly.",
+      "expected_terminal_status": "paused_or_blocked",
+      "gap": false,
+      "gap_reason": null,
+      "evidence": [
+        {"file": "test/runtime-integration.bats", "test": "browser verify downgrades to human-review pause"},
+        {"file": "test/runtime-integration.bats", "test": "unsupported verify type blocks with clear reason"}
+      ]
+    },
+    {
+      "id": "verify-first-recovery",
+      "title": "Interrupted-run discovery and verify-first recovery",
+      "invariant": "Interrupted state is found across worktrees and resumes through verification before advancement.",
+      "expected_terminal_status": "running",
+      "gap": false,
+      "gap_reason": null,
+      "evidence": [
+        {"file": "test/resume-discovery.bats", "test": "locator finds interrupted isolated-worktree run from authoring checkout by workflow"},
+        {"file": "test/smoke.bats", "test": "resuming skill exists with verify-first and sidecar state"}
+      ]
+    },
+    {
+      "id": "worktree-isolation",
+      "title": "Execution-root and worktree safety",
+      "invariant": "Isolation modes resolve predictably and unsafe branch or dirty-worktree states stop.",
+      "expected_terminal_status": "mixed",
+      "gap": false,
+      "gap_reason": null,
+      "evidence": [
+        {"file": "test/execution-root.bats", "test": "prepare-execution-root defaults to an isolated worktree and bootstraps the workflow file"},
+        {"file": "test/execution-root.bats", "test": "prepare-execution-root blocks on non-HOTL dirty files"},
+        {"file": "test/execution-root.bats", "test": "prepare-execution-root rejects worktree host on protected branches"}
+      ]
+    },
+    {
+      "id": "explicit-run-targeting",
+      "title": "Multiple runs require explicit identity",
+      "invariant": "State-changing commands cannot silently select one of multiple runs.",
+      "expected_terminal_status": "blocked",
+      "gap": false,
+      "gap_reason": null,
+      "evidence": [
+        {"file": "test/runtime.bats", "test": "step commands require explicit run id when multiple runs exist"}
+      ]
+    },
+    {
+      "id": "report-and-finish",
+      "title": "Incremental reporting, final rendering, and finish disposition",
+      "invariant": "Run events update durable reports and an explicit finish decision is recorded after execution.",
+      "expected_terminal_status": "completed",
+      "gap": false,
+      "gap_reason": null,
+      "evidence": [
+        {"file": "test/runtime-integration.bats", "test": "report is updated incrementally at each transition"},
+        {"file": "test/runtime.bats", "test": "finish records a kept outcome in state, summary, and report"},
+        {"file": "test/runtime-integration.bats", "test": "demo simulation flow renders report and compact Codex summary"}
+      ]
+    },
+    {
+      "id": "executor-profile-equivalence",
+      "title": "Executor profiles share the core state machine",
+      "invariant": "Loop, manual, and delegated profiles preserve one verification, gate, report, and completion authority.",
+      "expected_terminal_status": "mixed",
+      "gap": false,
+      "gap_reason": null,
+      "evidence": [
+        {"file": "test/smoke.bats", "test": "loop-execution and executing-plans contain identical Branch/Worktree Preflight section"},
+        {"file": "test/smoke.bats", "test": "subagent-execution references the canonical execution state machine"}
+      ]
+    }
+  ]
+}

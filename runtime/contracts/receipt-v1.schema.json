@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yimwoo/hotl-plugin/runtime/contracts/receipt-v1.schema.json",
+  "title": "HOTL evidence receipt v1",
+  "type": "object",
+  "required": ["schema", "generated_at", "run", "implementation", "evidence", "policy", "budgets", "external_actions", "finish", "sufficiency", "redaction"],
+  "properties": {
+    "schema": {"const": "hotl.receipt/v1"},
+    "evidence": {"type": "array", "minItems": 1},
+    "sufficiency": {
+      "type": "object",
+      "required": ["sufficient", "reasons"],
+      "properties": {"sufficient": {"type": "boolean"}, "reasons": {"type": "array"}}
+    }
+  }
+}
