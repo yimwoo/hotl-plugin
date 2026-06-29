@@ -206,7 +206,7 @@ manifest = json.load(open(sys.argv[1]))
 expected = {
     "skills": "./skills/",
     "commands": "./commands/",
-    "agents": "./agents/",
+    "agents": ["./agents/code-reviewer.md"],
     "hooks": "./hooks/hooks.json",
 }
 for key, value in expected.items():

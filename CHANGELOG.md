@@ -4,6 +4,11 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.19.1] - 2026-06-29
+
+### Fixed
+- Updated the Claude Code manifest to enumerate its bundled agent file explicitly, matching the current Claude Code plugin schema and restoring marketplace installation on Claude Code 2.1.157.
+
 ## [2.19.0] - 2026-06-29
 
 ### Added
