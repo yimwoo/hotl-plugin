@@ -208,6 +208,16 @@ copy_catalog() {
     grep -q 'evaluation-result-output.md' "$REPO_ROOT/docs/contracts/README.md"
 }
 
+@test "measured adaptive evaluation is indexed and remains human reviewed" {
+    [ -x "$REPO_ROOT/scripts/hotl-evaluation-report.sh" ]
+    grep -q 'evaluation-summary-output.md' "$REPO_ROOT/docs/contracts/README.md"
+    grep -q 'hotl-evaluation-report.sh' "$REPO_ROOT/README.md"
+    grep -q 'hotl-evaluation-report.sh' "$REPO_ROOT/docs/README.codex.md"
+    grep -q 'hotl-evaluation-report.sh' "$REPO_ROOT/docs/README.cline.md"
+    grep -q 'human_review_required: true' "$REPO_ROOT/docs/contracts/evaluation-summary-output.md"
+    grep -q 'configuration_changes_performed: false' "$REPO_ROOT/docs/contracts/evaluation-summary-output.md"
+}
+
 @test "README guides document governed routing and portable controls" {
     grep -q 'HOTL_CODEX_NATIVE=1' "$REPO_ROOT/README.md"
     grep -q 'HOTL_CODEX_NATIVE=1' "$REPO_ROOT/docs/README.codex.md"

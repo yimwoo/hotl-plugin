@@ -4,6 +4,14 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.20.0] - 2026-06-29
+
+### Added
+- Deterministic offline comparison of compatible evaluation records, with explicit profile and environment identity, shared-scenario metrics, repeat-sample normalization, hard safety eligibility, telemetry completeness, Pareto relationships, JSON/text summaries, and a mandatory human-review boundary.
+
+### Fixed
+- Isolated shell verification commands in a subshell so an explicit `exit` cannot terminate `hotl-rt` before the verification result is persisted.
+
 ## [2.19.2] - 2026-06-29
 
 ### Fixed

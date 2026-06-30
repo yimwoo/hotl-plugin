@@ -189,9 +189,30 @@ The portable execution boundary also provides:
 - Deterministic driver evidence and optional model-neutral evaluations:
   [driver conformance](docs/contracts/driver-conformance.md) and
   [evaluation result](docs/contracts/evaluation-result-output.md)
+- Offline, safety-first profile comparison with
+  `scripts/hotl-evaluation-report.sh`
 - Local, read-only adoption reporting with `scripts/hotl-adoption-report.sh`
 - Proposal-only memory candidates with `scripts/hotl-memory-proposal.sh`; this
   helper never writes to a memory system directly
+
+### Measured Adaptive Evaluation
+
+Compare existing evaluation records locally, with deterministic JSON by default
+or a concise human view:
+
+```bash
+scripts/hotl-evaluation-report.sh --format text results/*.json
+```
+
+Recommendation eligibility requires at least two explicit profile identities,
+three shared scenario/revision pairs, and a fully known matching environment.
+Profiles with incomplete outcomes, contract failures, or post-completion defects
+are disqualified. Missing duration, agent, token, or cost telemetry remains
+unknown and cannot improve a profile's standing. The output may say
+`collect_more_evidence`, require human review, or present one profile for human
+review; it never changes a model, driver, policy, permission, or routing
+configuration. See the
+[evaluation summary contract](docs/contracts/evaluation-summary-output.md).
 
 ## Commands & Usage
 

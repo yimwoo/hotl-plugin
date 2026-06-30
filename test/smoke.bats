@@ -873,6 +873,7 @@ print(match.group(1) if match else '')
     [ -f "$cache_dir/scripts/finalize-codex-summary.sh" ]
     [ -f "$cache_dir/scripts/show-codex-current-step.sh" ]
     [ -f "$cache_dir/scripts/hotl-locate-run.sh" ]
+    [ -f "$cache_dir/scripts/hotl-evaluation-report.sh" ]
     [ -f "$cache_dir/scripts/check-update.sh" ]
 }
 

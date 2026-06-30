@@ -91,6 +91,7 @@ validate_evaluation() {
       def nullable_nonnegative_integer: . == null or nonnegative_integer;
       def valid_timestamp: nonempty_string and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$");
       def valid_date: nonempty_string and test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$");
+      def valid_profile_id: nonempty_string and test("^[a-z0-9][a-z0-9._/-]*$");
       def allowed($values): . as $value | $values | index($value) != null;
       def observed_number($source; $value):
         if $source == "observed" then ($value | type == "number" and . >= 0)
@@ -101,11 +102,25 @@ validate_evaluation() {
       (.recorded_at | valid_timestamp) and
       (.scenario_id | nonempty_string) and
       (.scenario_revision | valid_date) and
+      ((has("profile_id") | not) or (.profile_id | valid_profile_id)) and
       (.host | nonempty_string) and
       (.execution_implementation | allowed(["fallback", "native_adapter", "manual"])) and
       (.resolved_model | nullable_string) and
       (.effort_profile | nullable_string) and
       (.adapter_version | nullable_string) and
+      (.environment as $environment |
+        $environment == null or
+        ($environment | type == "object" and
+          has("repo_revision") and
+          has("host_version") and
+          has("os") and
+          has("arch") and
+          has("toolchain_fingerprint") and
+          (.repo_revision | nullable_string) and
+          (.host_version | nullable_string) and
+          (.os | nullable_string) and
+          (.arch | nullable_string) and
+          (.toolchain_fingerprint | nullable_string))) and
       (.terminal_outcome | allowed(["completed", "blocked", "paused", "running"])) and
       (.contract_failures | type == "array" and all(.[]; nonempty_string)) and
       (.post_completion_defects | nonnegative_integer) and

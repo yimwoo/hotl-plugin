@@ -121,6 +121,21 @@ These durable controls require `jq`. See
 [`contracts/portable-workflow-and-receipt.md`](contracts/portable-workflow-and-receipt.md),
 and [`host-native-drivers.md`](host-native-drivers.md).
 
+### Measured Adaptive Evaluation
+
+Run `scripts/hotl-evaluation-report.sh --format text <evaluation.json> ...` to
+compare existing evaluation records locally. Recommendation eligibility
+requires two explicit profiles, three shared scenario/revision pairs, and a
+fully known matching environment. Incomplete outcomes, contract failures, and
+post-completion defects disqualify a profile. Unavailable duration, agent,
+token, or cost telemetry remains unknown rather than becoming zero.
+
+The model-neutral result may be `collect_more_evidence`,
+`human_review_required`, or `review_profile_candidate`. Every outcome remains a
+human decision and the helper never changes Cline's model, provider, permission,
+policy, driver, effort, or routing configuration. See the
+[`evaluation summary contract`](contracts/evaluation-summary-output.md).
+
 ## Workflow Files
 
 Canonical workflows are saved as `docs/plans/YYYY-MM-DD-<slug>-workflow.md` (for example, `docs/plans/2026-04-22-add-auth-workflow.md`). Legacy root files such as `hotl-workflow-add-auth.md` remain readable during migration, but new writes should use the canonical `docs/plans/` location:

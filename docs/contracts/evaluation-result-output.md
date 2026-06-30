@@ -1,6 +1,6 @@
 # HOTL Evaluation Result Output Contract
 
-This contract defines a model-neutral record for optional live evaluations of a HOTL conformance scenario. It is observational: Phase 1 evaluation results do not choose a model, alter execution routing, or gate normal CI.
+This contract defines a model-neutral record for optional live evaluations of a HOTL conformance scenario. It is observational: evaluation results do not choose a model, alter execution routing, or gate normal CI.
 
 ## Required identity
 
@@ -12,7 +12,23 @@ Every result records:
 - Resolved model, reasoning/effort profile, and adapter version when observable.
 - Terminal outcome using the conformance vocabulary.
 
-Use JSON `null` when the host does not expose model, effort, adapter, duration, agent-count, token, or cost information. Do not infer these values from a product label, plan, rate limit, or elapsed wall-clock observation unless the result identifies that measurement as observed.
+Records may add a stable `profile_id` for comparison. When present, it is a
+lowercase identifier beginning with an alphanumeric character and containing
+only lowercase alphanumerics, `.`, `_`, `/`, or `-`. The identifier names the
+operator-defined execution profile; it must not be inferred from a marketing
+model alias. Legacy records without `profile_id` remain valid, and comparison
+tools must visibly mark any derived fallback identity.
+
+Records may also add an `environment` object. When present, it contains the
+nullable string fields `repo_revision`, `host_version`, `os`, `arch`, and
+`toolchain_fingerprint`. Use explicit JSON `null` for an unavailable value.
+Known environment differences form separate comparison cohorts. Missing or
+partially unknown environment identity is not evidence of compatibility.
+
+Use JSON `null` when the host does not expose model, effort, adapter,
+environment, duration, agent-count, token, or cost information. Do not infer
+these values from a product label, plan, rate limit, or elapsed wall-clock
+observation unless the result identifies that measurement as observed.
 
 ## Quality measurements
 
@@ -43,3 +59,7 @@ Every result includes at least one evidence reference, such as a HOTL report pat
 ## Validation and use
 
 `scripts/hotl-conformance.sh validate-evaluation` validates the record and confirms that its scenario exists in the current conformance manifest. Deterministic contract tests remain the merge gate. Live evaluation results are compared only when scenario revision and relevant environment identity match.
+
+`scripts/hotl-evaluation-report.sh` compares validated records under the
+[evaluation summary contract](evaluation-summary-output.md). It performs no
+model call, upload, configuration edit, or routing change.

@@ -218,6 +218,21 @@ teardown() {
     jq -r '.steps[0].verify.stdout' "$STATE" | grep -q 'hello from verify'
 }
 
+@test "step verify persists commands that exit explicitly" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    jq '.steps[0].verify.command = "exit 0"' "$STATE" > "$STATE.tmp"
+    mv "$STATE.tmp" "$STATE"
+    "$HOTL_RT" step 1 start
+
+    run "$HOTL_RT" step 1 verify
+
+    [ "$status" -eq 0 ]
+    [ "$output" = "pass" ]
+    [ "$(jq -r '.steps[0].status' "$STATE")" = "done" ]
+    [ "$(jq -r '.steps[0].verify.passed' "$STATE")" = "true" ]
+}
+
 @test "step verify transitions to failed on failing command" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-retry-sample.md)
     "$HOTL_RT" step 1 start

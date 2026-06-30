@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-06-29T21:00:00Z",
+  "scenario_id": "successful-completion",
+  "scenario_revision": "2026-06-29",
+  "profile_id": "codex-balanced",
+  "host": "codex",
+  "execution_implementation": "native_adapter",
+  "resolved_model": "observed-model-id",
+  "effort_profile": "balanced",
+  "adapter_version": "fixture-adapter-version",
+  "environment": {
+    "repo_revision": "fixture-revision",
+    "host_version": "fixture-host-version",
+    "os": "fixture-os",
+    "arch": "fixture-arch",
+    "toolchain_fingerprint": "fixture-toolchain"
+  },
+  "terminal_outcome": "completed",
+  "contract_failures": [],
+  "post_completion_defects": 0,
+  "interventions": 0,
+  "retries": 0,
+  "telemetry": {
+    "duration_ms": 1000,
+    "agent_count": 1,
+    "tokens": {
+      "source": "observed",
+      "input": 100,
+      "output": 20,
+      "cached": 50
+    },
+    "cost": {
+      "source": "observed",
+      "usd": 0.01
+    }
+  },
+  "evidence_refs": [
+    ".hotl/reports/identity-valid.md"
+  ],
+  "notes": "Synthetic identity fixture; no provider call was made."
+}

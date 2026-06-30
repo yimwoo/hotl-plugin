@@ -255,6 +255,21 @@ Native host output never replaces the state-derived completion receipt. See
 [migration guide](migration-host-native.md), and the
 [portable workflow and receipt contract](contracts/portable-workflow-and-receipt.md).
 
+### Measured Adaptive Evaluation
+
+Use `scripts/hotl-evaluation-report.sh --format text <evaluation.json> ...` to
+compare already collected, validated evaluation records offline. An eligible
+comparison requires two explicit profile IDs, three shared scenario/revision
+pairs, and matching fully known environment identity. Incomplete runs,
+contract failures, and post-completion defects disqualify a profile; unavailable
+duration, agent, token, or cost telemetry remains unknown.
+
+The report is model-neutral and advisory. `collect_more_evidence`,
+`human_review_required`, and `review_profile_candidate` always require a human
+decision and never edit Codex model, effort, driver, sandbox, permission, policy,
+or routing configuration. See the
+[evaluation summary contract](contracts/evaluation-summary-output.md).
+
 ### Optional Codex Custom Agents
 
 HOTL also ships Codex custom agent templates under `adapters/codex-agents/` for
@@ -356,7 +371,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `governed-execution` — preferred native-or-fallback execution router with evidence receipts
   - **Driver selection:** auto mode uses fallback unless `HOTL_CODEX_NATIVE=1` or `--mode native` explicitly opts into the experimental Codex driver
   - **Portable governance:** sensitive actions, budgets, and verify-first recovery follow `docs/contracts/policy-budget-recovery.md`
-  - **Adoption tools:** `scripts/hotl-adoption-report.sh` is read-only; `scripts/hotl-memory-proposal.sh` only proposes memory candidates and never writes them directly
+  - **Adoption tools:** `scripts/hotl-adoption-report.sh` is read-only; `scripts/hotl-memory-proposal.sh` only proposes memory candidates and never writes them directly; `scripts/hotl-evaluation-report.sh` compares compatible evidence without changing configuration
 - `loop-execution` — autonomous execution with retries
   - **Output contract:** `docs/contracts/execution-report-output.md` defines the execution report schema, status vocabulary, and platform rendering tables
   - **Optional dependency:** State persistence and resumable execution require [`jq`](https://jqlang.github.io/jq/). Without it, HOTL still works but runs without state files or durable reports.

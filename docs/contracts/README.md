@@ -63,5 +63,6 @@ Apply each convention only to the contract family named below.
 | [execution-report-output.md](execution-report-output.md) | Output schema (5 sections) | Execution metadata, summary table, event log, final summary, and verification |
 | [driver-conformance.md](driver-conformance.md) | Execution behavior | Portable workflow invariants and deterministic evidence required from execution drivers |
 | [evaluation-result-output.md](evaluation-result-output.md) | Output schema | Optional model-neutral evaluation identity, quality measurements, telemetry, and evidence |
+| [evaluation-summary-output.md](evaluation-summary-output.md) | Output schema | Deterministic offline profile comparison, safety eligibility, Pareto relationships, and advisory recommendation state |
 | [portable-workflow-and-receipt.md](portable-workflow-and-receipt.md) | JSON and protocol contracts | Normalized workflow, driver protocol, and state-derived completion receipt |
 | [policy-budget-recovery.md](policy-budget-recovery.md) | Governance behavior | Sensitive-action decisions, observed budgets, and verify-first reconciliation |

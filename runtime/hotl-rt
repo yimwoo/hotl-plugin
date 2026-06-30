@@ -489,7 +489,7 @@ run_single_verify_check() {
             stderr_file=$(mktemp)
             exit_code=0
 
-            eval "$verify_cmd" >"$stdout_file" 2>"$stderr_file" || exit_code=$?
+            ( eval "$verify_cmd" ) >"$stdout_file" 2>"$stderr_file" || exit_code=$?
 
             VERIFY_STDOUT=$(cat "$stdout_file" | head -c 4096)
             VERIFY_STDERR=$(cat "$stderr_file" | head -c 4096)

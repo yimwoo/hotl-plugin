@@ -28,8 +28,25 @@ evidence. Optional live evaluations use the
 [evaluation result contract](contracts/evaluation-result-output.md), preserve
 missing telemetry as JSON `null`, and never run as part of default CI.
 
-These baseline artifacts are descriptive in Phase 1. They do not route
-execution or replace the current `hotl-rt` state machine.
+The catalog and probe remain descriptive. Driver routing is a separate,
+explicit operation and the `hotl-rt` state machine remains the conformant
+fallback.
+
+### Measured Adaptive Evaluation
+
+`scripts/hotl-evaluation-report.sh` compares previously collected evaluation
+JSON without a provider call or configuration write. It validates each record,
+forms cohorts only from matching known environment identity, and requires at
+least two explicit profiles with three shared scenario/revision pairs before a
+cohort can support a comparative recommendation.
+
+The report applies completion, contract-failure, and post-completion-defect
+gates before comparing interventions, retries, and fully observed telemetry.
+Missing telemetry stays unknown; it is never treated as zero. Output states are
+`collect_more_evidence`, `human_review_required`, and
+`review_profile_candidate`. All three retain the human decision boundary and
+perform no model, driver, policy, permission, effort, or routing change. See the
+[evaluation summary contract](contracts/evaluation-summary-output.md).
 
 ## 1. Brainstorm
 
