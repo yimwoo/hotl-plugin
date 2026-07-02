@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "${1:-}" = "--version" ] || [ "${1:-}" = "-V" ]; then
+    echo "codex-cli 9.9.9"
+    exit 0
+fi
+
+echo "codex" >> "${HOTL_EVAL_CALL_LOG:?}"
+call_number="$(wc -l < "$HOTL_EVAL_CALL_LOG" | tr -d ' ')"
+if [ "${FAKE_EVAL_INTERRUPT_ON_CALL:-0}" = "$call_number" ]; then
+    exit 130
+fi
+
+output_file=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -o|--output-last-message)
+            output_file="$2"
+            shift 2
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+case "${FAKE_EVAL_MODE:-valid}" in
+    sleep)
+        sleep 3
+        ;;
+    malformed)
+        printf '%s\n' 'not-json' > "$output_file"
+        ;;
+    secret)
+        echo 'authorization=FAKE_SECRET_VALUE' >&2
+        printf '%s\n' '{"governed_completion_allowed":true}' > "$output_file"
+        ;;
+    *)
+        printf '%s\n' '{"governed_completion_allowed":true}' > "$output_file"
+        ;;
+esac
+
+printf '%s\n' \
+    '{"type":"thread.started","thread_id":"fixture-thread"}' \
+    '{"type":"turn.completed","model":"codex-test-model","usage":{"input_tokens":120,"cached_input_tokens":20,"output_tokens":10}}'

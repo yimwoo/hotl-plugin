@@ -270,6 +270,33 @@ decision and never edit Codex model, effort, driver, sandbox, permission, policy
 or routing configuration. See the
 [evaluation summary contract](contracts/evaluation-summary-output.md).
 
+### Continuous Evaluation and Drift Detection
+
+Use the Phase 8 campaign helpers to preview a fixed profile/scenario matrix,
+run only an explicitly approved live collection, append validated local
+history, and render drift or profile proposals:
+
+```bash
+bash scripts/hotl-evaluation-campaign.sh plan campaign.json
+bash scripts/hotl-evaluation-collect.sh run campaign.json --approve-live
+bash scripts/hotl-evaluation-history.sh report .hotl/evaluation-history
+bash scripts/hotl-evaluation-proposal.sh --format text history-report.json
+```
+
+The collector pins the Codex binary/version, uses a read-only sandbox, separates
+cached input from total input, enforces call/time limits, and rejects a hard
+cost budget that Codex cannot enforce before a call. Unknown telemetry stops a
+budgeted comparison rather than becoming zero.
+
+The inert [Codex automation template](../automations/continuous-evaluation/codex.md)
+uses a standalone project automation only after manual prompt testing and
+explicit enablement. HOTL installation writes no `automation.toml` and never
+registers a schedule. Preflight leaves credentials unverified and
+`ready_to_enable: false` for human review. Profile proposals always set
+`human_review_required: true`, `automatic_selection_performed: false`, and
+`configuration_changes_performed: false`. See
+[Continuous Evaluation and Drift Detection](continuous-evaluation.md).
+
 ### Optional Codex Custom Agents
 
 HOTL also ships Codex custom agent templates under `adapters/codex-agents/` for
@@ -371,7 +398,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `governed-execution` — preferred native-or-fallback execution router with evidence receipts
   - **Driver selection:** auto mode uses fallback unless `HOTL_CODEX_NATIVE=1` or `--mode native` explicitly opts into the experimental Codex driver
   - **Portable governance:** sensitive actions, budgets, and verify-first recovery follow `docs/contracts/policy-budget-recovery.md`
-  - **Adoption tools:** `scripts/hotl-adoption-report.sh` is read-only; `scripts/hotl-memory-proposal.sh` only proposes memory candidates and never writes them directly; `scripts/hotl-evaluation-report.sh` compares compatible evidence without changing configuration
+  - **Adoption tools:** `scripts/hotl-adoption-report.sh` is read-only; `scripts/hotl-memory-proposal.sh` only proposes memory candidates and never writes them directly; evaluation campaign/history/report/proposal helpers preserve explicit live approval, append-only evidence, human review, and no configuration changes
 - `loop-execution` — autonomous execution with retries
   - **Output contract:** `docs/contracts/execution-report-output.md` defines the execution report schema, status vocabulary, and platform rendering tables
   - **Optional dependency:** State persistence and resumable execution require [`jq`](https://jqlang.github.io/jq/). Without it, HOTL still works but runs without state files or durable reports.

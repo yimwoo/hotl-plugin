@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "governed_completion_allowed": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "governed_completion_allowed"
+  ]
+}

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "${1:-}" = "--version" ]; then
+    echo "hotl-generic-fixture 1.0"
+    exit 0
+fi
+
+echo "generic" >> "${HOTL_EVAL_CALL_LOG:?}"
+call_number="$(wc -l < "$HOTL_EVAL_CALL_LOG" | tr -d ' ')"
+if [ "${FAKE_EVAL_INTERRUPT_ON_CALL:-0}" = "$call_number" ]; then
+    exit 130
+fi
+
+case "${FAKE_EVAL_MODE:-valid}" in
+    sleep)
+        sleep 3
+        ;;
+    malformed)
+        echo 'not-json'
+        exit 0
+        ;;
+    secret)
+        echo 'token=FAKE_SECRET_VALUE' >&2
+        ;;
+esac
+
+printf '%s\n' '{"schema":"hotl.evaluation-adapter-result/v1","structured_output":{"governed_completion_allowed":true},"resolved_model":"generic-test-model","effort_profile":null,"duration_ms":21,"tokens":{"source":"unavailable","input":null,"output":null,"cached":null},"cost":{"source":"unavailable","usd":null}}'

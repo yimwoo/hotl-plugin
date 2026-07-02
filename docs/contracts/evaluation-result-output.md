@@ -52,6 +52,12 @@ Zero is a measurement, not a missing-value placeholder. A result cannot label te
 
 Token telemetry separates input, output, and cached tokens. Cost telemetry records US dollars when observed. The contract does not normalize provider pricing or estimate cost from tokens.
 
+Phase 8 collectors add `telemetry_provenance` with normalization version
+`hotl.tokens/v1`, provider/source identity, input and cached-counter semantics,
+and whether normalization succeeded. Codex cached input is a subset of total
+input and is subtracted before storing normalized input. Claude cache reads are
+stored as a disjoint counter. Ambiguous counters remain unavailable.
+
 ## Evidence
 
 Every result includes at least one evidence reference, such as a HOTL report path, normalized state artifact, review result, or provider run identifier. Evidence may remain local. Publishing an evaluation result does not imply publishing secrets, raw prompts, or full tool output.

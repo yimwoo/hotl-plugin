@@ -191,6 +191,8 @@ The portable execution boundary also provides:
   [evaluation result](docs/contracts/evaluation-result-output.md)
 - Offline, safety-first profile comparison with
   `scripts/hotl-evaluation-report.sh`
+- Budgeted evaluation campaigns, append-only history, drift detection, and
+  proposal-only profile review with `scripts/hotl-evaluation-{campaign,collect,history,proposal}.sh`
 - Local, read-only adoption reporting with `scripts/hotl-adoption-report.sh`
 - Proposal-only memory candidates with `scripts/hotl-memory-proposal.sh`; this
   helper never writes to a memory system directly
@@ -213,6 +215,32 @@ unknown and cannot improve a profile's standing. The output may say
 review; it never changes a model, driver, policy, permission, or routing
 configuration. See the
 [evaluation summary contract](docs/contracts/evaluation-summary-output.md).
+
+### Continuous Evaluation and Drift Detection
+
+Phase 8 turns approved profiles and shared scenarios into repeatable campaigns:
+
+```bash
+bash scripts/hotl-evaluation-campaign.sh plan campaign.json
+bash scripts/hotl-evaluation-collect.sh run campaign.json --approve-live
+bash scripts/hotl-evaluation-history.sh append-run .hotl/evaluation-history \
+  campaign.json .hotl/evaluations/example/campaign-run.json
+bash scripts/hotl-evaluation-history.sh report .hotl/evaluation-history \
+  > .hotl/evaluation-history-report.json
+bash scripts/hotl-evaluation-proposal.sh --format text \
+  .hotl/evaluation-history-report.json
+```
+
+Planning is read-only. Live collection requires explicit approval and hard call
+and elapsed-time budgets; provider cost limits are accepted only when the host
+can enforce them before a call. History is append-only and separates workload,
+prompt/schema, host, adapter/model, toolchain, telemetry, incomplete-campaign,
+and quality-regression states before comparing trends.
+
+Every proposal requires human review and declares
+`automatic_selection_performed: false` and
+`configuration_changes_performed: false`. See
+[Continuous Evaluation and Drift Detection](docs/continuous-evaluation.md).
 
 ## Commands & Usage
 
@@ -275,6 +303,14 @@ HOTL includes optional Codex automation and GitHub Actions review templates in
 not active by default; copy them into a target project only after testing the
 prompt manually.
 
+Continuous-evaluation templates for Codex project automations and Claude
+Desktop local scheduled tasks live under
+[`automations/continuous-evaluation/`](automations/continuous-evaluation/).
+They are prompt templates only: installation never registers or enables a
+schedule. Use `scripts/hotl-evaluation-schedule.sh preflight` and approve the
+campaign, cadence, credentials, capture/retention policy, and budgets before
+native host enablement.
+
 ## Repository Structure
 
 ```text
@@ -282,6 +318,7 @@ skills/          HOTL skills (loaded by Skill tool or native discovery)
 commands/        Claude Code slash command definitions
 hooks/           SessionStart hook for Claude Code
 workflows/       Workflow templates (feature, bugfix, refactor)
+automations/      Inert native-host prompt templates; never auto-enabled
 cline/rules/     Global rules for Cline
 adapters/        Templates for AGENTS.md, Cursor, Copilot, and other tools
 scripts/         Utility scripts including document-lint.sh

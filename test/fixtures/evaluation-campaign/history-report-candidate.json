@@ -1,0 +1,104 @@
+{
+  "schema": "hotl.evaluation-history-report/v1",
+  "source": "append-only-local-history",
+  "source_recorded_through": "2026-06-30T22:00:00Z",
+  "entry_count": 6,
+  "campaigns": [
+    {
+      "campaign_run_id": "candidate-campaign-run",
+      "campaign_id": "candidate-campaign",
+      "status": "completed",
+      "entry_count": 6,
+      "result_paths": [
+        ".hotl/evaluations/candidate/results/codex-high-1.json",
+        ".hotl/evaluations/candidate/results/codex-low-1.json"
+      ]
+    }
+  ],
+  "cohorts": [
+    {
+      "workload_identity": {
+        "repo_revision": "fixture-revision",
+        "protocol_revision": "2026-06-30",
+        "scenario_id": "successful-completion",
+        "scenario_revision": "2026-06-29",
+        "prompt_sha256": "9b521e5f1eed77dc4c764f5784bcb4c9d5b4401e1a217bd6bd20ec37094a5c94",
+        "response_schema_sha256": "0cf7ca75f34d2baea4fd4095e57567a4f23e13697307d64cc0b36665a630b805",
+        "assertion_sha256": "c7cabcf673fe6365d22b44441461b4fb80adaf7346b5daad09f884b9d18b84c1",
+        "os": "fixture-os",
+        "arch": "fixture-arch",
+        "toolchain_fingerprint": "fixture-toolchain"
+      },
+      "entry_count": 6,
+      "profile_ids": ["codex-high", "codex-low"],
+      "campaign_ids": ["candidate-campaign"],
+      "run_ids": ["candidate-1", "candidate-2"]
+    }
+  ],
+  "profile_comparisons": [
+    {
+      "campaign_run_id": "candidate-campaign-run",
+      "summary": {
+        "schema": "hotl.evaluation-summary/v1",
+        "source": "local-evaluation-results",
+        "source_recorded_through": "2026-06-30T22:00:00Z",
+        "requirements": {
+          "minimum_profiles": 2,
+          "minimum_shared_scenarios": 3,
+          "known_environment_required": true
+        },
+        "inputs": {"count": 6, "records": []},
+        "cohorts": [
+          {
+            "id": "known/fixture",
+            "environment_status": "known",
+            "profile_count": 2,
+            "profile_ids": ["codex-high", "codex-low"],
+            "shared_scenarios": ["one", "two", "three"],
+            "shared_scenario_count": 3,
+            "eligibility": {"eligible": true, "reasons": []},
+            "pareto_frontier": ["codex-low"],
+            "profiles": [
+              {
+                "profile_id": "codex-high",
+                "safety": {"eligible": false, "disqualifiers": ["post_completion_defect"], "terminal_outcomes": ["completed"], "contract_failures": []},
+                "metrics": {"post_completion_defects": 1, "duration_ms": {"mean": 3200}, "tokens": {"mean": 22000}, "cost_usd": {"mean": null}},
+                "observed_dimensions": ["duration_ms", "tokens"],
+                "dominated_by": []
+              },
+              {
+                "profile_id": "codex-low",
+                "safety": {"eligible": true, "disqualifiers": [], "terminal_outcomes": ["completed"], "contract_failures": []},
+                "metrics": {"post_completion_defects": 0, "duration_ms": {"mean": 2300}, "tokens": {"mean": 21800}, "cost_usd": {"mean": null}},
+                "observed_dimensions": ["duration_ms", "tokens"],
+                "dominated_by": []
+              }
+            ]
+          }
+        ],
+        "recommendation": {
+          "state": "review_profile_candidate",
+          "candidate_profile_id": "codex-low",
+          "reason_codes": ["single_pareto_candidate"],
+          "human_review_required": true,
+          "configuration_changes_performed": false
+        }
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "profile_id": "codex-low",
+      "scenario_id": "successful-completion",
+      "previous_run_id": "candidate-1",
+      "current_run_id": "candidate-2",
+      "classification": "compatible"
+    }
+  ],
+  "regression_count": 0,
+  "drift_count": 0,
+  "evidence_state": "history_available",
+  "supported_classifications": ["compatible", "quality_regression", "insufficient_evidence"],
+  "human_review_required": true,
+  "configuration_changes_performed": false
+}

@@ -136,6 +136,23 @@ human decision and the helper never changes Cline's model, provider, permission,
 policy, driver, effort, or routing configuration. See the
 [`evaluation summary contract`](contracts/evaluation-summary-output.md).
 
+### Continuous Evaluation and Drift Detection
+
+Cline can inspect, validate, and report the same model-neutral campaign and
+history artifacts with `scripts/hotl-evaluation-campaign.sh`,
+`scripts/hotl-evaluation-history.sh`, and
+`scripts/hotl-evaluation-proposal.sh`. Live Codex or Claude Code profiles still
+require their host binaries and an explicit `--approve-live` collection outside
+Cline's model/provider selection.
+
+Append-only reports separate workload, prompt/schema, host, model/adapter,
+toolchain, telemetry, incomplete-campaign, and quality-regression evidence.
+Profile proposals are advisory only: `human_review_required: true`,
+`automatic_selection_performed: false`, and
+`configuration_changes_performed: false`. HOTL does not change Cline's model,
+provider, permissions, rules, or routing. See
+[`Continuous Evaluation and Drift Detection`](continuous-evaluation.md).
+
 ## Workflow Files
 
 Canonical workflows are saved as `docs/plans/YYYY-MM-DD-<slug>-workflow.md` (for example, `docs/plans/2026-04-22-add-auth-workflow.md`). Legacy root files such as `hotl-workflow-add-auth.md` remain readable during migration, but new writes should use the canonical `docs/plans/` location:
