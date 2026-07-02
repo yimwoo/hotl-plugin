@@ -142,6 +142,7 @@ cmd_check() {
 cmd_audit() {
     local current_version
     local exclude_args=()
+    local exclude_patterns=()
     local pattern
     local declared_paths=()
     local path type field
@@ -159,6 +160,7 @@ cmd_audit() {
 
     while IFS= read -r pattern; do
         [ -n "$pattern" ] || continue
+        exclude_patterns+=("$pattern")
         exclude_args+=("--exclude=$pattern" "--exclude-dir=$pattern")
     done < <(audit_excludes)
     exclude_args+=("--exclude-dir=.git" "--exclude-dir=node_modules" "--binary-files=without-match")
@@ -173,9 +175,19 @@ cmd_audit() {
     while IFS= read -r match; do
         local rel_path
         local is_declared=0
+        local is_excluded=0
 
         rel_path="${match%%:*}"
         rel_path="${rel_path#"$REPO_ROOT"/}"
+        for pattern in "${exclude_patterns[@]}"; do
+            case "$rel_path" in
+                "$pattern"|"$pattern"/*)
+                    is_excluded=1
+                    break
+                    ;;
+            esac
+        done
+        [ "$is_excluded" -eq 0 ] || continue
         for path in "${declared_paths[@]}"; do
             if [ "$rel_path" = "$path" ]; then
                 is_declared=1

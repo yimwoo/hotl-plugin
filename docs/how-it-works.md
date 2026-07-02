@@ -48,6 +48,33 @@ Missing telemetry stays unknown; it is never treated as zero. Output states are
 perform no model, driver, policy, permission, effort, or routing change. See the
 [evaluation summary contract](contracts/evaluation-summary-output.md).
 
+### Continuous Evaluation, History, and Drift
+
+An evaluation campaign pins logical profiles and scenario revisions to hashed
+prompts, response schemas, assertions, budgets, and capture policy. Campaign
+validation and planning are read-only. Live collection is a separate
+`--approve-live` boundary and writes validated results plus redacted evidence
+only beneath the declared output root.
+
+Codex total input is normalized by separating its cached-input subset; Claude
+cache reads remain a disjoint counter. Provider-specific semantics and
+`hotl.tokens/v1` provenance are stored with every history entry. Missing or
+ambiguous telemetry remains unavailable.
+
+History storage is append-only and hash-verified under run-ID-derived keys. Trend
+reporting validates every result again, forms workload-compatible cohorts, uses a
+Phase 8 projection to compare host profiles without hiding their observed
+versions, reuses the measured-adaptive report for single-campaign relationships,
+and exposes every simultaneous workload, prompt/schema, host, adapter/model,
+toolchain, telemetry, and quality-regression class.
+
+The final profile-proposal renderer cites evidence, trade-offs, confidence
+limits, and rollback guidance. It always requires human review and states
+`automatic_selection_performed: false` and
+`configuration_changes_performed: false`. Optional Codex and Claude native
+schedule templates are inert until a human installs and enables them. See
+[Continuous Evaluation and Drift Detection](continuous-evaluation.md).
+
 ## 1. Brainstorm
 
 HOTL asks clarifying questions, proposes options, and writes a design around three contracts:

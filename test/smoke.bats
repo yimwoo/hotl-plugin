@@ -727,6 +727,18 @@ print(match.group(1) if match else '')
     [ -d "$tmp_home/.claude/plugins/hotl/skills" ]
 }
 
+@test "install.sh ships inert evaluation templates without enabling a schedule" {
+    tmp_home="$(mktemp -d)"
+
+    run env HOME="$tmp_home" bash "$REPO_ROOT/install.sh"
+
+    [ "$status" -eq 0 ]
+    [ -d "$tmp_home/.claude/plugins/hotl/automations/continuous-evaluation" ]
+    [ ! -e "$tmp_home/.codex/automations" ]
+    ! find "$tmp_home/.claude/plugins/hotl/automations/continuous-evaluation" \
+        -type f -name 'automation.toml' | grep -q .
+}
+
 @test "docs/README.codex.md prompt examples resolve to installed HOTL skills locally" {
     assert_codex_prompt_resolves 'Use @hotl to compare OAuth and API-key auth before writing code.'
     assert_codex_prompt_resolves 'Use $hotl:writing-plans to create docs/plans/2026-04-22-add-rate-limiting-workflow.md.'
@@ -861,7 +873,8 @@ print(match.group(1) if match else '')
     tmp_home="$(mktemp -d)"
     cache_dir="$tmp_home/.codex/plugins/cache/codex-plugins/hotl/local"
 
-    run env HOME="$tmp_home" bash "$REPO_ROOT/install.sh" --codex-plugin --local
+    run env HOME="$tmp_home" HOTL_LOCAL_MARKETPLACE_DIR="$tmp_home/.agents/plugins" \
+        bash "$REPO_ROOT/install.sh" --codex-plugin --local
 
     [ "$status" -eq 0 ]
     [[ "$output" == *"Seeding Codex plugin cache at ${cache_dir}..."* ]]
@@ -874,6 +887,10 @@ print(match.group(1) if match else '')
     [ -f "$cache_dir/scripts/show-codex-current-step.sh" ]
     [ -f "$cache_dir/scripts/hotl-locate-run.sh" ]
     [ -f "$cache_dir/scripts/hotl-evaluation-report.sh" ]
+    for helper in campaign collect history proposal schedule; do
+        [ -f "$cache_dir/scripts/hotl-evaluation-${helper}.sh" ]
+    done
+    [ -f "$cache_dir/automations/continuous-evaluation/prompt.md" ]
     [ -f "$cache_dir/scripts/check-update.sh" ]
 }
 

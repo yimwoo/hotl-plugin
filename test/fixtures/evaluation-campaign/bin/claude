@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "${1:-}" = "--version" ] || [ "${1:-}" = "-v" ]; then
+    echo "9.9.9 (Claude Code)"
+    exit 0
+fi
+
+echo "claude-code" >> "${HOTL_EVAL_CALL_LOG:?}"
+call_number="$(wc -l < "$HOTL_EVAL_CALL_LOG" | tr -d ' ')"
+if [ "${FAKE_EVAL_INTERRUPT_ON_CALL:-0}" = "$call_number" ]; then
+    exit 130
+fi
+
+case "${FAKE_EVAL_MODE:-valid}" in
+    sleep)
+        sleep 3
+        ;;
+    malformed)
+        echo 'not-json'
+        exit 0
+        ;;
+    secret)
+        echo 'api_key=FAKE_SECRET_VALUE' >&2
+        ;;
+esac
+
+printf '%s\n' '{"type":"result","subtype":"success","is_error":false,"duration_ms":42,"total_cost_usd":0.02,"usage":{"input_tokens":80,"output_tokens":15,"cache_read_input_tokens":30},"modelUsage":{"claude-test-model":{"inputTokens":80,"outputTokens":15,"cacheReadInputTokens":30}},"structured_output":{"governed_completion_allowed":true}}'

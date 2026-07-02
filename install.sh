@@ -77,7 +77,7 @@ if [ "$CODEX_PLUGIN" = true ]; then
 
     if [ "$LOCAL" = true ]; then
         # Local/contributor mode: point marketplace at the current checkout
-        MARKETPLACE_DIR="${SCRIPT_DIR}/.agents/plugins"
+        MARKETPLACE_DIR="${HOTL_LOCAL_MARKETPLACE_DIR:-${SCRIPT_DIR}/.agents/plugins}"
         MARKETPLACE_FILE="${MARKETPLACE_DIR}/marketplace.json"
         PLUGIN_SOURCE_PATH="${SCRIPT_DIR}"
         MARKETPLACE_PLUGIN_PATH="${SCRIPT_DIR}"

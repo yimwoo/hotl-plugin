@@ -4,6 +4,18 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Repeatable, budgeted evaluation campaigns with hashed prompts/schemas/assertions and explicit Codex, Claude Code, and generic fallback collectors.
+- Append-only local evaluation history, interrupted-run recovery, telemetry provenance, deterministic drift/regression reports, and Phase 7-compatible profile relationships.
+- Inert Codex and Claude native scheduling templates with read-only preflight, isolated recurring-run labels, and explicit installation, credential, budget, capture, and enablement gates.
+- Evidence-linked profile proposals with safety eligibility, incompatible-evidence warnings, confidence limits, rollback guidance, mandatory human review, and no automatic selection or configuration writes.
+
+### Changed
+- Version audits now ignore repository-local work-product directories consistently, and local Codex marketplace tests can use an explicit temporary registry path without changing normal installer behavior.
+
+### Security
+- Live evaluation requires `--approve-live`; hard provider cost limits are rejected when the adapter cannot enforce them before a call; effort values are host-allowlisted; artifact, output, and history paths reject symlink escapes; local evidence defaults to owner-only permissions and explicit prompt/raw capture policy; and schedules remain disabled during installation.
+
 ## [2.20.0] - 2026-06-29
 
 ### Added

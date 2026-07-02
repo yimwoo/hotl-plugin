@@ -38,6 +38,21 @@ docs/README.cline.md, and skills/using-hotl/SKILL.md. Report drift only; do not
 edit files unless I explicitly ask you to update them.
 ```
 
+### Continuous Evaluation
+
+The fuller continuous-evaluation prompt and setup guide live under
+[`automations/continuous-evaluation/`](../automations/continuous-evaluation/).
+Unlike the read-only examples above, an approved campaign makes provider calls
+and writes local evidence. Run `scripts/hotl-evaluation-schedule.sh preflight`
+first, then review the exact campaign, cadence, credentials, call/time/cost
+budgets, and capture/retention policy before creating a standalone Codex
+project automation.
+
+HOTL ships no `automation.toml` and installation never registers this task.
+Every resulting profile proposal remains human-reviewed and declares
+`automatic_selection_performed: false` and
+`configuration_changes_performed: false`.
+
 ## GitHub Actions PR Review
 
 Use the templates in `adapters/` when a team wants Codex to leave a read-only

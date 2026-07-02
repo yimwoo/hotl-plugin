@@ -1,0 +1,46 @@
+{
+  "schema": "hotl.evaluation-campaign/v1",
+  "campaign_id": "phase8-contract-fixture",
+  "protocol_revision": "2026-06-30",
+  "created_at": "2026-06-30T19:00:00Z",
+  "output_root": ".hotl/test-campaign-contract-output",
+  "repetitions": 2,
+  "profiles": [
+    {
+      "profile_id": "claude-balanced",
+      "host": "claude-code",
+      "requested_model": "fixture-model",
+      "requested_effort": "medium",
+      "adapter_version": "fixture-adapter-version"
+    },
+    {
+      "profile_id": "codex-low",
+      "host": "codex",
+      "requested_model": "fixture-model",
+      "requested_effort": "low",
+      "adapter_version": "fixture-adapter-version"
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "successful-completion",
+      "scenario_revision": "2026-06-29",
+      "prompt_path": "prompt.txt",
+      "prompt_sha256": "9b521e5f1eed77dc4c764f5784bcb4c9d5b4401e1a217bd6bd20ec37094a5c94",
+      "response_schema_path": "response-schema.json",
+      "response_schema_sha256": "0cf7ca75f34d2baea4fd4095e57567a4f23e13697307d64cc0b36665a630b805",
+      "assertion_path": "assertion.json",
+      "assertion_sha256": "c7cabcf673fe6365d22b44441461b4fb80adaf7346b5daad09f884b9d18b84c1"
+    }
+  ],
+  "budgets": {
+    "max_calls": 4,
+    "max_elapsed_minutes": 10,
+    "max_cost_usd": null
+  },
+  "capture": {
+    "raw_output": "local",
+    "prompts": "hash_only",
+    "redact": true
+  }
+}

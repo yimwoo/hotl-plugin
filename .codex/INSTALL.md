@@ -50,6 +50,13 @@ is already installed but disabled, press `Space` to enable it.
 Codex app users can use the same installer, then open **Plugins**, switch to
 **Local Plugins**, and install HOTL there.
 
+The plugin also ships continuous-evaluation campaign, history, drift, and
+proposal helpers plus an inert Codex automation prompt template. Installation
+does not create anything under `~/.codex/automations`, enable a schedule, call a
+provider, or change a model/profile. See
+[`docs/continuous-evaluation.md`](../docs/continuous-evaluation.md) before using
+`--approve-live` or creating a native project automation.
+
 ## Native Skills Fallback
 
 Use this path for older Codex versions or HOTL development.

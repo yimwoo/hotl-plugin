@@ -64,5 +64,8 @@ Apply each convention only to the contract family named below.
 | [driver-conformance.md](driver-conformance.md) | Execution behavior | Portable workflow invariants and deterministic evidence required from execution drivers |
 | [evaluation-result-output.md](evaluation-result-output.md) | Output schema | Optional model-neutral evaluation identity, quality measurements, telemetry, and evidence |
 | [evaluation-summary-output.md](evaluation-summary-output.md) | Output schema | Deterministic offline profile comparison, safety eligibility, Pareto relationships, and advisory recommendation state |
+| [evaluation-campaign.md](evaluation-campaign.md) | Campaign contract | Repeatable profiles, scenarios, artifact hashes, call matrix, budgets, capture policy, and read-only planning |
+| [evaluation-history-and-drift.md](evaluation-history-and-drift.md) | History contract | Append-only result identity, workload/profile separation, telemetry provenance, and drift vocabulary |
+| [evaluation-profile-proposal.md](evaluation-profile-proposal.md) | Advisory proposal contract | Evidence-linked candidate states, confidence limits, rollback guidance, and mandatory human review without configuration changes |
 | [portable-workflow-and-receipt.md](portable-workflow-and-receipt.md) | JSON and protocol contracts | Normalized workflow, driver protocol, and state-derived completion receipt |
 | [policy-budget-recovery.md](policy-budget-recovery.md) | Governance behavior | Sensitive-action decisions, observed budgets, and verify-first reconciliation |

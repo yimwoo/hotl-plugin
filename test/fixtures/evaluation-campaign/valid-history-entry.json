@@ -1,0 +1,41 @@
+{
+  "schema": "hotl.evaluation-history-entry/v1",
+  "campaign_id": "phase8-contract-fixture",
+  "run_id": "phase8-contract-fixture-20260630T190000Z-codex-low-successful-completion-1",
+  "recorded_at": "2026-06-30T19:00:00Z",
+  "status": "valid",
+  "result_path": "test/fixtures/evaluations/comparison/identity-valid.json",
+  "result_sha256": "313366315b6d29ad5b6c1dd23c27c38c477afd5921bf1d1e78a455001b1d51cc",
+  "workload_identity": {
+    "repo_revision": "fixture-revision",
+    "protocol_revision": "2026-06-30",
+    "scenario_id": "successful-completion",
+    "scenario_revision": "2026-06-29",
+    "prompt_sha256": "9b521e5f1eed77dc4c764f5784bcb4c9d5b4401e1a217bd6bd20ec37094a5c94",
+    "response_schema_sha256": "0cf7ca75f34d2baea4fd4095e57567a4f23e13697307d64cc0b36665a630b805",
+    "assertion_sha256": "c7cabcf673fe6365d22b44441461b4fb80adaf7346b5daad09f884b9d18b84c1",
+    "os": "fixture-os",
+    "arch": "fixture-arch",
+    "toolchain_fingerprint": "fixture-toolchain"
+  },
+  "profile_observation": {
+    "profile_id": "codex-balanced",
+    "host": "codex",
+    "host_version": "fixture-host-version",
+    "resolved_model": "observed-model-id",
+    "effort_profile": "balanced",
+    "adapter_version": "fixture-adapter-version"
+  },
+  "telemetry_provenance": {
+    "normalization_version": "hotl.tokens/v1",
+    "tokens": {
+      "source": "codex-json",
+      "input_semantics": "uncached_input",
+      "cached_semantics": "separate_subset",
+      "normalized": true
+    },
+    "cost": {
+      "source": "observed"
+    }
+  }
+}
