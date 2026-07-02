@@ -4,6 +4,8 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.21.0] - 2026-07-01
+
 ### Added
 - Repeatable, budgeted evaluation campaigns with hashed prompts/schemas/assertions and explicit Codex, Claude Code, and generic fallback collectors.
 - Append-only local evaluation history, interrupted-run recovery, telemetry provenance, deterministic drift/regression reports, and Phase 7-compatible profile relationships.
