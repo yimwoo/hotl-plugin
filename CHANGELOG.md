@@ -4,6 +4,8 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+## [2.22.0] - 2026-07-06
+
 ### Added
 - Renewable run-controller ownership with claim, heartbeat, handoff, release, and auditable takeover transitions; raw controller tokens are returned once and stored only as hashes.
 - Durable sensitive-effect intent/outcome tracking with idempotency keys, explicit begin/complete/reconcile transitions, and receipt-level effect evidence.
