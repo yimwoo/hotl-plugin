@@ -57,11 +57,28 @@ now_time() {
     date -u +"%H:%M:%S"
 }
 
+random_hex() {
+    local bytes="$1"
+    if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex "$bytes"
+        return
+    fi
+    if [ -r /dev/urandom ]; then
+        od -An -N"$bytes" -tx1 /dev/urandom | tr -d ' \n'
+        return
+    fi
+    return 1
+}
+
 generate_run_id() {
     local slug="$1"
-    local ts
+    local ts nonce
     ts=$(date -u +"%Y%m%dT%H%M%SZ")
-    echo "${slug}-${ts}"
+    nonce=$(random_hex 6) || {
+        echo "ERROR: operating-system entropy is required for collision-resistant run ids" >&2
+        return 1
+    }
+    echo "${slug}-${ts}-${nonce}"
 }
 
 slug_from_workflow() {
@@ -327,10 +344,61 @@ report_write_finish_section() {
     mv "$tmp" "$report"
 }
 
+render_report_step_rows() {
+    local state_file="$1"
+    while IFS=$'\t' read -r number name status attempts gate_result gate_mode; do
+        local rendered iterations
+        if [ "$gate_result" = approved ]; then
+            if [ "$gate_mode" = auto ]; then rendered='⚡ Auto-approved'; else rendered='✓ Approved'; fi
+            iterations='-'
+        elif [ "$gate_result" = rejected ]; then
+            rendered='✗ Rejected'
+            iterations='-'
+        else
+            case "$status" in
+                pending) rendered='· Pending'; iterations='-' ;;
+                in_progress) rendered='→ Running'; iterations="$attempts" ;;
+                done) rendered='✓ Done'; iterations="$attempts" ;;
+                failed) rendered='✗ Failed'; iterations="$attempts" ;;
+                blocked) rendered='✗ Blocked'; iterations='-' ;;
+                *) rendered="$status"; iterations="$attempts" ;;
+            esac
+        fi
+        printf '| %2s   | %s | %s | %s |\n' "$number" "$name" "$rendered" "$iterations"
+    done < <(jq -r '.steps[] | [.number,.name,.status,.attempts,(.gate_result // ""),(.gate_mode // "")] | @tsv' "$state_file")
+}
+
+report_matches_state() {
+    local state_file="$1"
+    local report="$2"
+    local expected_row disposition
+
+    [ -s "$report" ] || return 1
+    grep -Fqx "# Execution Report: $(jq -r '.run_id' "$state_file")" "$report" || return 1
+    grep -Fqx "**Updated:** $(jq -r '.last_update' "$state_file")" "$report" || return 1
+    grep -Fqx "**Status:** $(jq -r '.status' "$state_file")" "$report" || return 1
+    while IFS= read -r expected_row; do
+        grep -Fqx -- "$expected_row" "$report" || return 1
+    done < <(render_report_step_rows "$state_file")
+
+    disposition=$(jq -r '.finish.disposition // empty' "$state_file")
+    if [ -n "$disposition" ]; then
+        grep -Fqx "**Disposition:** $disposition" "$report" || return 1
+    fi
+}
+
 repair_report_from_state() {
     local state_file="$1"
     local report="$2"
-    local tmp
+    local tmp prior_events
+    prior_events=""
+    if [ -s "$report" ]; then
+        prior_events=$(awk '
+            $0 == "## Finish Outcome" { exit }
+            capture { print }
+            $0 == "## Event Log" { capture=1 }
+        ' "$report")
+    fi
     mkdir -p "$(dirname "$report")"
     tmp=$(mktemp "${report}.repair.XXXXXX")
 
@@ -353,27 +421,11 @@ repair_report_from_state() {
         printf '**Status:** %s\n\n' "$(jq -r '.status' "$state_file")"
         printf '| Step | Name | Status | Iterations |\n'
         printf '|------|------|--------|------------|\n'
-        while IFS=$'\t' read -r number name status attempts gate_result gate_mode; do
-            local rendered iterations
-            if [ "$gate_result" = approved ]; then
-                if [ "$gate_mode" = auto ]; then rendered='⚡ Auto-approved'; else rendered='✓ Approved'; fi
-                iterations='-'
-            elif [ "$gate_result" = rejected ]; then
-                rendered='✗ Rejected'
-                iterations='-'
-            else
-                case "$status" in
-                    pending) rendered='· Pending'; iterations='-' ;;
-                    in_progress) rendered='→ Running'; iterations="$attempts" ;;
-                    done) rendered='✓ Done'; iterations="$attempts" ;;
-                    failed) rendered='✗ Failed'; iterations="$attempts" ;;
-                    blocked) rendered='✗ Blocked'; iterations='-' ;;
-                    *) rendered="$status"; iterations="$attempts" ;;
-                esac
-            fi
-            printf '| %2s   | %s | %s | %s |\n' "$number" "$name" "$rendered" "$iterations"
-        done < <(jq -r '.steps[] | [.number,.name,.status,.attempts,(.gate_result // ""),(.gate_mode // "")] | @tsv' "$state_file")
+        render_report_step_rows "$state_file"
         printf '\n## Event Log\n\n'
+        if [ -n "$prior_events" ]; then
+            printf '%s\n' "$prior_events"
+        fi
         printf '**[%s]** Report repaired from authoritative state revision %s\n' "$(now_time)" "$(jq -r '.revision // 0' "$state_file")"
     } > "$tmp"
     mv "$tmp" "$report"
@@ -400,7 +452,7 @@ repair_report_from_state() {
 ensure_report_from_state() {
     local state_file="$1"
     local report="$2"
-    if [ ! -s "$report" ] || ! grep -Fq "# Execution Report: $(jq -r '.run_id' "$state_file")" "$report"; then
+    if ! report_matches_state "$state_file" "$report"; then
         repair_report_from_state "$state_file" "$report"
     fi
 }
@@ -414,16 +466,10 @@ sha256_text() {
 }
 
 new_owner_token() {
-    if command -v openssl >/dev/null 2>&1; then
-        openssl rand -hex 32
-        return
-    fi
-    if [ -r /dev/urandom ]; then
-        od -An -N32 -tx1 /dev/urandom | tr -d ' \n'
-        return
-    fi
-    echo "ERROR: secure operating-system entropy is required for controller ownership tokens" >&2
-    return 1
+    random_hex 32 || {
+        echo "ERROR: secure operating-system entropy is required for controller ownership tokens" >&2
+        return 1
+    }
 }
 
 enforce_controller_ownership() {
@@ -458,6 +504,19 @@ enforce_controller_ownership() {
         echo "ERROR: Invalid controller ownership token" >&2
         return 1
     }
+}
+
+enforce_execution_evidence_mutable() {
+    local state_file="$1"
+    local operation="$2"
+    local status
+    status=$(jq -r '.status' "$state_file")
+    case "$status" in
+        ready_to_finish|completed|abandoned)
+            echo "ERROR: Run is '$status'; cannot mutate execution evidence with $operation" >&2
+            return 1
+            ;;
+    esac
 }
 
 iso_to_epoch() {
@@ -1493,6 +1552,7 @@ cmd_step() {
     resolved_run_id=$(jq -r '.run_id' "$state_file")
     acquire_run_lock "$resolved_run_id"
     enforce_controller_ownership "$state_file"
+    enforce_execution_evidence_mutable "$state_file" "step $action"
     if [[ ! "$step_num" =~ ^[1-9][0-9]*$ ]] || [ "$step_num" -gt "$(jq '.steps | length' "$state_file")" ]; then
         echo "ERROR: Invalid step number: $step_num" >&2
         exit 1
@@ -1836,6 +1896,7 @@ cmd_gate() {
     state_file=$(find_active_state "$run_id")
     acquire_run_lock "$(jq -r '.run_id' "$state_file")"
     enforce_controller_ownership "$state_file"
+    enforce_execution_evidence_mutable "$state_file" gate
     if [[ ! "$step_num" =~ ^[1-9][0-9]*$ ]] || [ "$step_num" -gt "$(jq '.steps | length' "$state_file")" ]; then
         echo "ERROR: Invalid step number: $step_num" >&2
         exit 1
@@ -2653,6 +2714,7 @@ cmd_budget() {
             state_file=$(find_active_state "$run_id"); ts=$(now_iso)
             acquire_run_lock "$(jq -r '.run_id' "$state_file")"
             enforce_controller_ownership "$state_file"
+            enforce_execution_evidence_mutable "$state_file" "budget record"
             local previous
             previous=$(jq -r --arg metric "$metric" '.budgets.observed[$metric] // empty' "$state_file")
             if [ -n "$previous" ] && ! jq -en --arg old "$previous" --arg new "$value" '($new|tonumber) >= ($old|tonumber)' >/dev/null; then
@@ -2668,6 +2730,7 @@ cmd_budget() {
             state_file=$(find_active_state "$run_id"); ts=$(now_iso)
             acquire_run_lock "$(jq -r '.run_id' "$state_file")"
             enforce_controller_ownership "$state_file"
+            enforce_execution_evidence_mutable "$state_file" "budget check"
             local evaluation
             evaluation=$(jq '
                 (.budgets.limits // {}) as $limits |

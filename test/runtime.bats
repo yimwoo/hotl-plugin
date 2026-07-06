@@ -148,8 +148,8 @@ complete_steps_through() {
 
 @test "init prints run_id to stdout" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
-    # Run ID format: <slug>-<YYYYMMDDTHHMMSSZ>
-    echo "$RUN_ID" | grep -qE '^runtime-sample-[0-9]{8}T[0-9]{6}Z$'
+    # Run ID format: <slug>-<YYYYMMDDTHHMMSSZ>-<12-hex-nonce>
+    echo "$RUN_ID" | grep -qE '^runtime-sample-[0-9]{8}T[0-9]{6}Z-[0-9a-f]{12}$'
 }
 
 # ── step start ──────────────────────────────────────────────────────────────
@@ -698,6 +698,35 @@ EOF
     [ "$(jq -r '.finish.disposition' "$STATE")" = "kept" ]
 }
 
+@test "ready and completed runs reject execution evidence mutations" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    complete_steps_through "$RUN_ID" 3
+    "$HOTL_RT" gate 3 approved --mode human --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" finalize --run-id "$RUN_ID" >/dev/null
+
+    run "$HOTL_RT" step 1 block --reason 'late block' --run-id "$RUN_ID"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"ready_to_finish"*"cannot mutate execution evidence"* ]]
+    run "$HOTL_RT" gate 3 rejected --mode human --run-id "$RUN_ID"
+    [ "$status" -ne 0 ]
+    run "$HOTL_RT" budget record agents 1 --run-id "$RUN_ID"
+    [ "$status" -ne 0 ]
+    [ "$(jq -r '.status' "$STATE")" = "ready_to_finish" ]
+
+    "$HOTL_RT" finish kept --run-id "$RUN_ID" >/dev/null
+
+    run "$HOTL_RT" step 1 block --reason 'late block' --run-id "$RUN_ID"
+    [ "$status" -ne 0 ]
+    run "$HOTL_RT" gate 3 rejected --mode human --run-id "$RUN_ID"
+    [ "$status" -ne 0 ]
+    run "$HOTL_RT" budget record agents 1 --run-id "$RUN_ID"
+    [ "$status" -ne 0 ]
+    [ "$(jq -r '.status' "$STATE")" = "completed" ]
+    [ "$(jq -r '.finish.disposition' "$STATE")" = "kept" ]
+    [ "$("$HOTL_RT" receipt "$RUN_ID" | jq -r '.sufficiency.sufficient')" = "true" ]
+}
+
 @test "finish rejects published disposition for blocked runs" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
     "$HOTL_RT" step 1 start
@@ -755,6 +784,39 @@ EOF
     [ "$failures" -eq 0 ]
     [ "$(sort -u run-*.out | wc -l | tr -d ' ')" -eq 3 ]
     [ "$(find .hotl/state -maxdepth 1 -name '*.json' | wc -l | tr -d ' ')" -eq 3 ]
+}
+
+@test "run ids remain unique across independent execution roots" {
+    mkdir -p root-a root-b fake-bin
+    cat > fake-bin/date <<'EOF'
+#!/usr/bin/env bash
+case "$*" in
+    '-u +%Y%m%dT%H%M%SZ') printf '%s\n' '20260705T120000Z' ;;
+    '-u +%Y-%m-%dT%H:%M:%S+00:00') printf '%s\n' '2026-07-05T12:00:00+00:00' ;;
+    '-u +%H:%M:%S') printf '%s\n' '12:00:00' ;;
+    *) exec /bin/date "$@" ;;
+esac
+EOF
+    chmod +x fake-bin/date
+
+    PATH="$TEST_DIR/fake-bin:$PATH" "$HOTL_RT" init "$TEST_DIR/fixtures/hotl-workflow-runtime-sample.md" \
+        --repo-root "$TEST_ROOT" --execution-root "$TEST_ROOT/root-a" > root-a.id &
+    pid_a=$!
+    (
+        cd root-b
+        PATH="$TEST_DIR/fake-bin:$PATH" "$HOTL_RT" init "$TEST_DIR/fixtures/hotl-workflow-runtime-sample.md" \
+            --repo-root "$TEST_ROOT" --execution-root "$TEST_ROOT/root-b"
+    ) > root-b.id &
+    pid_b=$!
+
+    wait "$pid_a"
+    wait "$pid_b"
+    run_id_a=$(< root-a.id)
+    run_id_b=$(< root-b.id)
+
+    [ "$run_id_a" != "$run_id_b" ]
+    [[ "$run_id_a" =~ ^runtime-sample-20260705T120000Z-[0-9a-f]{12}$ ]]
+    [[ "$run_id_b" =~ ^runtime-sample-20260705T120000Z-[0-9a-f]{12}$ ]]
 }
 
 @test "explicit run ids reject path traversal" {
@@ -848,6 +910,22 @@ EOF
     grep -Fq '→ Running' "$REPORT"
 }
 
+@test "a mutation repairs a stale existing report from authoritative state" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    REPORT=".hotl/reports/${RUN_ID}.md"
+    "$HOTL_RT" action request local_write --target 'preexisting event' --run-id "$RUN_ID" >/dev/null
+    cp "$REPORT" "$REPORT.stale"
+    "$HOTL_RT" step 1 start --run-id "$RUN_ID" >/dev/null
+    cp "$REPORT.stale" "$REPORT"
+
+    "$HOTL_RT" action request local_write --target 'diagnostic write' --run-id "$RUN_ID" >/dev/null
+
+    grep -Fq '→ Running' "$REPORT"
+    ! grep -Fq '|  1   | Run a passing shell verify | · Pending | - |' "$REPORT"
+    grep -Fq 'Action action-1 requested: local_write (allowed)' "$REPORT"
+    grep -Fq 'Report repaired from authoritative state revision' "$REPORT"
+}
+
 @test "report repair reconstructs completed status and finish disposition" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
     complete_steps_through "$RUN_ID" 3
@@ -857,7 +935,7 @@ EOF
     REPORT=".hotl/reports/${RUN_ID}.md"
     rm "$REPORT"
 
-    "$HOTL_RT" budget check --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" finalize --run-id "$RUN_ID" >/dev/null
 
     grep -Fq '**Status:** completed' "$REPORT"
     grep -Fq '## Finish Outcome' "$REPORT"

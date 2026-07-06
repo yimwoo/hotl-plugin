@@ -101,6 +101,7 @@ These are step and run state indicators — status labels, not a severity system
 
 - `ready_to_finish` means steps, verification, gates, sensitive-effect evidence, and budgets are terminal, but no branch/worktree disposition has been recorded.
 - `completed` means a successful `ready_to_finish` run also recorded an explicit finish disposition. Host session completion or a rendered summary cannot create this status.
+- Step, gate, and budget mutations are rejected after `ready_to_finish` so completed execution evidence cannot regress. Missing or stale report summaries are reconstructed from authoritative state before a permitted mutation.
 
 ## Report Lifecycle
 
