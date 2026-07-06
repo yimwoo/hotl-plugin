@@ -224,7 +224,7 @@ The runtime owns:
 
 The sidecar also records the execution location for the run: `repo_root`, `execution_root`, `workflow_path`, `source_workflow_path`, `worktree_path`, and `executor_mode`.
 
-Run ID format: `<slug>-<YYYYMMDDTHHMMSSZ>` (e.g., `add-auth-20260320T212315Z`).
+Run ID format: `<slug>-<YYYYMMDDTHHMMSSZ>-<12-hex-nonce>` (e.g., `add-auth-20260320T212315Z-a1b2c3d4e5f6`). The entropy suffix prevents collisions across independent execution roots; legacy timestamp-only IDs remain readable.
 
 Workflow checkboxes (`- [x]`) are a human-visible mirror updated by the agent on step completion. The sidecar is the source of truth.
 

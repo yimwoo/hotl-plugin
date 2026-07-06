@@ -21,7 +21,7 @@ Execution state is persisted at `.hotl/state/<run-id>.json`. This is the **autho
 
 ```json
 {
-  "run_id": "<slug>-<YYYYMMDDTHHMMSSZ>",
+  "run_id": "<slug>-<YYYYMMDDTHHMMSSZ>-<12-hex-nonce>",
   "workflow_path": "/abs/path/to/execution-root/docs/plans/YYYY-MM-DD-<slug>-workflow.md",
   "source_workflow_path": "/abs/path/to/original/workflow.md",
   "workflow_slug": "<slug>",
@@ -48,7 +48,7 @@ Execution state is persisted at `.hotl/state/<run-id>.json`. This is the **autho
 
 ### Run ID Format
 
-`<slug>-<YYYYMMDDTHHMMSSZ>` (e.g., `add-auth-20260320T212315Z`). Derived from the semantic workflow slug and UTC execution start time, not from the date prefix in canonical workflow filenames.
+`<slug>-<YYYYMMDDTHHMMSSZ>-<12-hex-nonce>` (e.g., `add-auth-20260320T212315Z-a1b2c3d4e5f6`). The semantic workflow slug and UTC start time keep the identifier readable; operating-system entropy keeps simultaneous runs unique across independent execution roots. Legacy timestamp-only run IDs remain readable.
 
 ### Status Values
 
@@ -105,7 +105,7 @@ Never put `HOTL_OWNER_TOKEN` in chat, delegated prompts, reports, or committed f
 3. Resolve and claim/take over controller ownership using the rules above, then export `HOTL_OWNER_TOKEN`
 4. Check for existing report at report_path from the sidecar
    - If report exists: surface its path to the user and continue appending to it
-   - If report is missing: let the runtime deterministically reconstruct it from authoritative sidecar state
+   - If the report is missing or its summary has drifted from state: let the runtime deterministically reconstruct the summary from authoritative sidecar state
 5. Run `hotl-rt reconcile <run-id>` and inspect sensitive effects before step recovery:
    - If any effect is `in_progress` or `uncertain`, inspect the external target and use `action reconcile` with evidence. Never replay `action begin` merely because the host session disappeared.
    - If an approved effect is `not_started`, continue through the normal `action begin` → operation → `action complete` lifecycle with its existing idempotency key.

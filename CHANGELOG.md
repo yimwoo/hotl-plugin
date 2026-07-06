@@ -12,11 +12,12 @@ All notable changes to the HOTL plugin will be documented in this file.
 ### Changed
 - Existing execution skills now treat host goals, background sessions, automations, hooks, and handoffs as scheduling/liveness aids while HOTL state, runtime limits, verification, and receipts remain authoritative.
 - Successful finalization now produces `ready_to_finish`; only an explicit finish disposition produces `completed` and a sufficient receipt.
-- Runtime writes are serialized and revisioned, run identities are collision-safe and path-safe, step ordering/iteration/aggregate budgets are enforced at transitions, and missing reports are reconstructed from state.
+- Runtime writes are serialized and revisioned, run identities use path-safe entropy suffixes across independent execution roots, step ordering/iteration/aggregate budgets are enforced at transitions, and missing or stale report summaries are reconstructed from state.
 - Historical slice smoke suites no longer recursively invoke earlier Bats suites.
 
 ### Fixed
 - Finish publishing now propagates PR-creation failures without recording a successful disposition, and can persist begun external-effect evidence before recording publish or merge success.
+- `ready_to_finish` and `completed` runs now reject later step, gate, or budget mutations so terminal evidence and sufficient receipts cannot regress.
 
 ### Security
 - Driver-managed runs require explicit controller ownership backed by operating-system token entropy; age alone never authorizes takeover. Gates cannot be recorded before their step completes. Sensitive external effects cannot finalize successfully without terminal observed evidence, publish approvals are bound to the exact branch/remote/PR target, and interrupted or uncertain effects require reconciliation instead of blind replay.

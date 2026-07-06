@@ -221,7 +221,7 @@ Before creating or reusing an execution branch/worktree, resume-aware executors 
 
 The `hotl-rt` shared runtime (`runtime/hotl-rt`) manages all execution state. Agents call `hotl-rt` subcommands; they do not manage state files directly.
 
-State is persisted in `.hotl/state/<run-id>.json` — the authoritative, revisioned source of truth for execution progress. Serialized runtime writes prevent concurrent lost updates. The runtime also maintains `.hotl/reports/<run-id>.md` as a durable Markdown report, updated incrementally on each state transition and reconstructed from state if missing.
+State is persisted in `.hotl/state/<run-id>.json` — the authoritative, revisioned source of truth for execution progress. Serialized runtime writes prevent concurrent lost updates. The runtime also maintains `.hotl/reports/<run-id>.md` as a durable Markdown report, updated incrementally on each state transition and reconstructed from state when missing or when its summary drifts from authoritative state.
 
 Workflow checkboxes (`- [x]`) are a human-visible mirror updated by the agent on step completion. If a chat transcript or native progress card disagrees with the runtime artifacts, trust the artifacts.
 
@@ -239,11 +239,11 @@ hotl-rt summary <run-id> [--json]             → read-only query
 hotl-rt receipt <run-id> [--json]             → state-derived completion evidence
 ```
 
-**Run ID format:** `<slug>-<YYYYMMDDTHHMMSSZ>` with a collision suffix such as `-2` when needed — human-readable, lexicographically sortable, UTC, and path-safe.
+**Run ID format:** `<slug>-<YYYYMMDDTHHMMSSZ>-<12-hex-nonce>`, with a final numeric suffix such as `-2` only for a local entropy collision. The slug and UTC timestamp remain human-readable and sortable; the operating-system entropy suffix prevents simultaneous runs in independent worktrees from sharing an identity. Legacy timestamp-only IDs remain readable.
 
 **Execution-root and owner rule:** driver-managed runs initialize with `--require-owner`. After init returns a run id, the controller must `owner claim`, retain the one-time token only as `HOTL_OWNER_TOKEN`, renew with `owner heartbeat`, and use the same `execution_root` and `run_id` for every later mutation. Handoff, release, and takeover are explicit; state age alone is never ownership authority. Do not rely on "latest file in .hotl/state" when multiple runs exist.
 
-**Run status lifecycle:** `running` / `paused` / `blocked` describe execution. A successful `finalize` produces `ready_to_finish`; the run becomes `completed` only after `finish` records `kept`, `merged`, `published`, or `discarded`. A completion receipt is sufficient only after all verification, gate, effect, budget, and finish evidence is terminal.
+**Run status lifecycle:** `running` / `paused` / `blocked` describe execution. A successful `finalize` produces `ready_to_finish`; the run becomes `completed` only after `finish` records `kept`, `merged`, `published`, or `discarded`. Step, gate, and budget evidence cannot be mutated after `ready_to_finish`; only the governed finish/external-effect and controller lifecycle may continue. A completion receipt is sufficient only after all verification, gate, effect, budget, and finish evidence is terminal.
 
 **Gitignore:** Add `.hotl/` to your project's `.gitignore` — execution state should not be committed.
 
