@@ -4,6 +4,23 @@ All notable changes to the HOTL plugin will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Renewable run-controller ownership with claim, heartbeat, handoff, release, and auditable takeover transitions; raw controller tokens are returned once and stored only as hashes.
+- Durable sensitive-effect intent/outcome tracking with idempotency keys, explicit begin/complete/reconcile transitions, and receipt-level effect evidence.
+- Stable long-running continuation hints for current Codex Goal mode, automations, hooks, remote/thread handoff and Claude Code goal/loop plus background subagents, while keeping preview/experimental surfaces opt-in.
+
+### Changed
+- Existing execution skills now treat host goals, background sessions, automations, hooks, and handoffs as scheduling/liveness aids while HOTL state, runtime limits, verification, and receipts remain authoritative.
+- Successful finalization now produces `ready_to_finish`; only an explicit finish disposition produces `completed` and a sufficient receipt.
+- Runtime writes are serialized and revisioned, run identities are collision-safe and path-safe, step ordering/iteration/aggregate budgets are enforced at transitions, and missing reports are reconstructed from state.
+- Historical slice smoke suites no longer recursively invoke earlier Bats suites.
+
+### Fixed
+- Finish publishing now propagates PR-creation failures without recording a successful disposition, and can persist begun external-effect evidence before recording publish or merge success.
+
+### Security
+- Driver-managed runs require explicit controller ownership backed by operating-system token entropy; age alone never authorizes takeover. Gates cannot be recorded before their step completes. Sensitive external effects cannot finalize successfully without terminal observed evidence, publish approvals are bound to the exact branch/remote/PR target, and interrupted or uncertain effects require reconciliation instead of blind replay.
+
 ## [2.21.0] - 2026-07-01
 
 ### Added

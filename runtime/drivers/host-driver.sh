@@ -49,7 +49,7 @@ parse_mode() {
 
 case "$COMMAND_NAME" in
     describe)
-        jq -cn --arg id "$HOST_ID" '{protocol:"hotl.driver/v1",id:$id,host:$id,maturity:"experimental",opt_in_required:true,execution:"host-native-with-hotl-evidence",supports:["normalize","preflight","envelope","launch","step","gate","status","receipt","finalize","finish"]}'
+        jq -cn --arg id "$HOST_ID" '{protocol:"hotl.driver/v1",id:$id,host:$id,maturity:"experimental",opt_in_required:true,execution:"host-native-with-hotl-evidence",supports:["normalize","preflight","envelope","launch","owner","step","gate","action","budget","status","receipt","reconcile","finalize","finish"]}'
         ;;
     preflight)
         [ $# -ge 1 ] || { echo "usage: $HOST_ID.sh preflight <workflow> [--mode auto|native|fallback]" >&2; exit 1; }
@@ -72,8 +72,14 @@ case "$COMMAND_NAME" in
         [ "${#REMAINING[@]}" -eq 0 ] || { echo "ERROR: Unknown envelope option: ${REMAINING[0]}" >&2; exit 1; }
         resolved=$(resolve_mode "$REQUESTED_MODE")
         normalized=$("$HOTL_RT" normalize "$workflow" --json)
-        if [ "$HOST_ID" = codex ]; then features='["plan","subagents","worktrees","review"]'; else features='["dynamic-workflows","subagents","agent-teams","worktrees"]'; fi
-        jq -cn --arg driver "$HOST_ID" --arg mode "$resolved" --argjson workflow "$normalized" --argjson features "$features" '{protocol:"hotl.driver/v1",driver:$driver,resolved_mode:$mode,workflow:$workflow,native_feature_hints:$features,rules:["Host permissions remain authoritative","Record every step and gate through HOTL runtime","Do not claim completion until receipt sufficiency is true","External writes require explicit policy approval"]}'
+        if [ "$HOST_ID" = codex ]; then
+            features='["plan","goal-mode","automations","thread-handoff","hooks","subagents","worktrees","review"]'
+            continuation='[{"id":"goal-mode","maturity":"stable","opt_in":false,"completion_authority":false},{"id":"automations","maturity":"stable","opt_in":false,"completion_authority":false},{"id":"thread-handoff","maturity":"stable","opt_in":false,"completion_authority":false},{"id":"hooks","maturity":"stable","opt_in":false,"completion_authority":false}]'
+        else
+            features='["goal-loop","background-subagents","agent-view","dynamic-workflows","subagents","agent-teams","worktrees"]'
+            continuation='[{"id":"goal-loop","maturity":"stable","opt_in":false,"completion_authority":false},{"id":"background-subagents","maturity":"stable","opt_in":false,"completion_authority":false},{"id":"agent-view","maturity":"research_preview","opt_in":true,"completion_authority":false}]'
+        fi
+        jq -cn --arg driver "$HOST_ID" --arg mode "$resolved" --argjson workflow "$normalized" --argjson features "$features" --argjson continuation "$continuation" '{protocol:"hotl.driver/v1",driver:$driver,resolved_mode:$mode,workflow:$workflow,native_feature_hints:$features,continuation_hints:$continuation,rules:["Host permissions remain authoritative","Record every owner, step, gate, action, budget, and finish transition through HOTL runtime","Host continuation is scheduling and liveness only; HOTL state and receipts remain authoritative","Do not claim completion until receipt sufficiency is true","External writes require explicit policy approval and durable effect evidence"]}'
         ;;
     launch)
         [ $# -ge 1 ] || { echo "usage: $HOST_ID.sh launch <workflow> [--mode auto|native|fallback] [init options]" >&2; exit 1; }
@@ -83,13 +89,13 @@ case "$COMMAND_NAME" in
             if [ "${#REMAINING[@]}" -gt 0 ]; then "$GENERIC" launch "$workflow" "${REMAINING[@]}"; else "$GENERIC" launch "$workflow"; fi
         else
             if [ "${#REMAINING[@]}" -gt 0 ]; then
-                "$HOTL_RT" init "$workflow" --executor-mode "$HOST_ID-native" --driver "$HOST_ID" --host "$HOST_ID" "${REMAINING[@]}"
+                "$HOTL_RT" init "$workflow" --require-owner --executor-mode "$HOST_ID-native" --driver "$HOST_ID" --host "$HOST_ID" "${REMAINING[@]}"
             else
-                "$HOTL_RT" init "$workflow" --executor-mode "$HOST_ID-native" --driver "$HOST_ID" --host "$HOST_ID"
+                "$HOTL_RT" init "$workflow" --require-owner --executor-mode "$HOST_ID-native" --driver "$HOST_ID" --host "$HOST_ID"
             fi
         fi
         ;;
-    step|gate|finalize|finish)
+    owner|step|gate|action|budget|reconcile|finalize|finish)
         "$HOTL_RT" "$COMMAND_NAME" "$@"
         ;;
     status)

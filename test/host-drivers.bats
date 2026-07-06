@@ -14,6 +14,8 @@ setup() {
 teardown() { rm -rf "$TEST_DIR"; }
 
 @test "Codex auto mode falls back when native capability is unknown" {
+    description=$("$CODEX_DRIVER" describe)
+    jq -e '.supports | index("owner") and index("action") and index("budget") and index("reconcile")' <<< "$description" >/dev/null
     preflight=$(HOTL_CODEX_BIN="$TEST_DIR/fake-host" "$CODEX_DRIVER" preflight fixtures/hotl-workflow-runtime-sample.md)
     [ "$(jq -r '.resolved_mode' <<< "$preflight")" = "fallback" ]
     [ "$(jq -r '.fallback_reason' <<< "$preflight")" = "native_opt_in_missing_or_capability_unknown" ]
@@ -26,6 +28,7 @@ teardown() { rm -rf "$TEST_DIR"; }
     [ "$(jq -r '.driver' ".hotl/state/$run_id.json")" = "codex" ]
     [ "$(jq -r '.host' ".hotl/state/$run_id.json")" = "codex" ]
     [ "$(jq -r '.executor_mode' ".hotl/state/$run_id.json")" = "codex-native" ]
+    [ "$(jq -r '.ownership_required' ".hotl/state/$run_id.json")" = "true" ]
     receipt=$("$CODEX_DRIVER" receipt "$run_id")
     [ "$(jq -r '.implementation.driver' <<< "$receipt")" = "codex" ]
 }
@@ -41,7 +44,10 @@ teardown() { rm -rf "$TEST_DIR"; }
     envelope=$(HOTL_CODEX_BIN="$TEST_DIR/fake-host" "$CODEX_DRIVER" envelope fixtures/hotl-workflow-runtime-sample.md --mode native)
     [ "$(jq -r '.workflow.schema' <<< "$envelope")" = "hotl.workflow/v1" ]
     jq -e '.native_feature_hints | index("subagents")' <<< "$envelope"
+    jq -e '.continuation_hints[] | select(.id=="goal-mode" and .maturity=="stable" and .completion_authority==false)' <<< "$envelope" >/dev/null
+    jq -e '.continuation_hints[] | select(.id=="thread-handoff" and .maturity=="stable" and .completion_authority==false)' <<< "$envelope" >/dev/null
     jq -e '.rules | index("Do not claim completion until receipt sufficiency is true")' <<< "$envelope"
+    jq -e '.rules | index("Host continuation is scheduling and liveness only; HOTL state and receipts remain authoritative")' <<< "$envelope"
     run grep -E 'gpt-[0-9]|claude-[0-9]' <<< "$envelope"
     [ "$status" -ne 0 ]
 }
@@ -57,15 +63,19 @@ teardown() { rm -rf "$TEST_DIR"; }
     run_id=$(HOTL_CLAUDE_BIN="$TEST_DIR/fake-host" "$CLAUDE_DRIVER" launch fixtures/hotl-workflow-runtime-sample.md --mode native)
     [ "$(jq -r '.driver' ".hotl/state/$run_id.json")" = "claude" ]
     [ "$(jq -r '.executor_mode' ".hotl/state/$run_id.json")" = "claude-native" ]
+    [ "$(jq -r '.ownership_required' ".hotl/state/$run_id.json")" = "true" ]
     envelope=$(HOTL_CLAUDE_BIN="$TEST_DIR/fake-host" "$CLAUDE_DRIVER" envelope fixtures/hotl-workflow-runtime-sample.md --mode native)
     jq -e '.native_feature_hints | index("dynamic-workflows")' <<< "$envelope"
     jq -e '.native_feature_hints | index("agent-teams")' <<< "$envelope"
+    jq -e '.continuation_hints[] | select(.id=="background-subagents" and .maturity=="stable" and .completion_authority==false)' <<< "$envelope" >/dev/null
+    jq -e '.continuation_hints[] | select(.id=="agent-view" and .maturity=="research_preview" and .opt_in==true)' <<< "$envelope" >/dev/null
 }
 
 @test "host driver auto fallback launches the generic implementation" {
     run_id=$(HOTL_CODEX_BIN="$TEST_DIR/fake-host" "$CODEX_DRIVER" launch fixtures/hotl-workflow-runtime-sample.md)
     [ "$(jq -r '.driver' ".hotl/state/$run_id.json")" = "generic" ]
     [ "$(jq -r '.host' ".hotl/state/$run_id.json")" = "fallback" ]
+    [ "$(jq -r '.ownership_required' ".hotl/state/$run_id.json")" = "true" ]
 }
 
 @test "host driver reports a missing mode value clearly" {

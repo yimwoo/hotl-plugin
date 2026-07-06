@@ -220,7 +220,7 @@ if [ "$worktree_was_set" -eq 0 ] && [ "$branch_was_set" -eq 0 ] && [ "$is_linked
     branch="$source_branch"
 fi
 
-workflow_rel="${workflow_abs#${repo_root}/}"
+workflow_rel="${workflow_abs#"${repo_root}"/}"
 if [ "$workflow_rel" = "$workflow_abs" ]; then
     echo "ERROR: Workflow file must live inside the git repo: $workflow_abs" >&2
     exit 1

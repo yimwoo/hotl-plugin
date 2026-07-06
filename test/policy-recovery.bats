@@ -112,6 +112,10 @@ teardown() { rm -rf "$TEST_DIR"; }
 
 @test "gate approval cannot bypass a pending sensitive action" {
     run_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    for step in 1 2 3; do
+        "$HOTL_RT" step "$step" start --run-id "$run_id" >/dev/null
+        "$HOTL_RT" step "$step" verify --run-id "$run_id" >/dev/null
+    done
     "$HOTL_RT" action request external_write --target 'open pull request' --run-id "$run_id" >/dev/null
     "$HOTL_RT" gate 3 approved --mode human --run-id "$run_id" >/dev/null
     [ "$(jq -r '.status' ".hotl/state/$run_id.json")" = "paused" ]
@@ -119,7 +123,13 @@ teardown() { rm -rf "$TEST_DIR"; }
 
 @test "publish and merge finish dispositions require non-finish evidence" {
     run_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
-    "$HOTL_RT" finalize --run-id "$run_id" >/dev/null
+    for step in 1 2 3; do
+        "$HOTL_RT" step "$step" start --run-id "$run_id" >/dev/null
+        "$HOTL_RT" step "$step" verify --run-id "$run_id" >/dev/null
+    done
+    state=".hotl/state/$run_id.json"
+    jq '.status = "ready_to_finish" | .finalized_at = .last_update' "$state" > "$state.fixture"
+    mv "$state.fixture" "$state"
     run "$HOTL_RT" finish published --run-id "$run_id"
     [ "$status" -ne 0 ]
     [[ "$output" == *"requires sufficient completion evidence"* ]]
@@ -156,4 +166,240 @@ teardown() { rm -rf "$TEST_DIR"; }
     [[ "$output" == *"cannot decrease"* ]]
     grep -Fq '**Status:** paused' ".hotl/reports/$run_id.md"
     grep -Fq 'Budget exceeded: cost_usd' ".hotl/reports/$run_id.md"
+}
+
+@test "simultaneous action requests preserve every unique record" {
+    run_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    pids=()
+    for index in 1 2 3 4 5 6; do
+        "$HOTL_RT" action request local_write --target "edit file $index" --run-id "$run_id" > "action-$index.out" 2> "action-$index.err" &
+        pids+=("$!")
+    done
+
+    failures=0
+    for pid in "${pids[@]}"; do
+        wait "$pid" || failures=$((failures + 1))
+    done
+
+    [ "$failures" -eq 0 ]
+    [ "$(jq '.external_actions | length' ".hotl/state/$run_id.json")" -eq 6 ]
+    [ "$(jq '[.external_actions[].id] | unique | length' ".hotl/state/$run_id.json")" -eq 6 ]
+}
+
+@test "step transitions enforce aggregate attempt budgets without a separate check" {
+    cat > aggregate-budget-workflow.md <<'EOF'
+---
+intent: Enforce aggregate attempts
+success_criteria: Third attempt is rejected
+risk_level: low
+auto_approve: true
+max_total_attempts: 2
+---
+
+## Steps
+
+- [ ] **Step 1: First attempt**
+action: Pass
+loop: false
+verify: true
+
+- [ ] **Step 2: Second attempt**
+action: Pass
+loop: false
+verify: true
+
+- [ ] **Step 3: Over budget**
+action: Must not start
+loop: false
+verify: true
+EOF
+    run_id=$("$HOTL_RT" init aggregate-budget-workflow.md)
+    "$HOTL_RT" step 1 start --run-id "$run_id" >/dev/null
+    "$HOTL_RT" step 1 verify --run-id "$run_id" >/dev/null
+    "$HOTL_RT" step 2 start --run-id "$run_id" >/dev/null
+    "$HOTL_RT" step 2 verify --run-id "$run_id" >/dev/null
+
+    run "$HOTL_RT" step 3 start --run-id "$run_id"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"total_attempts"*"exceeded"* ]]
+    [ "$(jq -r '.status' ".hotl/state/$run_id.json")" = "paused" ]
+}
+
+@test "step transitions enforce elapsed budgets without a separate check" {
+    run_id=$("$HOTL_RT" init budget-workflow.md)
+    state=".hotl/state/$run_id.json"
+    jq '.started_at = "2000-01-01T00:00:00+00:00"' "$state" > "$state.fixture"
+    mv "$state.fixture" "$state"
+
+    run "$HOTL_RT" step 1 start --run-id "$run_id"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"elapsed_minutes"*"exceeded"* ]]
+    [ "$(jq -r '.status' "$state")" = "paused" ]
+}
+
+@test "controller ownership supports claim heartbeat release and conflict rejection" {
+    run_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+
+    claim=$("$HOTL_RT" owner claim --owner controller-a --lease-seconds 60 --run-id "$run_id")
+    token=$(jq -r '.token' <<< "$claim")
+    [ "$(jq -r '.status' <<< "$claim")" = "active" ]
+    [ -n "$token" ]
+    ! grep -Fq "$token" ".hotl/state/$run_id.json"
+
+    run "$HOTL_RT" owner claim --owner controller-b --lease-seconds 60 --run-id "$run_id"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"active controller"* ]]
+
+    before=$(jq -r '.revision' ".hotl/state/$run_id.json")
+    HOTL_OWNER_TOKEN="$token" "$HOTL_RT" owner heartbeat --lease-seconds 60 --run-id "$run_id" >/dev/null
+    [ "$(jq -r '.revision' ".hotl/state/$run_id.json")" -gt "$before" ]
+    HOTL_OWNER_TOKEN="$token" "$HOTL_RT" owner release --run-id "$run_id" >/dev/null
+    [ "$("$HOTL_RT" owner status --run-id "$run_id" | jq -r '.status')" = "released" ]
+
+    replacement=$("$HOTL_RT" owner claim --owner controller-b --lease-seconds 60 --run-id "$run_id")
+    [ "$(jq -r '.owner_id' <<< "$replacement")" = "controller-b" ]
+}
+
+@test "controller tokens are generated from operating-system entropy" {
+    grep -Eq 'openssl rand|/dev/urandom' "$HOTL_RT"
+}
+
+@test "controller takeover is explicit and audit recorded" {
+    run_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    "$HOTL_RT" owner claim --owner controller-a --lease-seconds 60 --run-id "$run_id" >/dev/null
+
+    run "$HOTL_RT" owner takeover --owner controller-b --reason 'resume elsewhere' --run-id "$run_id"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"lease is still active"* ]]
+
+    state=".hotl/state/$run_id.json"
+    jq '.controller.lease_expires_epoch = 0' "$state" > "$state.fixture"
+    mv "$state.fixture" "$state"
+    takeover=$("$HOTL_RT" owner takeover --owner controller-b --reason 'expired controller' --run-id "$run_id")
+
+    [ "$(jq -r '.owner_id' <<< "$takeover")" = "controller-b" ]
+    [ "$(jq -r '.ownership_history[-1].event' "$state")" = "takeover" ]
+    [ "$(jq -r '.ownership_history[-1].reason' "$state")" = "expired controller" ]
+}
+
+@test "claimed runs reject mutations from controllers without the lease token" {
+    run_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    claim=$("$HOTL_RT" owner claim --owner controller-a --lease-seconds 60 --run-id "$run_id")
+    token=$(jq -r '.token' <<< "$claim")
+
+    run "$HOTL_RT" step 1 start --run-id "$run_id"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"controller ownership token"* ]]
+
+    HOTL_OWNER_TOKEN="$token" "$HOTL_RT" step 1 start --run-id "$run_id" >/dev/null
+    [ "$(jq -r '.steps[0].status' ".hotl/state/$run_id.json")" = "in_progress" ]
+}
+
+@test "sensitive effects persist intent idempotency and reconciled outcome" {
+    run_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    requested=$("$HOTL_RT" action request external_write --target 'create pull request' --idempotency-key pr-release-1 --run-id "$run_id")
+    action_id=$(jq -r '.id' <<< "$requested")
+    [ "$(jq -r '.idempotency_key' <<< "$requested")" = "pr-release-1" ]
+    "$HOTL_RT" action decide "$action_id" approved --mode human --run-id "$run_id" >/dev/null
+
+    receipt=$("$HOTL_RT" receipt "$run_id")
+    jq -e '.sufficiency.reasons | index("sensitive_action_effect_unresolved")' <<< "$receipt" >/dev/null
+
+    begun=$("$HOTL_RT" action begin "$action_id" --idempotency-key pr-release-1 --run-id "$run_id")
+    [ "$(jq -r '.effect_status' <<< "$begun")" = "in_progress" ]
+    jq -e --arg id "$action_id" '.external_actions[] | select(.id==$id and .effect.intent_recorded_at != null)' ".hotl/state/$run_id.json" >/dev/null
+    [ "$("$HOTL_RT" reconcile "$run_id" | jq -r '.next_action')" = "reconcile_action_effect" ]
+
+    "$HOTL_RT" action complete "$action_id" uncertain --evidence-ref 'provider-timeout' --run-id "$run_id" >/dev/null
+    [ "$("$HOTL_RT" reconcile "$run_id" | jq -r '.next_action')" = "reconcile_action_effect" ]
+    run "$HOTL_RT" action begin "$action_id" --idempotency-key pr-release-1 --run-id "$run_id"
+    [ "$status" -ne 0 ]
+
+    "$HOTL_RT" action reconcile "$action_id" succeeded --evidence-ref 'pr:https://example.test/1' --run-id "$run_id" >/dev/null
+    receipt=$("$HOTL_RT" receipt "$run_id")
+    [ "$(jq '[.sufficiency.reasons[] | select(.=="sensitive_action_effect_unresolved")] | length' <<< "$receipt")" -eq 0 ]
+}
+
+@test "duplicate sensitive idempotency keys reuse one action record" {
+    run_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    first=$("$HOTL_RT" action request external_write --target 'publish release' --idempotency-key release-42 --run-id "$run_id")
+    second=$("$HOTL_RT" action request external_write --target 'publish release' --idempotency-key release-42 --run-id "$run_id")
+
+    [ "$(jq -r '.id' <<< "$first")" = "$(jq -r '.id' <<< "$second")" ]
+    [ "$(jq '.external_actions | length' ".hotl/state/$run_id.json")" -eq 1 ]
+}
+
+@test "legacy approved sensitive actions without effect evidence stay conservative" {
+    run_id=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    action_id=$("$HOTL_RT" action request external_write --target 'legacy publish' --run-id "$run_id" | jq -r '.id')
+    "$HOTL_RT" action decide "$action_id" approved --mode human --run-id "$run_id" >/dev/null
+    state=".hotl/state/$run_id.json"
+    jq '(.external_actions[] | select(.id=="action-1")) |= del(.effect, .idempotency_key, .effect_required)' "$state" > "$state.fixture"
+    mv "$state.fixture" "$state"
+
+    receipt=$("$HOTL_RT" receipt "$run_id")
+
+    jq -e '.sufficiency.reasons | index("sensitive_action_effect_evidence_missing")' <<< "$receipt" >/dev/null
+
+    "$HOTL_RT" action reconcile "$action_id" succeeded \
+        --evidence-ref 'legacy-inspection:published' --run-id "$run_id" >/dev/null
+    receipt=$("$HOTL_RT" receipt "$run_id")
+    [ "$(jq '[.sufficiency.reasons[] | select(startswith("sensitive_action_effect"))] | length' <<< "$receipt")" -eq 0 ]
+    [ "$(jq -r --arg id "$action_id" '.external_actions[] | select(.id==$id) | .effect.status' ".hotl/state/$run_id.json")" = "succeeded" ]
+}
+
+@test "finish cannot complete a ready run with post-finalize unresolved effects" {
+    run_id=$("$HOTL_RT" init budget-workflow.md)
+    "$HOTL_RT" step 1 start --run-id "$run_id" >/dev/null
+    "$HOTL_RT" step 1 verify --run-id "$run_id" >/dev/null
+    "$HOTL_RT" finalize --run-id "$run_id" >/dev/null
+    action_id=$("$HOTL_RT" action request external_write --target 'publish after finalize' --idempotency-key post-finalize-publish --run-id "$run_id" | jq -r '.id')
+    "$HOTL_RT" action decide "$action_id" approved --mode human --run-id "$run_id" >/dev/null
+
+    run "$HOTL_RT" finish kept --run-id "$run_id"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"sufficient completion evidence"* ]]
+    [ "$(jq -r '.status' ".hotl/state/$run_id.json")" = "ready_to_finish" ]
+    [ "$(jq -r '.finish.disposition' ".hotl/state/$run_id.json")" = "null" ]
+}
+
+@test "finalize rejects approved sensitive actions without terminal effect evidence" {
+    run_id=$("$HOTL_RT" init budget-workflow.md)
+    action_id=$("$HOTL_RT" action request external_write --target 'publish release' --run-id "$run_id" | jq -r '.id')
+    "$HOTL_RT" action decide "$action_id" approved --mode human --run-id "$run_id" >/dev/null
+    "$HOTL_RT" step 1 start --run-id "$run_id" >/dev/null
+    "$HOTL_RT" step 1 verify --run-id "$run_id" >/dev/null
+
+    run "$HOTL_RT" finalize --run-id "$run_id"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"effect evidence"* ]]
+    [ "$(jq -r '.status' ".hotl/state/$run_id.json")" != "completed" ]
+    [ "$("$HOTL_RT" reconcile "$run_id" | jq -r '.next_action')" = "execute_approved_action" ]
+}
+
+@test "failed and cancelled sensitive effects produce distinct conservative outcomes" {
+    failed_run=$("$HOTL_RT" init budget-workflow.md)
+    failed_request=$("$HOTL_RT" action request production_change --target 'deploy release' --idempotency-key deploy-1 --run-id "$failed_run")
+    failed_id=$(jq -r '.id' <<< "$failed_request")
+    "$HOTL_RT" action decide "$failed_id" approved --mode human --run-id "$failed_run" >/dev/null
+    "$HOTL_RT" action begin "$failed_id" --idempotency-key deploy-1 --run-id "$failed_run" >/dev/null
+    "$HOTL_RT" action complete "$failed_id" failed --evidence-ref 'deployment:error-42' --run-id "$failed_run" >/dev/null
+
+    [ "$(jq -r '.status' ".hotl/state/$failed_run.json")" = "blocked" ]
+    jq -e '.sufficiency.reasons | index("sensitive_action_effect_failed")' <<< "$("$HOTL_RT" receipt "$failed_run")" >/dev/null
+
+    cancelled_run=$("$HOTL_RT" init budget-workflow.md)
+    cancelled_request=$("$HOTL_RT" action request external_write --target 'create release' --idempotency-key release-cancelled --run-id "$cancelled_run")
+    cancelled_id=$(jq -r '.id' <<< "$cancelled_request")
+    "$HOTL_RT" action decide "$cancelled_id" approved --mode human --run-id "$cancelled_run" >/dev/null
+    "$HOTL_RT" action begin "$cancelled_id" --idempotency-key release-cancelled --run-id "$cancelled_run" >/dev/null
+    "$HOTL_RT" action complete "$cancelled_id" cancelled --evidence-ref 'human:cancelled-before-write' --run-id "$cancelled_run" >/dev/null
+
+    [ "$(jq -r '.status' ".hotl/state/$cancelled_run.json")" = "running" ]
+    receipt=$("$HOTL_RT" receipt "$cancelled_run")
+    [ "$(jq '[.sufficiency.reasons[] | select(startswith("sensitive_action_effect"))] | length' <<< "$receipt")" -eq 0 ]
 }

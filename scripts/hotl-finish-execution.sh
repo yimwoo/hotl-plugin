@@ -10,6 +10,7 @@ usage() {
 usage: hotl-finish-execution.sh --run-id <run-id> --mode <keep|merge|publish|discard>
        [--target-branch <branch>] [--remote <name>] [--create-pr]
        [--pr-url <url>] [--notes <text>] [--confirm discard]
+       --effect-action-id <id> --idempotency-key <key>   # required for publish
 
 Finish a HOTL execution branch/worktree and record the disposition in runtime state.
 USAGE
@@ -116,6 +117,38 @@ run_runtime_finish() {
     )
 }
 
+run_runtime_action() {
+    local run_root="$1"
+    shift
+    (
+        cd "$run_root"
+        "$HOTL_RT" action "$@"
+    )
+}
+
+validate_effect_action() {
+    local run_root="$1"
+    local run_id="$2"
+    local action_id="$3"
+    local key="$4"
+    local expected_kind="$5"
+    local expected_target="$6"
+    local state_file="$run_root/.hotl/state/${run_id}.json"
+
+    jq -e \
+        --arg id "$action_id" \
+        --arg key "$key" \
+        --arg kind "$expected_kind" \
+        --arg target "$expected_target" \
+        '.external_actions[]? | select(
+            .id==$id and .idempotency_key==$key and .kind==$kind and .target==$target and
+            .status=="approved" and .effect_required==true and .effect.status=="not_started"
+        )' "$state_file" >/dev/null || {
+        echo "ERROR: Approved action does not match the bounded finish effect or is not ready to begin." >&2
+        return 1
+    }
+}
+
 preserve_run_artifacts_to_repo_root() {
     local run_root="$1"
     local repo_root="$2"
@@ -157,6 +190,8 @@ create_pr=0
 pr_url=""
 notes=""
 confirm=""
+effect_action_id=""
+idempotency_key=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -192,6 +227,14 @@ while [ $# -gt 0 ]; do
             confirm="$2"
             shift 2
             ;;
+        --effect-action-id)
+            effect_action_id="$2"
+            shift 2
+            ;;
+        --idempotency-key)
+            idempotency_key="$2"
+            shift 2
+            ;;
         *)
             usage
             ;;
@@ -205,6 +248,22 @@ case "$mode" in
     keep|merge|publish|discard) ;;
     *) usage ;;
 esac
+
+if { [ -n "$effect_action_id" ] && [ -z "$idempotency_key" ]; } || \
+   { [ -z "$effect_action_id" ] && [ -n "$idempotency_key" ]; }; then
+    echo "ERROR: --effect-action-id and --idempotency-key must be provided together." >&2
+    exit 1
+fi
+if [ -n "$effect_action_id" ]; then
+    case "$mode" in
+        merge|publish) ;;
+        *) echo "ERROR: effect lifecycle options are supported only for merge or publish." >&2; exit 1 ;;
+    esac
+fi
+if [ "$mode" = publish ] && [ -z "$effect_action_id" ]; then
+    echo "ERROR: Publish requires --effect-action-id and --idempotency-key for its governed external effect." >&2
+    exit 1
+fi
 
 require_jq
 
@@ -226,21 +285,20 @@ summary_json="$(run_runtime_summary "$run_root" "$run_id")"
 
 status="$(printf '%s\n' "$summary_json" | jq -r '.status')"
 branch="$(printf '%s\n' "$summary_json" | jq -r '.branch')"
-execution_root="$(printf '%s\n' "$summary_json" | jq -r '.execution_root')"
 worktree_path="$(printf '%s\n' "$summary_json" | jq -r '.worktree_path // empty')"
 source_branch="$(printf '%s\n' "$summary_json" | jq -r '.source_branch // empty')"
 existing_finish="$(printf '%s\n' "$summary_json" | jq -r '.finish.disposition // empty')"
 
 case "$mode" in
     merge|publish)
-        [ "$status" = "completed" ] || {
+        { [ "$status" = "ready_to_finish" ] || [ "$status" = "completed" ]; } || {
             echo "ERROR: Mode '$mode' requires a completed run. Current status: $status" >&2
             exit 1
         }
         ;;
     keep|discard)
         case "$status" in
-            completed|blocked) ;;
+            ready_to_finish|completed|blocked) ;;
             *)
                 echo "ERROR: Mode '$mode' requires a finalized run. Current status: $status" >&2
                 exit 1
@@ -256,6 +314,30 @@ fi
 
 if [ -z "$target_branch" ]; then
     target_branch="$(first_existing_branch "$repo_root" "$source_branch" main master || true)"
+fi
+
+if [ -n "$effect_action_id" ]; then
+    case "$mode" in
+        publish)
+            effect_target="publish $branch to $remote"
+            if [ "$create_pr" -eq 1 ]; then
+                [ -n "$target_branch" ] || {
+                    echo "ERROR: Could not determine a PR base branch. Pass --target-branch explicitly." >&2
+                    exit 1
+                }
+                effect_target="$effect_target and create PR against $target_branch"
+            fi
+            validate_effect_action "$run_root" "$run_id" "$effect_action_id" "$idempotency_key" external_write "$effect_target"
+            ;;
+        merge)
+            [ -n "$target_branch" ] || {
+                echo "ERROR: Could not determine a merge target branch. Pass --target-branch explicitly." >&2
+                exit 1
+            }
+            effect_target="merge $branch into $target_branch"
+            validate_effect_action "$run_root" "$run_id" "$effect_action_id" "$idempotency_key" production_change "$effect_target"
+            ;;
+    esac
 fi
 
 artifacts_preserved_at=""
@@ -281,18 +363,37 @@ case "$mode" in
             exit 1
         }
 
+        if [ -n "$effect_action_id" ]; then
+            run_runtime_action "$run_root" begin "$effect_action_id" \
+                --idempotency-key "$idempotency_key" --run-id "$run_id" >/dev/null
+        fi
+
         git -C "$repo_root" push -u "$remote" "$branch"
 
         if [ "$create_pr" -eq 1 ]; then
             command -v gh >/dev/null 2>&1 || {
-                echo "ERROR: --create-pr requires the GitHub CLI (`gh`)." >&2
+                echo 'ERROR: --create-pr requires the GitHub CLI (gh).' >&2
                 exit 1
             }
             [ -n "$target_branch" ] || {
                 echo "ERROR: Could not determine a PR base branch. Pass --target-branch explicitly." >&2
                 exit 1
             }
-            pr_url="$(gh pr create --base "$target_branch" --head "$branch" --fill 2>/dev/null || true)"
+            if ! pr_url="$(gh pr create --base "$target_branch" --head "$branch" --fill)"; then
+                echo "ERROR: Pull request creation failed; the branch was pushed but no successful finish disposition was recorded." >&2
+                exit 1
+            fi
+            [ -n "$pr_url" ] || {
+                echo "ERROR: Pull request creation returned no URL; no successful finish disposition was recorded." >&2
+                exit 1
+            }
+        fi
+
+        if [ -n "$effect_action_id" ]; then
+            effect_evidence="git-push:${remote}/${branch}"
+            [ -z "$pr_url" ] || effect_evidence="pr:${pr_url}"
+            run_runtime_action "$run_root" complete "$effect_action_id" succeeded \
+                --evidence-ref "$effect_evidence" --run-id "$run_id" >/dev/null
         fi
 
         branch_action="kept"
@@ -322,12 +423,22 @@ case "$mode" in
             exit 1
         }
         ensure_clean_non_hotl_checkout "$repo_root"
+        if [ -n "$effect_action_id" ]; then
+            run_runtime_action "$run_root" begin "$effect_action_id" \
+                --idempotency-key "$idempotency_key" --run-id "$run_id" >/dev/null
+        fi
         cd "$repo_root"
         git -C "$repo_root" switch "$target_branch" >/dev/null
         if ! git -C "$repo_root" merge --no-ff --no-edit "$branch"; then
             git -C "$repo_root" merge --abort >/dev/null 2>&1 || true
             echo "ERROR: Merge failed. HOTL left the execution branch/worktree intact." >&2
             exit 1
+        fi
+
+        if [ -n "$effect_action_id" ]; then
+            merge_head="$(git -C "$repo_root" rev-parse HEAD)"
+            run_runtime_action "$run_root" complete "$effect_action_id" succeeded \
+                --evidence-ref "git-merge:${target_branch}@${merge_head}" --run-id "$run_id" >/dev/null
         fi
 
         artifacts_preserved_at="$repo_root/.hotl"

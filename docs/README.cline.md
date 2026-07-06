@@ -78,6 +78,12 @@ ships host-native drivers for Codex and Claude Code, not Cline, so normal Cline
 sessions select the generic `hotl-rt` fallback. This keeps workflow state,
 verification, gates, receipts, and finish behavior portable across hosts.
 
+Host goals, background agents, hooks, and handoffs provide scheduling and liveness only.
+The generic runtime still requires renewable controller
+ownership, enforces ordered loops and budgets, and records pre-effect intent
+plus reconciliation evidence. A successful `finalize` is `ready_to_finish`;
+only explicit `finish` plus a sufficient receipt is `completed`.
+
 ## The HOTL Workflow
 
 ```text
@@ -110,7 +116,10 @@ Every workflow defines:
 Governed execution records more than step completion:
 
 - `external_write`, `production_change`, and `secret_access` actions require a
-  persisted human decision before execution
+  persisted human decision, an idempotency key, `action begin` before execution,
+  and `action complete` or `action reconcile` evidence afterward
+- Driver-managed runs require `owner claim`, private `HOTL_OWNER_TOKEN`, and
+  renewable heartbeats; handoff/takeover is explicit rather than age-based
 - Configured attempt, agent, cost, and elapsed-time budgets are evaluated from
   observed runtime evidence; unavailable telemetry remains `unknown`
 - Interrupted or ambiguous runs use read-only, verify-first reconciliation

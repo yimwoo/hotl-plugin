@@ -33,6 +33,7 @@ teardown() {
     [[ "$output" == *"Step 1: Run a passing shell verify - Done (1 attempt)"* ]]
     [[ "$output" == *"Step 2: Loop until condition met - Done (1 attempt)"* ]]
     [[ "$output" == *"Step 3: Human gate step - Approved (-)"* ]]
+    [ "$(jq -r '.status' ".hotl/state/${RUN_ID}.json")" = "ready_to_finish" ]
 }
 
 @test "show-codex-current-step prints active step metadata" {
@@ -93,7 +94,7 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"Step 1: Run a passing shell verify - Done (1 attempt)"* ]]
 
-    [ "$(jq -r '.status' ".hotl/state/${RUN_ID_A}.json")" = "completed" ]
+    [ "$(jq -r '.status' ".hotl/state/${RUN_ID_A}.json")" = "ready_to_finish" ]
     [ "$(jq -r '.status' ".hotl/state/${RUN_ID_B}.json")" = "running" ]
 }
 

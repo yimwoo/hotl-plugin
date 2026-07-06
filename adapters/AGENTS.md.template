@@ -62,6 +62,12 @@ Review is embedded in execution, not a post-hoc check:
 Always run tests, lint, and show output before saying work is complete.
 Never claim "done" without evidence.
 
+## Long-Running Execution
+
+Host goals, background agents, automations, hooks, and handoffs provide scheduling and liveness only. HOTL keeps one renewable controller, persists serialized state, enforces step order, loop and aggregate budgets, and reconciles interrupted external effects from evidence. Stable host continuation may be used when available; preview and experimental surfaces remain opt-in.
+
+Successful `hotl-rt finalize` produces `ready_to_finish`. Only an explicit `hotl-rt finish` disposition produces `completed`, and completion still requires a state-derived sufficient receipt.
+
 ## Design-doc structure rules
 
 Design-doc structure rules live in the canonical brainstorming skill (Claude Code: `skills/brainstorming/SKILL.md`; Cline: `cline/rules/hotl-brainstorming.md`). Feature/phase design docs use the seven required sections (Intent / Verification / Governance contracts plus Scope / Decisions / Surface / Risks & Open Questions); `document-lint.sh` warns on missing sections and on implementation leakage (file:line refs, code blocks > 10 lines, dense flag lines). Initiative / architecture / contract / reference docs are exempt this pass. Doctrine: design says shape; the workflow file and the code say exact bytes. Lint runs as warnings only — never block on lint findings; the human decides if a finding is blocking.

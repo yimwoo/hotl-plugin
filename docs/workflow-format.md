@@ -23,7 +23,7 @@ Legacy root files such as `hotl-workflow-add-rate-limiting.md` remain readable d
 | `max_cost_usd` | number | no | Compare against explicitly observed cost; unknown remains unknown |
 | `max_elapsed_minutes` | number | no | Compare against explicitly observed elapsed time; unknown remains unknown |
 
-Sensitive actions are not frontmatter permissions. Each `external_write`, `production_change`, or `secret_access` requires a bounded `hotl-rt action request` and an explicit human decision for that run. Host security controls remain authoritative.
+Sensitive actions are not frontmatter permissions. Each `external_write`, `production_change`, or `secret_access` requires a bounded `hotl-rt action request` with a stable idempotency key, an explicit human decision, `action begin` before the effect, and `action complete` or verify-first `action reconcile` evidence afterward. Host security controls remain authoritative.
 
 ## Step Fields
 
@@ -221,22 +221,29 @@ Before creating or reusing an execution branch/worktree, resume-aware executors 
 
 The `hotl-rt` shared runtime (`runtime/hotl-rt`) manages all execution state. Agents call `hotl-rt` subcommands; they do not manage state files directly.
 
-State is persisted in `.hotl/state/<run-id>.json` — the authoritative source of truth for execution progress. The runtime also maintains `.hotl/reports/<run-id>.md` as a durable Markdown report, updated incrementally on each state transition.
+State is persisted in `.hotl/state/<run-id>.json` — the authoritative, revisioned source of truth for execution progress. Serialized runtime writes prevent concurrent lost updates. The runtime also maintains `.hotl/reports/<run-id>.md` as a durable Markdown report, updated incrementally on each state transition and reconstructed from state if missing.
 
 Workflow checkboxes (`- [x]`) are a human-visible mirror updated by the agent on step completion. If a chat transcript or native progress card disagrees with the runtime artifacts, trust the artifacts.
 
 **Runtime API:**
 ```
 hotl-rt init <workflow-file> [metadata flags] → creates run, state JSON, report
+hotl-rt owner claim|status|heartbeat|handoff|release|takeover → renewable controller ownership
 hotl-rt step <N> start|verify|retry|block     [--run-id <run-id>] → step state transitions
 hotl-rt gate <N> approved|rejected            [--run-id <run-id>] → records gate decisions
-hotl-rt finalize [--json]                     [--run-id <run-id>] → finalizes run, prints summary
+hotl-rt action request|decide|begin|complete|reconcile            → bounded effect lifecycle
+hotl-rt budget record|check                    [--run-id <run-id>] → aggregate budget enforcement
+hotl-rt finalize [--json]                     [--run-id <run-id>] → validates evidence; successful run becomes ready_to_finish
+hotl-rt finish <disposition>                  [--run-id <run-id>] → records disposition; ready_to_finish becomes completed
 hotl-rt summary <run-id> [--json]             → read-only query
+hotl-rt receipt <run-id> [--json]             → state-derived completion evidence
 ```
 
-**Run ID format:** `<slug>-<YYYYMMDDTHHMMSSZ>` (e.g., `add-auth-20260320T212315Z`) — human-readable, lexicographically sortable, UTC
+**Run ID format:** `<slug>-<YYYYMMDDTHHMMSSZ>` with a collision suffix such as `-2` when needed — human-readable, lexicographically sortable, UTC, and path-safe.
 
-**Execution-root rule:** after `hotl-rt init` returns a run id, every later runtime/helper call for that run must use the same `execution_root` and the same `run_id`. Do not rely on "latest file in .hotl/state" when multiple runs exist.
+**Execution-root and owner rule:** driver-managed runs initialize with `--require-owner`. After init returns a run id, the controller must `owner claim`, retain the one-time token only as `HOTL_OWNER_TOKEN`, renew with `owner heartbeat`, and use the same `execution_root` and `run_id` for every later mutation. Handoff, release, and takeover are explicit; state age alone is never ownership authority. Do not rely on "latest file in .hotl/state" when multiple runs exist.
+
+**Run status lifecycle:** `running` / `paused` / `blocked` describe execution. A successful `finalize` produces `ready_to_finish`; the run becomes `completed` only after `finish` records `kept`, `merged`, `published`, or `discarded`. A completion receipt is sufficient only after all verification, gate, effect, budget, and finish evidence is terminal.
 
 **Gitignore:** Add `.hotl/` to your project's `.gitignore` — execution state should not be committed.
 

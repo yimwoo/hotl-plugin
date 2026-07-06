@@ -67,10 +67,16 @@ The `verify` field supports 4 types. Scalar string = type: shell. List = all mus
 
 ### Execution Process
 
+Initialize with `hotl-rt init ... --require-owner`, then run `owner claim --owner <stable-controller-id> --lease-seconds <bounded-lease> --run-id <run-id>`. Parse the one-time token privately, export it as `HOTL_OWNER_TOKEN`, and run `owner heartbeat` before and after long actions and at safe transitions. Every later mutation uses the same run id and token. Handoff, release, and takeover are explicit; age alone is never takeover authority.
+
+Host goals, background sessions, handoffs, hooks, and automations provide scheduling and liveness only. HOTL state, ownership, verification, budgets, and receipts remain completion authority.
+
 For each step in the workflow:
 
 1. **Announce:** "Step N: [name]"
 2. **Execute** the action
+   - For `external_write`, `production_change`, or `secret_access`, use `action request` with a stable idempotency key, human `action decide`, then `action begin` before the effect and `action complete` with evidence after it.
+   - If the result may be interrupted or uncertain, inspect the target and use `action reconcile`; never replay an `in_progress` or `uncertain` effect blindly.
 3. **Run typed verification** — show the actual output
 4. **If verify passes:** Log "Done — Step N: [name]" and continue
 5. **If verify fails AND loop is set:** Retry up to max_iterations. Show each attempt.
@@ -94,7 +100,7 @@ After every 3 completed steps, pause and show:
 
 HOTL persists execution state in `.hotl/state/<run-id>.json` (sidecar). This is the authoritative source of truth — workflow checkboxes are a human-visible mirror. State is updated on each step transition, verify result, and status change.
 
-After `hotl-rt init` returns a run id, pin every later runtime/helper call to that run (`--run-id <run-id>` or `HOTL_RUN_ID=<run-id>`). Never rely on "the newest file in .hotl/state" when multiple runs exist.
+After `hotl-rt init --require-owner` returns a run id, complete `owner claim`, retain `HOTL_OWNER_TOKEN`, and pin every later runtime/helper call to that run (`--run-id <run-id>` or `HOTL_RUN_ID=<run-id>`). Never rely on "the newest file in .hotl/state" when multiple runs exist.
 
 If the session is interrupted, use `/hotl:resume` to continue. Executors also auto-detect interrupted runs and offer resume when starting a workflow that has unfinished state.
 
@@ -139,7 +145,7 @@ Show the final summary table. Then run a final verification:
 - Confirm the success criteria from the intent contract are met
 - Show evidence — NEVER claim success without proof
 
-After that, do not silently merge or delete the execution branch/worktree. Present the explicit finish options: merge back locally, publish/create PR, keep, or discard.
+After that, `hotl-rt finalize` moves a successful run to `ready_to_finish`. Do not silently merge or delete the execution branch/worktree. Present the explicit finish options: merge back locally, publish/create PR, keep, or discard. Only `hotl-rt finish` records the choice and moves the run to `completed`; release ownership and require a sufficient receipt afterward.
 
 **ONLY THEN mark the task as complete.**
 

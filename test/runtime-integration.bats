@@ -19,7 +19,7 @@ teardown() {
     rm -rf "$TEST_DIR"
 }
 
-# ── Happy path: init → steps → finalize ─────────────────────────────────────
+# ── Happy path: init → steps → finalize → finish ────────────────────────────
 
 @test "happy path: all steps done, run completed" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
@@ -41,9 +41,11 @@ teardown() {
     "$HOTL_RT" step 3 verify
     [ "$(jq -r '.steps[2].status' "$STATE")" = "done" ]
 
-    # Finalize
+    "$HOTL_RT" gate 3 approved --mode human >/dev/null
+
+    # Finalize establishes readiness; finish disposition establishes completion.
     SUMMARY=$("$HOTL_RT" finalize --json)
-    [ "$(echo "$SUMMARY" | jq -r '.status')" = "completed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "ready_to_finish" ]
     [ "$(echo "$SUMMARY" | jq -r '.completed_steps')" = "3" ]
     [ "$(echo "$SUMMARY" | jq -r '.failed_steps')" = "0" ]
     [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "0" ]
@@ -51,10 +53,13 @@ teardown() {
     [ "$(echo "$SUMMARY" | jq -r '.steps[0].attempts')" = "1" ]
     [ "$(echo "$SUMMARY" | jq -r '.steps[2].attempts')" = "1" ]
 
-    # Report should be finalized
+    SUMMARY=$("$HOTL_RT" finish kept --run-id "$RUN_ID")
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "completed" ]
+
+    # Report should be completed only after disposition.
     grep -Fq '**Status:** completed' "$REPORT"
     grep -q '✓ Done' "$REPORT"
-    grep -q 'Run finalized: completed' "$REPORT"
+    grep -q 'Run finalized: ready_to_finish' "$REPORT"
 }
 
 @test "demo simulation flow renders report and compact Codex summary" {
@@ -81,13 +86,13 @@ teardown() {
     [[ "$output" == *"Step 2: Write demo note - Done (1 attempt)"* ]]
     [[ "$output" == *"Step 3: Demo review gate - Auto-approved (-)"* ]]
 
-    [ "$(jq -r '.status' "$STATE")" = "completed" ]
+    [ "$(jq -r '.status' "$STATE")" = "ready_to_finish" ]
     [ "$(jq -r '.steps[2].gate_result' "$STATE")" = "approved" ]
     [ "$(jq -r '.steps[2].gate_mode' "$STATE")" = "auto" ]
     [ -f .hotl-demo/simulation/demo-note.md ]
-    grep -Fq '**Status:** completed' "$REPORT"
+    grep -Fq '**Status:** ready_to_finish' "$REPORT"
     grep -q '⚡ Auto-approved' "$REPORT"
-    grep -q 'Run finalized: completed' "$REPORT"
+    grep -q 'Run finalized: ready_to_finish' "$REPORT"
 }
 
 @test "human-review pause plus explicit human gate flow completes end to end" {
@@ -127,9 +132,9 @@ teardown() {
     [[ "$output" == *"Step 3: Run a post-review check - Done (1 attempt)"* ]]
     [[ "$output" == *"Step 4: Final human gate - Approved (-)"* ]]
 
-    [ "$(jq -r '.status' "$STATE")" = "completed" ]
+    [ "$(jq -r '.status' "$STATE")" = "ready_to_finish" ]
     [ "$(jq -r '[.steps[] | select(.status == "blocked")] | length' "$STATE")" = "0" ]
-    grep -Fq '**Status:** completed' "$REPORT"
+    grep -Fq '**Status:** ready_to_finish' "$REPORT"
     grep -q 'Human review for Step 2: approved (human)' "$REPORT"
     grep -q 'Gate Step 4: approved (human)' "$REPORT"
 }
@@ -189,9 +194,10 @@ teardown() {
     "$HOTL_RT" step 2 verify
     "$HOTL_RT" step 3 start
     "$HOTL_RT" step 3 verify
+    "$HOTL_RT" gate 3 approved --mode auto
     SUMMARY=$("$HOTL_RT" finalize --json)
 
-    [ "$(echo "$SUMMARY" | jq -r '.status')" = "completed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "ready_to_finish" ]
     [ "$(echo "$SUMMARY" | jq -r '.steps[0].status')" = "done" ]
     [ "$(echo "$SUMMARY" | jq -r '.steps[0].attempts')" = "1" ]
     [ "$(echo "$SUMMARY" | jq -r '.steps[0].gate_result')" = "approved" ]
@@ -238,6 +244,11 @@ teardown() {
     [ "$(jq -r '.steps[0].status' "$STATE")" = "done" ]
     [ "$(jq -r '.steps[0].attempts' "$STATE")" = "2" ]
 
+    "$HOTL_RT" step 2 start
+    "$HOTL_RT" step 2 verify
+    "$HOTL_RT" step 3 start
+    "$HOTL_RT" step 3 verify
+    "$HOTL_RT" gate 3 approved --mode human >/dev/null
     SUMMARY=$("$HOTL_RT" finalize --json)
     [ "$(echo "$SUMMARY" | jq -r '.steps[0].status')" = "done" ]
     [ "$(echo "$SUMMARY" | jq -r '.steps[0].attempts')" = "2" ]
@@ -249,7 +260,7 @@ teardown() {
 
 # ── Mixed outcomes in summary payload ──────────────────────────────────────
 
-@test "finalize summary preserves failed and blocked step outcomes" {
+@test "finalize summary preserves failed and pending step outcomes" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
     STATE=".hotl/state/${RUN_ID}.json"
 
@@ -261,19 +272,15 @@ teardown() {
     run "$HOTL_RT" step 2 verify
     [ "$status" -ne 0 ]
 
-    "$HOTL_RT" step 3 start
-    "$HOTL_RT" step 3 block --reason "manual stop for review"
-
     SUMMARY=$("$HOTL_RT" finalize --json)
 
     [ "$(echo "$SUMMARY" | jq -r '.status')" = "blocked" ]
     [ "$(echo "$SUMMARY" | jq -r '.completed_steps')" = "1" ]
     [ "$(echo "$SUMMARY" | jq -r '.failed_steps')" = "1" ]
-    [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "1" ]
+    [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "0" ]
     [ "$(echo "$SUMMARY" | jq -r '.steps[0].status')" = "done" ]
     [ "$(echo "$SUMMARY" | jq -r '.steps[1].status')" = "failed" ]
-    [ "$(echo "$SUMMARY" | jq -r '.steps[2].status')" = "blocked" ]
-    [ "$(echo "$SUMMARY" | jq -r '.steps[2].block_reason')" = "manual stop for review" ]
+    [ "$(echo "$SUMMARY" | jq -r '.steps[2].status')" = "pending" ]
 }
 
 # ── Report incremental updates: report is always current ────────────────────

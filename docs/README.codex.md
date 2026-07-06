@@ -255,6 +255,17 @@ Native host output never replaces the state-derived completion receipt. See
 [migration guide](migration-host-native.md), and the
 [portable workflow and receipt contract](contracts/portable-workflow-and-receipt.md).
 
+Codex Goal mode, automations, hooks, remote connections, and local/worktree/
+remote thread handoff provide scheduling and liveness only. HOTL keeps the
+renewable controller token private, persists every transition, enforces loop
+and budget stops in the runtime, and reconciles interrupted effects. Stable
+host features may be capability-gated hints; preview or experimental features
+remain opt-in.
+
+After verification, `finalize` sets `ready_to_finish`. The run becomes
+`completed` only after an explicit finish disposition, controller release, and
+a state-derived receipt with `sufficiency.sufficient: true`.
+
 ### Measured Adaptive Evaluation
 
 Use `scripts/hotl-evaluation-report.sh --format text <evaluation.json> ...` to
@@ -397,7 +408,7 @@ Use HOTL for this task and choose the most appropriate skill automatically.
 - `document-review` — run structural lint and qualitative review before execution
 - `governed-execution` — preferred native-or-fallback execution router with evidence receipts
   - **Driver selection:** auto mode uses fallback unless `HOTL_CODEX_NATIVE=1` or `--mode native` explicitly opts into the experimental Codex driver
-  - **Portable governance:** sensitive actions, budgets, and verify-first recovery follow `docs/contracts/policy-budget-recovery.md`
+  - **Portable governance:** renewable ownership, sensitive-effect evidence, budgets, and verify-first recovery follow `docs/contracts/policy-budget-recovery.md`
   - **Adoption tools:** `scripts/hotl-adoption-report.sh` is read-only; `scripts/hotl-memory-proposal.sh` only proposes memory candidates and never writes them directly; evaluation campaign/history/report/proposal helpers preserve explicit live approval, append-only evidence, human review, and no configuration changes
 - `loop-execution` — autonomous execution with retries
   - **Output contract:** `docs/contracts/execution-report-output.md` defines the execution report schema, status vocabulary, and platform rendering tables
