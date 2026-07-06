@@ -6,7 +6,7 @@ HOTL_RT="${HOTL_RT:-$SCRIPT_DIR/../hotl-rt}"
 
 usage() {
     cat <<'USAGE'
-usage: generic.sh <describe|preflight|launch|step|gate|status|receipt|finalize|finish> [args]
+usage: generic.sh <describe|preflight|launch|owner|step|gate|action|budget|status|receipt|reconcile|finalize|finish> [args]
 USAGE
 }
 
@@ -16,7 +16,7 @@ shift
 
 case "$command_name" in
     describe)
-        jq -cn '{protocol:"hotl.driver/v1",id:"generic",host:"fallback",maturity:"conformant",execution:"hotl-rt",supports:["normalize","launch","step","gate","status","receipt","finalize","finish"]}'
+        jq -cn '{protocol:"hotl.driver/v1",id:"generic",host:"fallback",maturity:"conformant",execution:"hotl-rt",supports:["normalize","launch","owner","step","gate","action","budget","status","receipt","reconcile","finalize","finish"]}'
         ;;
     preflight)
         [ $# -eq 1 ] || { echo "usage: generic.sh preflight <workflow>" >&2; exit 1; }
@@ -27,9 +27,9 @@ case "$command_name" in
         [ $# -ge 1 ] || { echo "usage: generic.sh launch <workflow> [init options]" >&2; exit 1; }
         workflow="$1"
         shift
-        "$HOTL_RT" init "$workflow" --executor-mode generic --driver generic --host fallback "$@"
+        "$HOTL_RT" init "$workflow" --require-owner --executor-mode generic --driver generic --host fallback "$@"
         ;;
-    step|gate|finalize|finish)
+    owner|step|gate|action|budget|reconcile|finalize|finish)
         "$HOTL_RT" "$command_name" "$@"
         ;;
     status)

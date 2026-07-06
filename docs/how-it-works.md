@@ -169,6 +169,10 @@ HOTL records the `execution_root`, `worktree_path`, `source_branch`, and `source
 
 All execution modes share one engine: the **HOTL execution state machine** (resolve → lint/preflight → execute → verify → loop → gate → summarize). They differ in how steps run and how often human checkpoints occur.
 
+Long-running hosts can keep work alive with Codex Goal mode, automations, hooks, and thread handoff or with Claude Code goal/loop continuation, background subagents, and agent view. HOTL treats these as scheduling and liveness only. Stable features can be capability-gated hints; preview and experimental surfaces remain opt-in. The renewable HOTL controller, serialized sidecar revisions, ordered transitions, runtime retry/budget stops, verification, and receipts remain authoritative.
+
+New driver-managed runs require an explicit controller claim. The controller keeps `HOTL_OWNER_TOKEN` private, heartbeats around long actions, and uses auditable handoff/release/takeover instead of guessing from file age. Sensitive external effects persist authorization and an idempotency key, record `action begin` before execution, and record `action complete` or verify-first reconciliation afterward.
+
 ### Loop Execution (universal engine)
 
 The canonical execution mode. HOTL runs the workflow step by step, retries steps that are allowed to loop, auto-approves low-risk gates, and pauses on high-risk or human-gated steps. Works on all platforms.
@@ -213,7 +217,7 @@ No green checkmark without proof.
 
 ## 8. Finish The Branch / Worktree Lifecycle
 
-Execution completion is not the end of the lifecycle. HOTL also needs an explicit answer to: what happened to the execution branch/worktree after the run?
+Execution finalization is not the end of the lifecycle. When all execution evidence passes, `hotl-rt finalize` sets `ready_to_finish`. HOTL still needs an explicit answer to: what happened to the execution branch/worktree after the run?
 
 The finishing stage uses runtime provenance to separate the **authoring checkout** (`source_branch`, `source_head`) from the **execution checkout** (`branch`, `execution_root`, `worktree_path`). That lets HOTL safely support the common pattern where a workflow is authored on one branch, executed in an isolated `hotl/<slug>` worktree, then merged back into the authoring branch or published for review.
 
@@ -225,3 +229,5 @@ Available finish outcomes:
 - **Discard** — explicitly remove the execution branch/worktree after confirmation
 
 For isolated worktree runs, HOTL preserves `.hotl/state/<run-id>.json` and `.hotl/reports/<run-id>.md` back into the repo checkout before merge/discard cleanup so the execution record survives even after the worktree is removed.
+
+Only `hotl-rt finish` moves a successful `ready_to_finish` run to `completed`. HOTL then releases the controller and requires a state-derived receipt with `sufficiency.sufficient: true`; neither a host completion notification nor a green chat summary is enough.

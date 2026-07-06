@@ -49,6 +49,7 @@ teardown() {
     description=$("$DRIVER" describe)
     [ "$(jq -r '.protocol' <<< "$description")" = "hotl.driver/v1" ]
     [ "$(jq -r '.host' <<< "$description")" = "fallback" ]
+    jq -e '.supports | index("owner") and index("action") and index("budget") and index("reconcile")' <<< "$description" >/dev/null
     preflight=$("$DRIVER" preflight fixtures/hotl-workflow-runtime-sample.md)
     [ "$(jq -r '.ready' <<< "$preflight")" = "true" ]
     [ "$(jq -r '.workflow.schema' <<< "$preflight")" = "hotl.workflow/v1" ]
@@ -61,6 +62,7 @@ teardown() {
     status_json=$("$DRIVER" status "$run_id")
     [ "$(jq -r '.run_id' <<< "$status_json")" = "$run_id" ]
     [ "$(jq -r '.executor_mode' <<< "$status_json")" = "generic" ]
+    [ "$(jq -r '.ownership_required' ".hotl/state/$run_id.json")" = "true" ]
     [ -f ".hotl/state/$run_id.json" ]
 }
 
@@ -78,6 +80,9 @@ teardown() {
 # bats test_tags=receipt
 @test "receipt becomes sufficient only after verification gates finalize and finish" {
     run_id=$("$DRIVER" launch fixtures/hotl-workflow-runtime-sample.md)
+    claim=$("$DRIVER" owner claim --owner portable-contract-test --lease-seconds 60 --run-id "$run_id")
+    export HOTL_OWNER_TOKEN
+    HOTL_OWNER_TOKEN=$(jq -r '.token' <<< "$claim")
     "$DRIVER" step 1 start --run-id "$run_id"
     "$DRIVER" step 1 verify --run-id "$run_id"
     "$DRIVER" step 2 start --run-id "$run_id"
@@ -89,7 +94,9 @@ teardown() {
 
     receipt=$("$DRIVER" receipt "$run_id")
     [ "$(jq -r '.sufficiency.sufficient' <<< "$receipt")" = "false" ]
-    [ "$(jq -r '.sufficiency.reasons[0]' <<< "$receipt")" = "finish_disposition_missing" ]
+    [ "$(jq -r '.run.status' <<< "$receipt")" = "ready_to_finish" ]
+    jq -e '.sufficiency.reasons | index("run_not_completed")' <<< "$receipt" >/dev/null
+    jq -e '.sufficiency.reasons | index("finish_disposition_missing")' <<< "$receipt" >/dev/null
 
     "$DRIVER" finish kept --run-id "$run_id" >/dev/null
     receipt=$("$DRIVER" receipt "$run_id")

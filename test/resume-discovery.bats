@@ -110,6 +110,7 @@ prepare_and_init_run() {
     "$HOTL_RT" step 2 start --run-id "$RUN_ID" >/dev/null
     "$HOTL_RT" step 2 verify --run-id "$RUN_ID" >/dev/null
     "$HOTL_RT" finalize --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" finish kept --run-id "$RUN_ID" >/dev/null
     cd "$REPO_DIR"
 
     run "$LOCATE_RUN" --workflow docs/plans/2026-05-09-long-workflow.md
@@ -120,4 +121,21 @@ prepare_and_init_run() {
     [ "$status" -eq 0 ]
     [ "$(echo "$output" | jq 'length')" = "1" ]
     [ "$(echo "$output" | jq -r '.[0].status')" = "completed" ]
+}
+
+@test "locator includes ready-to-finish runs so disposition can resume" {
+    write_workflow
+    prepare_and_init_run
+
+    "$HOTL_RT" step 1 start --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" step 1 verify --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" step 2 start --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" step 2 verify --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" finalize --run-id "$RUN_ID" >/dev/null
+    cd "$REPO_DIR"
+
+    run "$LOCATE_RUN" --workflow docs/plans/2026-05-09-long-workflow.md
+    [ "$status" -eq 0 ]
+    [ "$(echo "$output" | jq 'length')" = "1" ]
+    [ "$(echo "$output" | jq -r '.[0].status')" = "ready_to_finish" ]
 }

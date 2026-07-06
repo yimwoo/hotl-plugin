@@ -18,13 +18,13 @@ Want to create or modify HOTL abstractions? See [Authoring Skills vs Agents](aut
 
 | Skill | Description | Phase |
 | --- | --- | --- |
-| [`governed-execution`](../skills/governed-execution/SKILL.md) | Preferred entry point that selects a Codex, Claude, or generic driver and an autonomous, manual, or delegated execution profile while preserving one evidence contract. | Execute |
-| [`loop-execution`](../skills/loop-execution/SKILL.md) | The canonical HOTL execution engine — mandatory live step visibility, platform-specific rendering (Codex: native progress card, Claude Code/Cline: chat logs + markdown table). Persists state for resume. | Execute |
-| [`executing-plans`](../skills/executing-plans/SKILL.md) | Loop execution with explicit human checkpoints between batches of tasks. | Execute |
-| [`subagent-execution`](../skills/subagent-execution/SKILL.md) | Delegated step runner over the loop execution engine — delegates eligible steps to fresh subagents while the controller keeps governance and verification. | Execute |
-| [`resuming`](../skills/resuming/SKILL.md) | Resume an interrupted workflow run — verify-first strategy with sidecar state persistence. | Execute |
+| [`governed-execution`](../skills/governed-execution/SKILL.md) | Preferred entry point that selects a Codex, Claude, or generic driver/profile while preserving renewable ownership, runtime bounds, effect evidence, and receipts. | Execute |
+| [`loop-execution`](../skills/loop-execution/SKILL.md) | Canonical autonomous engine with renewable controller ownership, ordered bounded loops/budgets, durable effect recovery, live progress, and state-derived completion receipts. | Execute |
+| [`executing-plans`](../skills/executing-plans/SKILL.md) | The same governed runtime with explicit human checkpoints between batches of tasks. | Execute |
+| [`subagent-execution`](../skills/subagent-execution/SKILL.md) | Delegates eligible steps to fresh workers while the controller retains its token, verification, effects, gates, budgets, and stop conditions. | Execute |
+| [`resuming`](../skills/resuming/SKILL.md) | Resume an interrupted run with explicit ownership resolution and verify-first step/effect reconciliation. | Execute |
 | [`dispatch-agents`](../skills/dispatch-agents/SKILL.md) | Run 2+ independent tasks in parallel with no shared state — dispatches parallel subagents for each task. | Execute |
-| [`finishing-a-development-branch`](../skills/finishing-a-development-branch/SKILL.md) | Close the execution lifecycle intentionally — merge back, publish/create a PR, keep the execution checkout, or discard it while recording the outcome in HOTL state. | Finish |
+| [`finishing-a-development-branch`](../skills/finishing-a-development-branch/SKILL.md) | Turn `ready_to_finish` into `completed` by explicitly merging, publishing, keeping, or discarding while recording effect and disposition evidence. | Finish |
 
 ### Quality & Review
 

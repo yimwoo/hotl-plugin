@@ -9,6 +9,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 HOTL_DIR=".hotl"
 STATE_DIR="$HOTL_DIR/state"
 REPORT_DIR="$HOTL_DIR/reports"
+LOCK_DIR="$HOTL_DIR/locks"
+ACTIVE_LOCK_PATH=""
 
 # ── Dependency check ────────────────────────────────────────────────────────
 
@@ -83,7 +85,77 @@ slug_from_workflow() {
 }
 
 ensure_dirs() {
-    mkdir -p "$STATE_DIR" "$REPORT_DIR"
+    mkdir -p "$STATE_DIR" "$REPORT_DIR" "$LOCK_DIR"
+}
+
+validate_run_id() {
+    local run_id="$1"
+    if [ -z "$run_id" ] || [[ ! "$run_id" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+        echo "ERROR: invalid run id: $run_id" >&2
+        return 1
+    fi
+}
+
+state_path_for_run_id() {
+    local run_id="$1"
+    validate_run_id "$run_id" || return 1
+    printf '%s/%s.json\n' "$STATE_DIR" "$run_id"
+}
+
+release_active_lock() {
+    if [ -n "$ACTIVE_LOCK_PATH" ] && [ -d "$ACTIVE_LOCK_PATH" ]; then
+        rm -f "$ACTIVE_LOCK_PATH/pid" "$ACTIVE_LOCK_PATH/host"
+        rmdir "$ACTIVE_LOCK_PATH" 2>/dev/null || true
+    fi
+    ACTIVE_LOCK_PATH=""
+}
+
+acquire_lock() {
+    local lock_key="$1"
+    local lock_path="$LOCK_DIR/${lock_key}.lock"
+    local attempt owner_pid owner_host current_host
+
+    ensure_dirs
+    current_host=$(uname -n)
+    if [ "$ACTIVE_LOCK_PATH" = "$lock_path" ]; then
+        return 0
+    fi
+    if [ -n "$ACTIVE_LOCK_PATH" ]; then
+        echo "ERROR: runtime cannot hold locks for two runs in one transition" >&2
+        return 1
+    fi
+
+    for ((attempt = 1; attempt <= 200; attempt++)); do
+        if mkdir "$lock_path" 2>/dev/null; then
+            printf '%s\n' "$$" > "$lock_path/pid"
+            printf '%s\n' "$current_host" > "$lock_path/host"
+            ACTIVE_LOCK_PATH="$lock_path"
+            trap release_active_lock EXIT
+            trap 'exit 130' INT
+            trap 'exit 143' TERM
+            return 0
+        fi
+
+        owner_pid=""
+        owner_host=""
+        [ -f "$lock_path/pid" ] && owner_pid=$(sed -n '1p' "$lock_path/pid" 2>/dev/null || true)
+        [ -f "$lock_path/host" ] && owner_host=$(sed -n '1p' "$lock_path/host" 2>/dev/null || true)
+        if [ "$owner_host" = "$current_host" ] && [[ "$owner_pid" =~ ^[0-9]+$ ]] && ! kill -0 "$owner_pid" 2>/dev/null; then
+            rm -f "$lock_path/pid" "$lock_path/host"
+            rmdir "$lock_path" 2>/dev/null || true
+            continue
+        fi
+        sleep 0.05
+    done
+
+    echo "ERROR: timed out waiting for HOTL writer lock: $lock_key" >&2
+    return 1
+}
+
+acquire_run_lock() {
+    local run_id="$1"
+    validate_run_id "$run_id" || return 1
+    acquire_lock "$run_id"
 }
 
 abspath_existing() {
@@ -127,7 +199,8 @@ json_number_or_null() {
 find_active_state() {
     local requested_run_id="${1:-${HOTL_RUN_ID:-}}"
     if [ -n "$requested_run_id" ]; then
-        local requested_state="${STATE_DIR}/${requested_run_id}.json"
+        local requested_state
+        requested_state=$(state_path_for_run_id "$requested_run_id") || exit 1
         if [ ! -f "$requested_state" ]; then
             echo "ERROR: No HOTL run found for run_id: $requested_run_id" >&2
             exit 1
@@ -168,8 +241,10 @@ state_get() {
 state_write() {
     local file="$1"
     local content="$2"
-    local tmp="${file}.tmp"
-    echo "$content" > "$tmp"
+    local tmp
+    tmp=$(mktemp "${file}.tmp.XXXXXX")
+    content=$(jq '.revision = ((.revision // 0) + 1)' <<< "$content")
+    printf '%s\n' "$content" > "$tmp"
     mv "$tmp" "$file"
 }
 
@@ -184,7 +259,8 @@ report_update_line() {
     local report="$1"
     local pattern="$2"
     local replacement="$3"
-    local tmp="${report}.tmp"
+    local tmp
+    tmp=$(mktemp "${report}.tmp.XXXXXX")
     sed "s|${pattern}|${replacement}|" "$report" > "$tmp"
     mv "$tmp" "$report"
 }
@@ -202,7 +278,8 @@ report_update_step_row() {
     local step_num="$2"
     local new_status="$3"
     local new_iterations="$4"
-    local tmp="${report}.tmp"
+    local tmp
+    tmp=$(mktemp "${report}.tmp.XXXXXX")
 
     # Match the table row by step number at the start
     # Table format: |  N   | Name | Status | Iterations |
@@ -229,7 +306,8 @@ report_update_step_row() {
 report_write_finish_section() {
     local report="$1"
     local content="$2"
-    local tmp="${report}.tmp"
+    local tmp
+    tmp=$(mktemp "${report}.tmp.XXXXXX")
 
     awk '
     $0 == "## Finish Outcome" { exit }
@@ -247,6 +325,201 @@ report_write_finish_section() {
     } >> "$tmp"
 
     mv "$tmp" "$report"
+}
+
+repair_report_from_state() {
+    local state_file="$1"
+    local report="$2"
+    local tmp
+    mkdir -p "$(dirname "$report")"
+    tmp=$(mktemp "${report}.repair.XXXXXX")
+
+    {
+        printf '# Execution Report: %s\n\n' "$(jq -r '.run_id' "$state_file")"
+        printf '**Workflow:** %s\n' "$(basename "$(jq -r '.workflow_path' "$state_file")")"
+        printf '**Source Workflow:** %s\n' "$(jq -r '.source_workflow_path' "$state_file")"
+        if [ "$(jq -r '.source_branch // empty' "$state_file")" != "" ]; then
+            printf '**Source Branch:** %s\n' "$(jq -r '.source_branch' "$state_file")"
+        fi
+        if [ "$(jq -r '.source_head // empty' "$state_file")" != "" ]; then
+            printf '**Source HEAD:** %s\n' "$(jq -r '.source_head' "$state_file")"
+        fi
+        printf '**Intent:** %s\n' "$(jq -r '.intent' "$state_file")"
+        printf '**Branch:** %s\n' "$(jq -r '.branch' "$state_file")"
+        printf '**Executor:** %s\n' "$(jq -r '.executor_mode' "$state_file")"
+        printf '**Execution Root:** %s\n' "$(jq -r '.execution_root' "$state_file")"
+        printf '**Started:** %s\n' "$(jq -r '.started_at' "$state_file")"
+        printf '**Updated:** %s\n' "$(jq -r '.last_update' "$state_file")"
+        printf '**Status:** %s\n\n' "$(jq -r '.status' "$state_file")"
+        printf '| Step | Name | Status | Iterations |\n'
+        printf '|------|------|--------|------------|\n'
+        while IFS=$'\t' read -r number name status attempts gate_result gate_mode; do
+            local rendered iterations
+            if [ "$gate_result" = approved ]; then
+                if [ "$gate_mode" = auto ]; then rendered='⚡ Auto-approved'; else rendered='✓ Approved'; fi
+                iterations='-'
+            elif [ "$gate_result" = rejected ]; then
+                rendered='✗ Rejected'
+                iterations='-'
+            else
+                case "$status" in
+                    pending) rendered='· Pending'; iterations='-' ;;
+                    in_progress) rendered='→ Running'; iterations="$attempts" ;;
+                    done) rendered='✓ Done'; iterations="$attempts" ;;
+                    failed) rendered='✗ Failed'; iterations="$attempts" ;;
+                    blocked) rendered='✗ Blocked'; iterations='-' ;;
+                    *) rendered="$status"; iterations="$attempts" ;;
+                esac
+            fi
+            printf '| %2s   | %s | %s | %s |\n' "$number" "$name" "$rendered" "$iterations"
+        done < <(jq -r '.steps[] | [.number,.name,.status,.attempts,(.gate_result // ""),(.gate_mode // "")] | @tsv' "$state_file")
+        printf '\n## Event Log\n\n'
+        printf '**[%s]** Report repaired from authoritative state revision %s\n' "$(now_time)" "$(jq -r '.revision // 0' "$state_file")"
+    } > "$tmp"
+    mv "$tmp" "$report"
+
+    local disposition
+    disposition=$(jq -r '.finish.disposition // empty' "$state_file")
+    if [ -n "$disposition" ]; then
+        local finish_content
+        finish_content=$(jq -r '
+            ["**Disposition:** \(.finish.disposition)",
+             "**Recorded:** \(.finish.recorded_at)",
+             (if .finish.target_branch then "**Target Branch:** \(.finish.target_branch)" else empty end),
+             (if .finish.remote then "**Remote:** \(.finish.remote)" else empty end),
+             (if .finish.pr_url then "**PR URL:** \(.finish.pr_url)" else empty end),
+             (if .finish.branch_action then "**Branch Action:** \(.finish.branch_action)" else empty end),
+             (if .finish.worktree_action then "**Worktree Action:** \(.finish.worktree_action)" else empty end),
+             (if .finish.artifacts_preserved_at then "**Artifacts Preserved At:** \(.finish.artifacts_preserved_at)" else empty end),
+             (if .finish.notes then "**Notes:** \(.finish.notes)" else empty end)] | .[]
+        ' "$state_file")
+        report_write_finish_section "$report" "$finish_content"
+    fi
+}
+
+ensure_report_from_state() {
+    local state_file="$1"
+    local report="$2"
+    if [ ! -s "$report" ] || ! grep -Fq "# Execution Report: $(jq -r '.run_id' "$state_file")" "$report"; then
+        repair_report_from_state "$state_file" "$report"
+    fi
+}
+
+sha256_text() {
+    if command -v shasum >/dev/null 2>&1; then
+        printf '%s' "$1" | shasum -a 256 | awk '{print $1}'
+    else
+        printf '%s' "$1" | sha256sum | awk '{print $1}'
+    fi
+}
+
+new_owner_token() {
+    if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex 32
+        return
+    fi
+    if [ -r /dev/urandom ]; then
+        od -An -N32 -tx1 /dev/urandom | tr -d ' \n'
+        return
+    fi
+    echo "ERROR: secure operating-system entropy is required for controller ownership tokens" >&2
+    return 1
+}
+
+enforce_controller_ownership() {
+    local state_file="$1"
+    local controller_status owner_token expected_hash now_epoch
+    controller_status=$(jq -r '.controller.status // "legacy-unclaimed"' "$state_file")
+    case "$controller_status" in
+        legacy-unclaimed) return 0 ;;
+        unclaimed|released)
+            if [ "$(jq -r '.ownership_required // false' "$state_file")" = true ]; then
+                echo "ERROR: This run requires an active controller; claim controller ownership first" >&2
+                return 1
+            fi
+            return 0
+            ;;
+        active) ;;
+        *) echo "ERROR: Run controller is '$controller_status'; claim or take over ownership first" >&2; return 1 ;;
+    esac
+
+    now_epoch=$(date -u +%s)
+    if [ "$(jq -r '.controller.lease_expires_epoch // 0' "$state_file")" -le "$now_epoch" ]; then
+        echo "ERROR: Controller lease expired; use owner takeover with a recorded reason" >&2
+        return 1
+    fi
+    owner_token="${HOTL_OWNER_TOKEN:-}"
+    [ -n "$owner_token" ] || {
+        echo "ERROR: Active run requires the controller ownership token in HOTL_OWNER_TOKEN" >&2
+        return 1
+    }
+    expected_hash=$(jq -r '.controller.token_sha256 // empty' "$state_file")
+    [ "$(sha256_text "$owner_token")" = "$expected_hash" ] || {
+        echo "ERROR: Invalid controller ownership token" >&2
+        return 1
+    }
+}
+
+iso_to_epoch() {
+    local value="$1"
+    local normalized
+    if date -u -d "$value" +%s >/dev/null 2>&1; then
+        date -u -d "$value" +%s
+        return
+    fi
+    normalized=$(printf '%s' "$value" | sed 's/+00:00$/+0000/')
+    date -j -u -f '%Y-%m-%dT%H:%M:%S%z' "$normalized" +%s 2>/dev/null
+}
+
+elapsed_minutes_for_state() {
+    local state_file="$1"
+    local started_epoch now_epoch elapsed_seconds
+    started_epoch=$(iso_to_epoch "$(jq -r '.started_at' "$state_file")") || return 1
+    now_epoch=$(date -u +%s)
+    elapsed_seconds=$((now_epoch - started_epoch))
+    [ "$elapsed_seconds" -ge 0 ] || elapsed_seconds=0
+    printf '%s\n' "$((elapsed_seconds / 60))"
+}
+
+enforce_transition_budgets() {
+    local state_file="$1"
+    local report="$2"
+    local attempt_delta="${3:-0}"
+    local elapsed evaluation exceeded updated ts
+
+    elapsed=$(elapsed_minutes_for_state "$state_file") || {
+        echo "ERROR: cannot evaluate elapsed runtime budget" >&2
+        return 1
+    }
+    ts=$(now_iso)
+    evaluation=$(jq --argjson attempt_delta "$attempt_delta" --argjson elapsed "$elapsed" '
+        (.budgets.limits // {}) as $limits |
+        (.budgets.observed // {}) as $observed |
+        (([.steps[].attempts] | add // 0) + $attempt_delta) as $attempts |
+        [{metric:"total_attempts",limit:($limits.total_attempts//null),observed:$attempts},
+         {metric:"agents",limit:($limits.agents//null),observed:($observed.agents//null)},
+         {metric:"cost_usd",limit:($limits.cost_usd//null),observed:($observed.cost_usd//null)},
+         {metric:"elapsed_minutes",limit:($limits.elapsed_minutes//null),observed:$elapsed}]
+        | map(. + {status:(if .limit==null then "unset" elif .observed==null then "unknown" elif .observed>.limit then "exceeded" else "within" end)})
+    ' "$state_file")
+    exceeded=$(jq '[.[] | select(.status=="exceeded") | .metric]' <<< "$evaluation")
+    updated=$(jq --argjson exceeded "$exceeded" --argjson elapsed "$elapsed" --arg ts "$ts" '
+        .budgets.observed.elapsed_minutes = $elapsed |
+        .budgets.exceeded = $exceeded |
+        .status = (if ($exceeded | length) > 0 then "paused" else .status end) |
+        .last_update = $ts
+    ' "$state_file")
+    state_write "$state_file" "$updated"
+    report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+
+    if [ "$(jq 'length' <<< "$exceeded")" -gt 0 ]; then
+        local names
+        names=$(jq -r 'join(", ")' <<< "$exceeded")
+        report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** paused"
+        report_append_event "$report" "**[$(now_time)]** Runtime budget exceeded: $names"
+        echo "ERROR: Runtime budget exceeded: $names" >&2
+        return 1
+    fi
 }
 
 build_summary_payload() {
@@ -825,7 +1098,7 @@ cmd_normalize() {
 
 cmd_init() {
     if [ $# -lt 1 ]; then
-        echo "usage: hotl-rt init <workflow-file> [--executor-mode <mode>] [--driver <id>] [--host <id>] [--repo-root <path>] [--execution-root <path>] [--source-workflow-path <path>] [--worktree-path <path>] [--branch <name>] [--source-branch <name>] [--source-head <sha>]" >&2
+        echo "usage: hotl-rt init <workflow-file> [--require-owner] [--executor-mode <mode>] [--driver <id>] [--host <id>] [--repo-root <path>] [--execution-root <path>] [--source-workflow-path <path>] [--worktree-path <path>] [--branch <name>] [--source-branch <name>] [--source-head <sha>]" >&2
         exit 1
     fi
 
@@ -841,6 +1114,7 @@ cmd_init() {
     local branch_override=""
     local source_branch=""
     local source_head=""
+    local require_owner=false
 
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -884,6 +1158,10 @@ cmd_init() {
                 source_head="$2"
                 shift 2
                 ;;
+            --require-owner)
+                require_owner=true
+                shift
+                ;;
             *)
                 echo "ERROR: Unknown option for init: $1" >&2
                 exit 1
@@ -907,8 +1185,16 @@ cmd_init() {
     source_workflow_path=$(abspath_existing "$source_workflow_path")
     [ -z "$repo_root" ] && repo_root=$(default_repo_root)
     [ -z "$execution_root" ] && execution_root=$(default_execution_root)
-    local run_id
-    run_id=$(generate_run_id "$slug")
+    acquire_lock "init"
+    local run_id base_run_id suffix
+    base_run_id=$(generate_run_id "$slug")
+    validate_run_id "$base_run_id" || exit 1
+    run_id="$base_run_id"
+    suffix=2
+    while [ -e "${STATE_DIR}/${run_id}.json" ] || [ -e "${REPORT_DIR}/${run_id}.md" ]; do
+        run_id="${base_run_id}-${suffix}"
+        suffix=$((suffix + 1))
+    done
     local started_at
     started_at=$(now_iso)
 
@@ -1018,6 +1304,18 @@ cmd_init() {
   },
   \"external_actions\": [],
   \"policy_pauses\": [],
+  \"controller\": {
+    \"status\": \"unclaimed\",
+    \"owner_id\": null,
+    \"token_sha256\": null,
+    \"claimed_at\": null,
+    \"heartbeat_at\": null,
+    \"lease_expires_epoch\": null,
+    \"released_at\": null
+  },
+  \"ownership_required\": ${require_owner},
+  \"ownership_history\": [],
+  \"revision\": 0,
   \"started_at\": \"${started_at}\",
   \"last_update\": \"${started_at}\",
   \"completed_at\": null,
@@ -1191,8 +1489,17 @@ cmd_step() {
 
     local state_file
     state_file=$(find_active_state "$run_id")
+    local resolved_run_id
+    resolved_run_id=$(jq -r '.run_id' "$state_file")
+    acquire_run_lock "$resolved_run_id"
+    enforce_controller_ownership "$state_file"
+    if [[ ! "$step_num" =~ ^[1-9][0-9]*$ ]] || [ "$step_num" -gt "$(jq '.steps | length' "$state_file")" ]; then
+        echo "ERROR: Invalid step number: $step_num" >&2
+        exit 1
+    fi
     local report
     report=$(report_path_from_state "$state_file")
+    ensure_report_from_state "$state_file" "$report"
     local ts
     ts=$(now_iso)
     local time_short
@@ -1216,6 +1523,29 @@ cmd_step() {
                 echo "ERROR: Step $step_num is '$current_status', expected 'pending'" >&2
                 exit 1
             fi
+
+            if [ "$step_num" -gt 1 ]; then
+                local prior_incomplete
+                prior_incomplete=$(jq --argjson index "$((step_num - 1))" '[.steps[0:$index][] | select(.status != "done")] | first | .number // empty' "$state_file")
+                if [ -n "$prior_incomplete" ]; then
+                    echo "ERROR: Step $prior_incomplete must be done before step $step_num can start" >&2
+                    exit 1
+                fi
+            fi
+
+            local attempts max_iter
+            attempts=$(jq -r ".steps[$((step_num - 1))].attempts" "$state_file")
+            max_iter=$(jq -r ".steps[$((step_num - 1))].max_iterations // 1" "$state_file")
+            if [ "$attempts" -ge "$max_iter" ]; then
+                echo "ERROR: Step $step_num reached maximum iterations ($max_iter)" >&2
+                exit 1
+            fi
+
+            if ! enforce_transition_budgets "$state_file" "$report" 1; then
+                exit 1
+            fi
+            ts=$(now_iso)
+            time_short=$(now_time)
 
             local step_name
             step_name=$(jq -r ".steps[$((step_num - 1))].name" "$state_file")
@@ -1244,6 +1574,15 @@ cmd_step() {
 
         verify)
             local verify_type verify_cmd step_name verify_json
+            if [ "$(jq -r ".steps[$((step_num - 1))].status" "$state_file")" != "in_progress" ]; then
+                echo "ERROR: Step $step_num must be in_progress before verify" >&2
+                exit 1
+            fi
+            if ! enforce_transition_budgets "$state_file" "$report" 0; then
+                exit 1
+            fi
+            ts=$(now_iso)
+            time_short=$(now_time)
             verify_type=$(jq -r ".steps[$((step_num - 1))].verify.type" "$state_file")
             verify_cmd=$(jq -r ".steps[$((step_num - 1))].verify.command" "$state_file")
             verify_json=$(jq -c ".steps[$((step_num - 1))].verify" "$state_file")
@@ -1400,6 +1739,10 @@ cmd_step() {
             attempts=$(jq -r ".steps[$((step_num - 1))].attempts" "$state_file")
             local max_iter
             max_iter=$(jq -r ".steps[$((step_num - 1))].max_iterations" "$state_file")
+            if [ "$attempts" -ge "$max_iter" ]; then
+                echo "ERROR: Step $step_num reached maximum iterations ($max_iter)" >&2
+                exit 1
+            fi
 
             local updated
             updated=$(jq --arg ts "$ts" --argjson num "$step_num" '
@@ -1491,12 +1834,19 @@ cmd_gate() {
 
     local state_file
     state_file=$(find_active_state "$run_id")
+    acquire_run_lock "$(jq -r '.run_id' "$state_file")"
+    enforce_controller_ownership "$state_file"
+    if [[ ! "$step_num" =~ ^[1-9][0-9]*$ ]] || [ "$step_num" -gt "$(jq '.steps | length' "$state_file")" ]; then
+        echo "ERROR: Invalid step number: $step_num" >&2
+        exit 1
+    fi
     if [ "$(jq -r '.risk_level' "$state_file")" = high ] && [ "$gate_mode" != human ]; then
         echo "ERROR: High-risk workflows require human gate decisions" >&2
         exit 1
     fi
     local report
     report=$(report_path_from_state "$state_file")
+    ensure_report_from_state "$state_file" "$report"
     local ts
     ts=$(now_iso)
     local time_short
@@ -1557,6 +1907,11 @@ cmd_gate() {
         return
     fi
 
+    if [ "$current_status" != "done" ]; then
+        echo "ERROR: Step $step_num must be done before its gate can be recorded (current status: $current_status)" >&2
+        exit 1
+    fi
+
     local updated
     updated=$(jq --arg ts "$ts" --argjson num "$step_num" --arg decision "$decision" --arg gate_mode "$gate_mode" '
         .status = (if .status == "paused" and $decision == "approved"
@@ -1615,29 +1970,60 @@ cmd_finalize() {
 
     local state_file
     state_file=$(find_active_state "$run_id")
+    acquire_run_lock "$(jq -r '.run_id' "$state_file")"
+    enforce_controller_ownership "$state_file"
     local report
     report=$(report_path_from_state "$state_file")
+    ensure_report_from_state "$state_file" "$report"
+    local existing_status
+    existing_status=$(jq -r '.status' "$state_file")
+    case "$existing_status" in
+        ready_to_finish|completed)
+            build_summary_payload "$state_file"
+            return
+            ;;
+    esac
     local ts
     ts=$(now_iso)
     local time_short
     time_short=$(now_time)
 
-    # Preserve the legacy finalized status for compatibility. The governed
-    # completion authority is the evidence receipt, which remains insufficient
-    # when steps, gates, verification, actions, budgets, or finish are missing.
-    local has_failed has_blocked
+    local unfinished has_failed has_blocked run_blocked
+    unfinished=$(jq '[.steps[] | select(.status == "pending" or .status == "in_progress")] | length' "$state_file")
     has_failed=$(jq '[.steps[] | select(.status == "failed")] | length' "$state_file")
     has_blocked=$(jq '[.steps[] | select(.status == "blocked")] | length' "$state_file")
+    run_blocked=$(jq 'if .status == "blocked" then 1 else 0 end' "$state_file")
+    if [ "$unfinished" -gt 0 ] && [ "$has_failed" -eq 0 ] && [ "$has_blocked" -eq 0 ] && [ "$run_blocked" -eq 0 ]; then
+        echo "ERROR: Cannot finalize run with unfinished steps ($unfinished remaining)" >&2
+        exit 1
+    fi
 
-    local final_status="completed"
-    if [ "$has_failed" -gt 0 ] || [ "$has_blocked" -gt 0 ]; then
+    local final_status="ready_to_finish"
+    if [ "$has_failed" -gt 0 ] || [ "$has_blocked" -gt 0 ] || [ "$run_blocked" -gt 0 ]; then
         final_status="blocked"
+    else
+        local missing_verification missing_gates pending_actions missing_effect_evidence unresolved_effects failed_effects exceeded_budgets
+        missing_verification=$(jq '[.steps[] | select((if .verify==null then false elif .verify.type=="shell" then ((.verify.command//"")|length)>0 else true end) and .verify.passed!=true)] | length' "$state_file")
+        missing_gates=$(jq --arg risk "$(jq -r '.risk_level' "$state_file")" '[.steps[] | select((.gate!=null or $risk=="high" or .verify.type=="human-review") and (.gate_result!="approved" or ($risk=="high" and .gate_mode!="human")))] | length' "$state_file")
+        pending_actions=$(jq '[.external_actions[]? | select(.status=="pending")] | length' "$state_file")
+        missing_effect_evidence=$(jq '[.external_actions[]? | select((.kind=="external_write" or .kind=="production_change" or .kind=="secret_access") and .status=="approved" and (.effect==null or .effect_required==null or .idempotency_key==null))] | length' "$state_file")
+        unresolved_effects=$(jq '[.external_actions[]? | select(.effect_required==true and .status=="approved" and (.effect.status!="succeeded" and .effect.status!="cancelled" and .effect.status!="failed"))] | length' "$state_file")
+        failed_effects=$(jq '[.external_actions[]? | select(.effect_required==true and .effect.status=="failed")] | length' "$state_file")
+        exceeded_budgets=$(jq '[.budgets.exceeded[]?] | length' "$state_file")
+
+        if [ "$missing_verification" -gt 0 ]; then echo "ERROR: Cannot finalize without passing verification evidence" >&2; exit 1; fi
+        if [ "$missing_gates" -gt 0 ]; then echo "ERROR: Cannot finalize without required gate evidence" >&2; exit 1; fi
+        if [ "$pending_actions" -gt 0 ]; then echo "ERROR: Cannot finalize with unresolved sensitive action decisions" >&2; exit 1; fi
+        if [ "$missing_effect_evidence" -gt 0 ] || [ "$unresolved_effects" -gt 0 ]; then echo "ERROR: Cannot finalize without terminal sensitive-action effect evidence" >&2; exit 1; fi
+        if [ "$failed_effects" -gt 0 ]; then echo "ERROR: Cannot finalize a successful run with failed sensitive-action effects" >&2; exit 1; fi
+        if [ "$exceeded_budgets" -gt 0 ]; then echo "ERROR: Cannot finalize while runtime budgets are exceeded" >&2; exit 1; fi
     fi
 
     local updated
     updated=$(jq --arg ts "$ts" --arg status "$final_status" '
         .status = $status |
-        .completed_at = $ts |
+        .finalized_at = $ts |
+        .completed_at = (if $status == "blocked" then $ts else null end) |
         .last_update = $ts
     ' "$state_file")
     state_write "$state_file" "$updated"
@@ -1729,8 +2115,11 @@ cmd_finish() {
 
     local state_file
     state_file=$(find_active_state "$run_id")
+    acquire_run_lock "$(jq -r '.run_id' "$state_file")"
+    enforce_controller_ownership "$state_file"
     local report
     report=$(report_path_from_state "$state_file")
+    ensure_report_from_state "$state_file" "$report"
     local status
     status=$(jq -r '.status' "$state_file")
     local existing_disposition
@@ -1743,22 +2132,11 @@ cmd_finish() {
 
     case "$disposition" in
         merged|published)
-            if [ "$status" != "completed" ]; then
-                echo "ERROR: Finish disposition '$disposition' requires a completed run. Current status: $status" >&2
-                exit 1
-            fi
-            local pre_finish_receipt remaining_reasons
-            pre_finish_receipt=$(cmd_receipt "$(jq -r '.run_id' "$state_file")" --json)
-            remaining_reasons=$(jq '[.sufficiency.reasons[] | select(. != "finish_disposition_missing")] | length' <<< "$pre_finish_receipt")
-            if [ "$remaining_reasons" -ne 0 ]; then
-                echo "ERROR: Finish disposition '$disposition' requires sufficient completion evidence." >&2
-                jq -r '.sufficiency.reasons[] | select(. != "finish_disposition_missing") | "  - \(.)"' <<< "$pre_finish_receipt" >&2
-                exit 1
-            fi
+            case "$status" in ready_to_finish|completed) ;; *) echo "ERROR: Finish disposition '$disposition' requires a completed run. Current status: $status" >&2; exit 1 ;; esac
             ;;
         kept|discarded)
             case "$status" in
-                completed|blocked) ;;
+                ready_to_finish|completed|blocked) ;;
                 *)
                     echo "ERROR: Finish disposition '$disposition' requires a finalized run. Current status: $status" >&2
                     exit 1
@@ -1766,6 +2144,17 @@ cmd_finish() {
             esac
             ;;
     esac
+
+    if [ "$status" = ready_to_finish ] || [ "$status" = completed ]; then
+        local pre_finish_receipt remaining_reasons
+        pre_finish_receipt=$(cmd_receipt "$(jq -r '.run_id' "$state_file")" --json)
+        remaining_reasons=$(jq '[.sufficiency.reasons[] | select(. != "finish_disposition_missing" and . != "run_not_completed")] | length' <<< "$pre_finish_receipt")
+        if [ "$remaining_reasons" -ne 0 ]; then
+            echo "ERROR: Finish disposition '$disposition' requires sufficient completion evidence." >&2
+            jq -r '.sufficiency.reasons[] | select(. != "finish_disposition_missing" and . != "run_not_completed") | "  - \(.)"' <<< "$pre_finish_receipt" >&2
+            exit 1
+        fi
+    fi
 
     local ts
     ts=$(now_iso)
@@ -1784,6 +2173,8 @@ cmd_finish() {
         --arg artifacts_preserved_at "$artifacts_preserved_at" \
         --arg notes "$notes" '
         .last_update = $ts |
+        .status = (if .status == "ready_to_finish" then "completed" else .status end) |
+        .completed_at = (if .status == "completed" then $ts else .completed_at end) |
         .finish = {
             disposition: $disposition,
             recorded_at: $ts,
@@ -1798,6 +2189,7 @@ cmd_finish() {
     ' "$state_file")
     state_write "$state_file" "$updated"
 
+    report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** $(jq -r '.status' "$state_file")"
     report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
     report_append_event "$report" "**[$time_short]** Finish recorded: $disposition"
 
@@ -1825,7 +2217,8 @@ cmd_summary() {
     require_jq
 
     local run_id="$1"
-    local state_file="${STATE_DIR}/${run_id}.json"
+    local state_file
+    state_file=$(state_path_for_run_id "$run_id") || exit 1
 
     if [ ! -f "$state_file" ]; then
         echo "ERROR: No state found for run: $run_id" >&2
@@ -1856,7 +2249,8 @@ cmd_receipt() {
         echo "ERROR: Unknown option for receipt: $1" >&2
         exit 1
     fi
-    local state_file="${STATE_DIR}/${run_id}.json"
+    local state_file
+    state_file=$(state_path_for_run_id "$run_id") || exit 1
     [ -f "$state_file" ] || { echo "ERROR: No state found for run: $run_id" >&2; exit 1; }
 
     jq '
@@ -1873,6 +2267,9 @@ cmd_receipt() {
             + [if ([.steps[] | select(gate_required($state.risk_level) and .gate_result != "approved")] | length) > 0 then "gate_evidence_missing_or_rejected" else empty end]
             + [if $state.risk_level == "high" and ([.steps[] | select(.gate_mode != "human")] | length) > 0 then "high_risk_human_gate_missing" else empty end]
             + [if ([.external_actions[]? | select(.status == "pending")] | length) > 0 then "sensitive_action_unresolved" else empty end]
+            + [if ([.external_actions[]? | select((.kind=="external_write" or .kind=="production_change" or .kind=="secret_access") and .status=="approved" and (.effect == null or .effect_required == null or .idempotency_key == null))] | length) > 0 then "sensitive_action_effect_evidence_missing" else empty end]
+            + [if ([.external_actions[]? | select(.effect_required==true and .status=="approved" and (.effect.status != "succeeded" and .effect.status != "cancelled" and .effect.status != "failed"))] | length) > 0 then "sensitive_action_effect_unresolved" else empty end]
+            + [if ([.external_actions[]? | select(.effect_required==true and .effect.status=="failed")] | length) > 0 then "sensitive_action_effect_failed" else empty end]
             + [if ([.budgets.exceeded[]?] | length) > 0 then "budget_exceeded" else empty end]
             + [if (.finish.disposition // null) == null then "finish_disposition_missing" else empty end]);
         (reasons) as $reasons |
@@ -1896,6 +2293,13 @@ cmd_receipt() {
                 completed_at: .completed_at
             },
             implementation: {driver: (.driver // "generic"), host: (.host // "fallback")},
+            controller: {
+                status: (.controller.status // "legacy-unclaimed"),
+                owner_id: (.controller.owner_id // null),
+                claimed_at: (.controller.claimed_at // null),
+                heartbeat_at: (.controller.heartbeat_at // null),
+                lease_expires_epoch: (.controller.lease_expires_epoch // null)
+            },
             evidence: [.steps[] | {
                 step: .number,
                 name: .name,
@@ -1921,7 +2325,10 @@ cmd_receipt() {
             external_actions: [.external_actions[]? | {
                 id: .id, kind: .kind, target: .target, status: .status,
                 requested_at: .requested_at, decided_at: .decided_at,
-                decision_mode: .decision_mode
+                decision_mode: .decision_mode,
+                effect_required: (.effect_required // null),
+                idempotency_key: (.idempotency_key // null),
+                effect: (.effect // null)
             }],
             finish: .finish,
             sufficiency: {sufficient: ($reasons | length == 0), reasons: $reasons},
@@ -1930,53 +2337,222 @@ cmd_receipt() {
     ' "$state_file"
 }
 
-cmd_action() {
-    [ $# -ge 1 ] || { echo "usage: hotl-rt action <request|decide> ..." >&2; exit 1; }
+cmd_owner() {
+    [ $# -ge 1 ] || { echo "usage: hotl-rt owner <claim|status|heartbeat|handoff|release|takeover> ..." >&2; exit 1; }
     require_jq
-    local operation="$1"; shift
+    local operation="$1"
+    shift
+    local run_id="${HOTL_RUN_ID:-}" owner_id="" token="${HOTL_OWNER_TOKEN:-}" to_owner="" reason=""
+    local lease_seconds=300 force=0
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --run-id) run_id="$2"; shift 2 ;;
+            --owner) owner_id="$2"; shift 2 ;;
+            --token) token="$2"; shift 2 ;;
+            --to-owner) to_owner="$2"; shift 2 ;;
+            --reason) reason="$2"; shift 2 ;;
+            --lease-seconds) lease_seconds="$2"; shift 2 ;;
+            --force) force=1; shift ;;
+            *) echo "ERROR: Unknown owner option: $1" >&2; exit 1 ;;
+        esac
+    done
+
+    [[ "$lease_seconds" =~ ^[1-9][0-9]*$ ]] && [ "$lease_seconds" -le 604800 ] || {
+        echo "ERROR: --lease-seconds must be an integer from 1 to 604800" >&2
+        exit 1
+    }
+
+    local state_file
+    state_file=$(find_active_state "$run_id")
+    if [ "$operation" = status ]; then
+        local now_epoch
+        now_epoch=$(date -u +%s)
+        jq --argjson now "$now_epoch" '{
+            status:(if (.controller.status // "legacy-unclaimed") == "active" and (.controller.lease_expires_epoch // 0) <= $now then "stale" else (.controller.status // "legacy-unclaimed") end),
+            owner_id:(.controller.owner_id // null),
+            claimed_at:(.controller.claimed_at // null),
+            heartbeat_at:(.controller.heartbeat_at // null),
+            lease_expires_epoch:(.controller.lease_expires_epoch // null),
+            released_at:(.controller.released_at // null)
+        }' "$state_file"
+        return
+    fi
+
+    acquire_run_lock "$(jq -r '.run_id' "$state_file")"
+    local report ts now_epoch expires_epoch updated new_token token_hash current_status
+    report=$(report_path_from_state "$state_file")
+    ensure_report_from_state "$state_file" "$report"
+    ts=$(now_iso)
+    now_epoch=$(date -u +%s)
+    expires_epoch=$((now_epoch + lease_seconds))
+    current_status=$(jq -r '.controller.status // "legacy-unclaimed"' "$state_file")
+
+    case "$operation" in
+        claim)
+            [[ "$owner_id" =~ ^[A-Za-z0-9][A-Za-z0-9._:@-]*$ ]] || { echo "ERROR: --owner must be a stable controller identity" >&2; exit 1; }
+            if [ "$current_status" = active ]; then
+                if [ "$(jq -r '.controller.lease_expires_epoch // 0' "$state_file")" -gt "$now_epoch" ]; then
+                    echo "ERROR: Run already has an active controller: $(jq -r '.controller.owner_id' "$state_file")" >&2
+                else
+                    echo "ERROR: Previous controller lease is stale; use owner takeover with a reason" >&2
+                fi
+                exit 1
+            fi
+            new_token=$(new_owner_token "$state_file")
+            token_hash=$(sha256_text "$new_token")
+            updated=$(jq --arg owner "$owner_id" --arg hash "$token_hash" --arg ts "$ts" --argjson expires "$expires_epoch" '
+                .controller={status:"active",owner_id:$owner,token_sha256:$hash,claimed_at:$ts,heartbeat_at:$ts,lease_expires_epoch:$expires,released_at:null} |
+                .ownership_history=((.ownership_history // []) + [{event:"claim",owner_id:$owner,at:$ts,reason:null}]) |
+                .last_update=$ts
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            report_append_event "$report" "**[$(now_time)]** Controller claimed: $owner_id"
+            jq -cn --arg owner "$owner_id" --arg token "$new_token" --argjson expires "$expires_epoch" '{status:"active",owner_id:$owner,token:$token,lease_expires_epoch:$expires}'
+            ;;
+        heartbeat)
+            [ "$current_status" = active ] || { echo "ERROR: No active controller to heartbeat" >&2; exit 1; }
+            [ -n "$token" ] && [ "$(sha256_text "$token")" = "$(jq -r '.controller.token_sha256 // empty' "$state_file")" ] || { echo "ERROR: Invalid controller ownership token" >&2; exit 1; }
+            updated=$(jq --arg ts "$ts" --argjson expires "$expires_epoch" '
+                .controller.heartbeat_at=$ts | .controller.lease_expires_epoch=$expires | .last_update=$ts
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            jq -cn --arg owner "$(jq -r '.controller.owner_id' "$state_file")" --argjson expires "$expires_epoch" '{status:"active",owner_id:$owner,heartbeat_at:now|todate,lease_expires_epoch:$expires}'
+            ;;
+        release)
+            [ "$current_status" = active ] || { echo "ERROR: No active controller to release" >&2; exit 1; }
+            [ -n "$token" ] && [ "$(sha256_text "$token")" = "$(jq -r '.controller.token_sha256 // empty' "$state_file")" ] || { echo "ERROR: Invalid controller ownership token" >&2; exit 1; }
+            owner_id=$(jq -r '.controller.owner_id' "$state_file")
+            updated=$(jq --arg owner "$owner_id" --arg ts "$ts" '
+                .controller.status="released" | .controller.token_sha256=null | .controller.lease_expires_epoch=null | .controller.released_at=$ts |
+                .ownership_history=((.ownership_history // []) + [{event:"release",owner_id:$owner,at:$ts,reason:null}]) | .last_update=$ts
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            report_append_event "$report" "**[$(now_time)]** Controller released: $owner_id"
+            jq -cn --arg owner "$owner_id" '{status:"released",owner_id:$owner}'
+            ;;
+        handoff)
+            [ "$current_status" = active ] || { echo "ERROR: No active controller to hand off" >&2; exit 1; }
+            [ -n "$token" ] && [ "$(sha256_text "$token")" = "$(jq -r '.controller.token_sha256 // empty' "$state_file")" ] || { echo "ERROR: Invalid controller ownership token" >&2; exit 1; }
+            [[ "$to_owner" =~ ^[A-Za-z0-9][A-Za-z0-9._:@-]*$ ]] || { echo "ERROR: --to-owner must be a stable controller identity" >&2; exit 1; }
+            owner_id=$(jq -r '.controller.owner_id' "$state_file")
+            new_token=$(new_owner_token "$state_file"); token_hash=$(sha256_text "$new_token")
+            updated=$(jq --arg from "$owner_id" --arg owner "$to_owner" --arg hash "$token_hash" --arg ts "$ts" --argjson expires "$expires_epoch" '
+                .controller={status:"active",owner_id:$owner,token_sha256:$hash,claimed_at:$ts,heartbeat_at:$ts,lease_expires_epoch:$expires,released_at:null} |
+                .ownership_history=((.ownership_history // []) + [{event:"handoff",owner_id:$owner,from_owner:$from,at:$ts,reason:null}]) | .last_update=$ts
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            report_append_event "$report" "**[$(now_time)]** Controller handoff: $owner_id → $to_owner"
+            jq -cn --arg owner "$to_owner" --arg token "$new_token" --argjson expires "$expires_epoch" '{status:"active",owner_id:$owner,token:$token,lease_expires_epoch:$expires}'
+            ;;
+        takeover)
+            [[ "$owner_id" =~ ^[A-Za-z0-9][A-Za-z0-9._:@-]*$ ]] || { echo "ERROR: --owner must be a stable controller identity" >&2; exit 1; }
+            [ -n "$reason" ] || { echo "ERROR: owner takeover requires --reason" >&2; exit 1; }
+            if [ "$current_status" = active ] && [ "$(jq -r '.controller.lease_expires_epoch // 0' "$state_file")" -gt "$now_epoch" ] && [ "$force" -ne 1 ]; then
+                echo "ERROR: Controller lease is still active; use --force only after explicit human review" >&2
+                exit 1
+            fi
+            local previous_owner
+            previous_owner=$(jq -r '.controller.owner_id // empty' "$state_file")
+            new_token=$(new_owner_token "$state_file"); token_hash=$(sha256_text "$new_token")
+            updated=$(jq --arg previous "$previous_owner" --arg owner "$owner_id" --arg hash "$token_hash" --arg ts "$ts" --arg reason "$reason" --argjson expires "$expires_epoch" --argjson forced "$force" '
+                .controller={status:"active",owner_id:$owner,token_sha256:$hash,claimed_at:$ts,heartbeat_at:$ts,lease_expires_epoch:$expires,released_at:null} |
+                .ownership_history=((.ownership_history // []) + [{event:"takeover",owner_id:$owner,from_owner:(if $previous=="" then null else $previous end),at:$ts,reason:$reason,forced:($forced==1)}]) | .last_update=$ts
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            report_append_event "$report" "**[$(now_time)]** Controller takeover: ${previous_owner:-unclaimed} → $owner_id ($reason)"
+            jq -cn --arg owner "$owner_id" --arg token "$new_token" --argjson expires "$expires_epoch" '{status:"active",owner_id:$owner,token:$token,lease_expires_epoch:$expires}'
+            ;;
+        *) echo "ERROR: Unknown owner operation: $operation" >&2; exit 1 ;;
+    esac
+}
+
+cmd_action() {
+    [ $# -ge 1 ] || { echo "usage: hotl-rt action <request|decide|begin|complete|reconcile> ..." >&2; exit 1; }
+    require_jq
+    local operation="$1"
+    shift
     local run_id="${HOTL_RUN_ID:-}" state_file report ts updated
 
     case "$operation" in
         request)
-            [ $# -ge 1 ] || { echo "usage: hotl-rt action request <kind> --target <description> [--run-id <id>]" >&2; exit 1; }
-            local kind="$1" target=""; shift
+            [ $# -ge 1 ] || { echo "usage: hotl-rt action request <kind> --target <description> [--idempotency-key <key>] [--run-id <id>]" >&2; exit 1; }
+            local kind="$1" target="" idempotency_key=""
+            shift
             while [ $# -gt 0 ]; do
-                case "$1" in --target) target="$2"; shift 2 ;; --run-id) run_id="$2"; shift 2 ;; *) echo "ERROR: Unknown action request option: $1" >&2; exit 1 ;; esac
+                case "$1" in
+                    --target) target="$2"; shift 2 ;;
+                    --idempotency-key) idempotency_key="$2"; shift 2 ;;
+                    --run-id) run_id="$2"; shift 2 ;;
+                    *) echo "ERROR: Unknown action request option: $1" >&2; exit 1 ;;
+                esac
             done
             case "$kind" in local_write|network_read|external_write|production_change|secret_access) ;; *) echo "ERROR: Unsupported action kind: $kind" >&2; exit 1 ;; esac
             [ -n "$target" ] || { echo "ERROR: --target is required and must describe the bounded action" >&2; exit 1; }
+            if [ -n "$idempotency_key" ] && [[ ! "$idempotency_key" =~ ^[A-Za-z0-9][A-Za-z0-9._:@/-]*$ ]]; then
+                echo "ERROR: Invalid idempotency key" >&2
+                exit 1
+            fi
             state_file=$(find_active_state "$run_id")
+            acquire_run_lock "$(jq -r '.run_id' "$state_file")"
+            enforce_controller_ownership "$state_file"
+            report=$(report_path_from_state "$state_file"); ensure_report_from_state "$state_file" "$report"
             [ "$(jq -r '.status' "$state_file")" != completed ] || { echo "ERROR: Cannot request an action for a completed run" >&2; exit 1; }
+
+            if [ -n "$idempotency_key" ] && jq -e --arg key "$idempotency_key" '.external_actions[]? | select(.idempotency_key == $key)' "$state_file" >/dev/null; then
+                local existing
+                existing=$(jq -c --arg key "$idempotency_key" '.external_actions[] | select(.idempotency_key == $key)' "$state_file")
+                [ "$(jq -r '.kind' <<< "$existing")" = "$kind" ] && [ "$(jq -r '.target' <<< "$existing")" = "$target" ] || {
+                    echo "ERROR: Idempotency key already belongs to a different bounded action" >&2
+                    exit 1
+                }
+                jq '{id,status,decision_mode,idempotency_key,effect_status:(.effect.status // "evidence_missing"),deduplicated:true}' <<< "$existing"
+                return
+            fi
+
             ts=$(now_iso)
-            local action_status="allowed" mode="policy"
+            local action_status="allowed" mode="policy" effect_required=false effect_status="not_required"
             case "$kind" in
-                external_write|production_change|secret_access) action_status="pending"; mode="human" ;;
+                external_write|production_change|secret_access) action_status="pending"; mode="human"; effect_required=true; effect_status="not_started" ;;
                 network_read) action_status="host_authority"; mode="host" ;;
             esac
             local action_id
             action_id="action-$(( $(jq '(.external_actions // []) | length' "$state_file") + 1 ))"
-            updated=$(jq --arg id "$action_id" --arg kind "$kind" --arg target "$target" --arg status "$action_status" --arg mode "$mode" --arg ts "$ts" '
-                .external_actions = ((.external_actions // []) + [{id:$id,kind:$kind,target:$target,status:$status,requested_at:$ts,decided_at:null,decision_mode:$mode}]) |
+            if [ "$effect_required" = true ] && [ -z "$idempotency_key" ]; then
+                idempotency_key="$(jq -r '.run_id' "$state_file"):${action_id}"
+            fi
+            updated=$(jq --arg id "$action_id" --arg kind "$kind" --arg target "$target" --arg status "$action_status" --arg mode "$mode" --arg key "$idempotency_key" --arg effect_status "$effect_status" --argjson effect_required "$effect_required" --arg ts "$ts" '
+                .external_actions = ((.external_actions // []) + [{
+                    id:$id,kind:$kind,target:$target,status:$status,requested_at:$ts,decided_at:null,decision_mode:$mode,
+                    effect_required:$effect_required,idempotency_key:(if $key=="" then null else $key end),
+                    effect:{status:$effect_status,intent_recorded_at:null,completed_at:null,evidence_ref:null}
+                }]) |
                 .policy_pauses = (if $status == "pending" then ((.policy_pauses // []) + [$id] | unique) else (.policy_pauses // []) end) |
                 .status = (if $status == "pending" and .status == "running" then "paused" else .status end) |
                 .last_update = $ts
             ' "$state_file")
             state_write "$state_file" "$updated"
-            report=$(report_path_from_state "$state_file")
             report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
             [ "$action_status" != pending ] || report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** $(jq -r '.status' "$state_file")"
             report_append_event "$report" "**[$(now_time)]** Action $action_id requested: $kind ($action_status)"
-            jq -cn --arg id "$action_id" --arg status "$action_status" --arg mode "$mode" '{id:$id,status:$status,decision_mode:$mode}'
+            jq -cn --arg id "$action_id" --arg status "$action_status" --arg mode "$mode" --arg key "$idempotency_key" --arg effect "$effect_status" '{id:$id,status:$status,decision_mode:$mode,idempotency_key:(if $key=="" then null else $key end),effect_status:$effect}'
             ;;
         decide)
             [ $# -ge 2 ] || { echo "usage: hotl-rt action decide <action-id> <approved|rejected> --mode human [--run-id <id>]" >&2; exit 1; }
-            local action_id="$1" decision="$2" decision_mode=""; shift 2
+            local action_id="$1" decision="$2" decision_mode=""
+            shift 2
             while [ $# -gt 0 ]; do
                 case "$1" in --mode) decision_mode="$2"; shift 2 ;; --run-id) run_id="$2"; shift 2 ;; *) echo "ERROR: Unknown action decision option: $1" >&2; exit 1 ;; esac
             done
             case "$decision" in approved|rejected) ;; *) echo "ERROR: Decision must be approved or rejected" >&2; exit 1 ;; esac
             [ "$decision_mode" = human ] || { echo "ERROR: Sensitive action decisions require --mode human" >&2; exit 1; }
-            state_file=$(find_active_state "$run_id")
+            state_file=$(find_active_state "$run_id"); acquire_run_lock "$(jq -r '.run_id' "$state_file")"; enforce_controller_ownership "$state_file"
+            report=$(report_path_from_state "$state_file"); ensure_report_from_state "$state_file" "$report"
             jq -e --arg id "$action_id" '.external_actions[]? | select(.id == $id and .status == "pending")' "$state_file" >/dev/null || { echo "ERROR: Pending action not found: $action_id" >&2; exit 1; }
             ts=$(now_iso)
             updated=$(jq --arg id "$action_id" --arg decision "$decision" --arg mode "$decision_mode" --arg ts "$ts" '
@@ -1985,16 +2561,78 @@ cmd_action() {
                 .status = (if $decision == "rejected" then "blocked"
                     elif .status == "paused" and (.policy_pauses|length) == 0
                       and ([.steps[] | select(.status == "blocked")] | length) == 0
-                      and ([.budgets.exceeded[]?] | length) == 0 then "running"
-                    else .status end) |
+                      and ([.budgets.exceeded[]?] | length) == 0 then "running" else .status end) |
                 .last_update = $ts
             ' "$state_file")
             state_write "$state_file" "$updated"
-            report=$(report_path_from_state "$state_file")
             report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
             report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** $(jq -r '.status' "$state_file")"
             report_append_event "$report" "**[$(now_time)]** Action $action_id decision: $decision (human)"
             jq -cn --arg id "$action_id" --arg decision "$decision" '{id:$id,status:$decision,decision_mode:"human"}'
+            ;;
+        begin)
+            [ $# -ge 1 ] || { echo "usage: hotl-rt action begin <action-id> --idempotency-key <key> [--run-id <id>]" >&2; exit 1; }
+            local action_id="$1" supplied_key=""
+            shift
+            while [ $# -gt 0 ]; do
+                case "$1" in --idempotency-key) supplied_key="$2"; shift 2 ;; --run-id) run_id="$2"; shift 2 ;; *) echo "ERROR: Unknown action begin option: $1" >&2; exit 1 ;; esac
+            done
+            state_file=$(find_active_state "$run_id"); acquire_run_lock "$(jq -r '.run_id' "$state_file")"; enforce_controller_ownership "$state_file"
+            report=$(report_path_from_state "$state_file"); ensure_report_from_state "$state_file" "$report"
+            jq -e --arg id "$action_id" --arg key "$supplied_key" '.external_actions[]? | select(.id==$id and .status=="approved" and .effect_required==true and .idempotency_key==$key and .effect.status=="not_started")' "$state_file" >/dev/null || {
+                echo "ERROR: Action is not approved and ready, the idempotency key mismatches, or its effect may already have started" >&2; exit 1;
+            }
+            ts=$(now_iso)
+            updated=$(jq --arg id "$action_id" --arg ts "$ts" '.external_actions |= map(if .id==$id then .effect.status="in_progress" | .effect.intent_recorded_at=$ts else . end) | .last_update=$ts' "$state_file")
+            state_write "$state_file" "$updated"
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            report_append_event "$report" "**[$(now_time)]** Action $action_id effect intent recorded (in_progress)"
+            jq -cn --arg id "$action_id" '{id:$id,effect_status:"in_progress"}'
+            ;;
+        complete|reconcile)
+            [ $# -ge 2 ] || { echo "usage: hotl-rt action $operation <action-id> <succeeded|failed|uncertain|cancelled> --evidence-ref <reference> [--run-id <id>]" >&2; exit 1; }
+            local action_id="$1" outcome="$2" evidence_ref=""
+            shift 2
+            while [ $# -gt 0 ]; do
+                case "$1" in --evidence-ref) evidence_ref="$2"; shift 2 ;; --run-id) run_id="$2"; shift 2 ;; *) echo "ERROR: Unknown action $operation option: $1" >&2; exit 1 ;; esac
+            done
+            if [ "$operation" = complete ]; then
+                case "$outcome" in succeeded|failed|uncertain|cancelled) ;; *) echo "ERROR: Invalid effect outcome: $outcome" >&2; exit 1 ;; esac
+            else
+                case "$outcome" in succeeded|failed|cancelled) ;; *) echo "ERROR: Reconciliation requires a terminal observed outcome" >&2; exit 1 ;; esac
+            fi
+            [ -n "$evidence_ref" ] || { echo "ERROR: --evidence-ref is required for effect outcomes" >&2; exit 1; }
+            state_file=$(find_active_state "$run_id"); acquire_run_lock "$(jq -r '.run_id' "$state_file")"; enforce_controller_ownership "$state_file"
+            report=$(report_path_from_state "$state_file"); ensure_report_from_state "$state_file" "$report"
+            if [ "$operation" = complete ]; then
+                jq -e --arg id "$action_id" '.external_actions[]? | select(.id==$id and .effect.status=="in_progress")' "$state_file" >/dev/null || { echo "ERROR: Effect is not in_progress" >&2; exit 1; }
+            else
+                jq -e --arg id "$action_id" '.external_actions[]? | select(.id==$id and .status=="approved" and ((.effect.status=="in_progress" or .effect.status=="uncertain") or (.effect==null and (.kind=="external_write" or .kind=="production_change" or .kind=="secret_access"))))' "$state_file" >/dev/null || { echo "ERROR: Effect does not require reconciliation" >&2; exit 1; }
+            fi
+            ts=$(now_iso)
+            updated=$(jq --arg id "$action_id" --arg outcome "$outcome" --arg evidence "$evidence_ref" --arg ts "$ts" --arg run_id "$(jq -r '.run_id' "$state_file")" '
+                .external_actions |= map(
+                    if .id==$id then
+                        if .effect==null then
+                            .effect_required=true |
+                            .idempotency_key=(.idempotency_key // ($run_id+":"+$id+":legacy-reconcile")) |
+                            .effect={status:$outcome,intent_recorded_at:null,completed_at:$ts,evidence_ref:$evidence}
+                        else
+                            .effect.status=$outcome | .effect.completed_at=$ts | .effect.evidence_ref=$evidence
+                        end
+                    else . end
+                ) |
+                .policy_pauses = (if $outcome=="uncertain" then ((.policy_pauses // []) + ["effect:"+$id] | unique) else [(.policy_pauses // [])[] | select(. != ("effect:"+$id))] end) |
+                .status = (if $outcome=="failed" then "blocked"
+                    elif $outcome=="uncertain" then "paused"
+                    elif .status=="paused" and (.policy_pauses|length)==0 and ([.budgets.exceeded[]?]|length)==0 and ([.steps[]|select(.status=="blocked")]|length)==0 then "running"
+                    else .status end) | .last_update=$ts
+            ' "$state_file")
+            state_write "$state_file" "$updated"
+            report_update_line "$report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
+            report_update_line "$report" "^\*\*Status:\*\*.*" "**Status:** $(jq -r '.status' "$state_file")"
+            report_append_event "$report" "**[$(now_time)]** Action $action_id effect $operation: $outcome ($evidence_ref)"
+            jq -cn --arg id "$action_id" --arg outcome "$outcome" --arg evidence "$evidence_ref" '{id:$id,effect_status:$outcome,evidence_ref:$evidence}'
             ;;
         *) echo "ERROR: Unknown action operation: $operation" >&2; exit 1 ;;
     esac
@@ -2013,6 +2651,8 @@ cmd_budget() {
             case "$metric" in agents|cost_usd|elapsed_minutes) ;; *) echo "ERROR: Unsupported budget metric: $metric" >&2; exit 1 ;; esac
             jq -en --arg value "$value" '$value | tonumber | select(. >= 0)' >/dev/null || { echo "ERROR: Budget observations must be non-negative numbers" >&2; exit 1; }
             state_file=$(find_active_state "$run_id"); ts=$(now_iso)
+            acquire_run_lock "$(jq -r '.run_id' "$state_file")"
+            enforce_controller_ownership "$state_file"
             local previous
             previous=$(jq -r --arg metric "$metric" '.budgets.observed[$metric] // empty' "$state_file")
             if [ -n "$previous" ] && ! jq -en --arg old "$previous" --arg new "$value" '($new|tonumber) >= ($old|tonumber)' >/dev/null; then
@@ -2026,6 +2666,8 @@ cmd_budget() {
         check)
             if [ $# -gt 0 ]; then [ "$1" = --run-id ] && [ $# -eq 2 ] || { echo "ERROR: Invalid budget check options" >&2; exit 1; }; run_id="$2"; fi
             state_file=$(find_active_state "$run_id"); ts=$(now_iso)
+            acquire_run_lock "$(jq -r '.run_id' "$state_file")"
+            enforce_controller_ownership "$state_file"
             local evaluation
             evaluation=$(jq '
                 (.budgets.limits // {}) as $limits |
@@ -2043,6 +2685,7 @@ cmd_budget() {
             state_write "$state_file" "$updated"
             local budget_report
             budget_report=$(report_path_from_state "$state_file")
+            ensure_report_from_state "$state_file" "$budget_report"
             report_update_line "$budget_report" "^\*\*Updated:\*\*.*" "**Updated:** $ts"
             if [ "$(jq 'length' <<< "$exceeded")" -gt 0 ]; then
                 report_update_line "$budget_report" "^\*\*Status:\*\*.*" "**Status:** $(jq -r '.status' "$state_file")"
@@ -2057,22 +2700,28 @@ cmd_budget() {
 cmd_reconcile() {
     [ $# -eq 1 ] || { echo "usage: hotl-rt reconcile <run-id>" >&2; exit 1; }
     require_jq
-    local run_id="$1" state_file="${STATE_DIR}/$1.json"
+    local run_id="$1" state_file
+    state_file=$(state_path_for_run_id "$run_id") || exit 1
     [ -f "$state_file" ] || { echo "ERROR: No state found for run: $run_id" >&2; exit 1; }
     local receipt
     receipt=$(cmd_receipt "$run_id" --json)
     jq -cn --argjson receipt "$receipt" '
         ($receipt.external_actions | map(select(.status=="pending")) | length) as $pending_actions |
+        ($receipt.external_actions | map(select(.status=="approved" and ((.effect.status=="in_progress" or .effect.status=="uncertain") or .effect==null))) | length) as $effects_to_reconcile |
+        ($receipt.external_actions | map(select(.status=="approved" and .effect.status=="not_started")) | length) as $effects_to_execute |
         ($receipt.budgets.exceeded | length) as $exceeded |
         ($receipt.evidence | map(select(.status=="failed")) | length) as $failed |
         {schema:"hotl.reconciliation/v1",run_id:$receipt.run.id,status:$receipt.run.status,sufficient:$receipt.sufficiency.sufficient,
          unresolved_actions:$pending_actions,exceeded_budgets:$receipt.budgets.exceeded,
          next_action:(if $receipt.sufficiency.sufficient then "complete"
           elif $pending_actions>0 then "await_action_decision"
+          elif $effects_to_reconcile>0 then "reconcile_action_effect"
+          elif $effects_to_execute>0 then "execute_approved_action"
           elif $exceeded>0 then "adjust_budget_or_stop"
           elif $receipt.run.status=="blocked" then "inspect_blocker"
           elif $receipt.run.status=="paused" then "resume_after_gate_or_policy"
           elif $failed>0 then "retry_or_block_failed_step"
+          elif $receipt.run.status=="ready_to_finish" and ([$receipt.sufficiency.reasons[] | select(.!="run_not_completed" and .!="finish_disposition_missing")] | length)==0 then "record_finish_disposition"
           elif $receipt.run.status=="completed" and ($receipt.sufficiency.reasons==["finish_disposition_missing"]) then "record_finish_disposition"
           else "verify_next_incomplete_step" end),
          reasons:$receipt.sufficiency.reasons}'
@@ -2123,7 +2772,7 @@ usage: hotl-rt <command> [args]
 
 commands:
   normalize <workflow-file> [--json]    Emit read-only normalized workflow JSON
-  init <workflow-file> [--executor-mode <mode>] [--driver <id>] [--host <id>] [--repo-root <path>]
+  init <workflow-file> [--require-owner] [--executor-mode <mode>] [--driver <id>] [--host <id>] [--repo-root <path>]
        [--execution-root <path>] [--source-workflow-path <path>]
        [--worktree-path <path>] [--branch <name>]
                                         Initialize a run from a workflow file
@@ -2142,9 +2791,17 @@ commands:
                                         Record the post-execution disposition
   summary <run-id> [--json]             Read-only summary for any run
   receipt <run-id> [--json]             Emit a state-derived evidence receipt
-  action request <kind> --target <text>  Record and gate a bounded action
+  owner <claim|status|heartbeat|handoff|release|takeover>
+                                        Coordinate a renewable run controller
+  action request <kind> --target <text> [--idempotency-key <key>]
+                                        Record and gate a bounded action
   action decide <id> <approved|rejected> --mode human
                                         Record a sensitive-action decision
+  action begin <id> --idempotency-key <key>
+                                        Persist intent before a sensitive effect
+  action complete <id> <outcome> --evidence-ref <reference>
+  action reconcile <id> <outcome> --evidence-ref <reference>
+                                        Persist observed effect outcomes
   budget record <metric> <value>        Record observed budget telemetry
   budget check [--run-id <run-id>]      Evaluate configured run budgets
   reconcile <run-id>                    Recommend a verify-first recovery action
@@ -2174,6 +2831,7 @@ case "$COMMAND" in
     finish)         cmd_finish "$@" ;;
     summary)        cmd_summary "$@" ;;
     receipt)        cmd_receipt "$@" ;;
+    owner)          cmd_owner "$@" ;;
     action)         cmd_action "$@" ;;
     budget)         cmd_budget "$@" ;;
     reconcile)      cmd_reconcile "$@" ;;

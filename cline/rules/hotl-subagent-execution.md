@@ -11,14 +11,17 @@ This is a **delegation profile** over the HOTL execution state machine. Follow t
 ### Process
 
 1. Resolve the workflow file
-2. Run preflight and structural lint (same as hotl-execution.md), change into the resolved `execution_root`, and pin runtime/helper calls to the captured `run_id`
+2. Run preflight and structural lint (same as hotl-execution.md), change into the resolved `execution_root`, initialize with `--require-owner`, run `owner claim`, retain its one-time token only as `HOTL_OWNER_TOKEN`, and pin runtime/helper calls to the captured `run_id`
 3. For each step in order:
    - Decide whether to delegate or run inline
    - If delegated: use a fresh subagent with the exact step text and relevant context
+   - Run `owner heartbeat` before dispatch and after the worker returns; never send `HOTL_OWNER_TOKEN` to a worker
    - Run verification in the controller session (typed verification applies)
    - Obey loop and max_iterations
    - Pause on gate: human
 4. Run final verification before claiming done
+
+Host background agents, goals, handoffs, hooks, and dashboards provide scheduling and liveness only. HOTL controller state remains authoritative. The controller performs sensitive `action request`/decision, `action begin`, `action complete`, and interrupted-effect `action reconcile`; workers never own or replay external effects.
 
 ### Critical Invariants
 

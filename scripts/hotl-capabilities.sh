@@ -8,7 +8,7 @@ DEFAULT_CATALOG="${REPO_ROOT}/runtime/capabilities/catalog.json"
 usage() {
     printf '%s\n' \
         "usage: hotl-capabilities.sh validate [catalog.json]" \
-        "       hotl-capabilities.sh render [catalog.json]" \
+        "       hotl-capabilities.sh render [catalog.json] [--check]" \
         "       hotl-capabilities.sh probe [catalog.json]"
 }
 
@@ -188,7 +188,27 @@ main() {
             echo "Capability catalog valid: $catalog"
             ;;
         render)
-            render_catalog "$catalog"
+            local check=0
+            if [ "$catalog" = --check ]; then
+                catalog="$DEFAULT_CATALOG"
+                check=1
+            elif [ "${3:-}" = --check ]; then
+                check=1
+            elif [ $# -gt 2 ]; then
+                echo "ERROR: Unknown render option: ${3:-}" >&2
+                exit 1
+            fi
+            if [ "$check" -eq 1 ]; then
+                local matrix="${REPO_ROOT}/docs/host-capabilities.md"
+                if diff -u "$matrix" <(render_catalog "$catalog"); then
+                    echo "Capability matrix is current: $matrix"
+                else
+                    echo "ERROR: capability matrix is stale; regenerate it from the catalog" >&2
+                    exit 1
+                fi
+            else
+                render_catalog "$catalog"
+            fi
             ;;
         probe)
             probe_catalog "$catalog"

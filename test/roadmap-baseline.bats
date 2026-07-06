@@ -78,6 +78,12 @@ copy_catalog() {
     [ "$status" -eq 0 ]
 }
 
+@test "capability renderer check mode validates the checked-in matrix" {
+    run bash "$CAPABILITIES" render --check
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Capability matrix is current"* ]]
+}
+
 @test "capability matrix includes security and verification provenance" {
     run bash "$CAPABILITIES" render "$CATALOG"
     [ "$status" -eq 0 ]

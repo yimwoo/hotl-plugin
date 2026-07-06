@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "verified_at": "2026-06-29",
+  "verified_at": "2026-07-05",
   "capabilities": [
     {
       "id": "goal-mode",
@@ -10,12 +10,12 @@
       "provider_maturity": "stable",
       "hotl_support": "candidate",
       "min_version": null,
-      "availability_conditions": ["Codex app, CLI, or IDE extension", "May require the goals feature flag when not visible"],
+      "availability_conditions": ["Codex app, CLI, or IDE extension", "Goal mode available on the active surface"],
       "observability": "partial",
-      "security_boundary": "Uses the active Codex sandbox and approval policy.",
+      "security_boundary": "Goal mode can continue for hours or days but remains inside the active Codex sandbox and approval policy; it is not HOTL completion evidence.",
       "fallback": "hotl-fallback:workflow-execution",
       "sources": ["https://developers.openai.com/codex/prompting#goal-mode"],
-      "verified_at": "2026-06-29"
+      "verified_at": "2026-07-05"
     },
     {
       "id": "subagents",
@@ -31,6 +31,36 @@
       "fallback": "hotl-fallback:workflow-execution",
       "sources": ["https://developers.openai.com/codex/subagents"],
       "verified_at": "2026-06-29"
+    },
+    {
+      "id": "thread-handoff",
+      "host": "codex",
+      "category": "lifecycle",
+      "name": "Local, worktree, and remote thread handoff",
+      "provider_maturity": "stable",
+      "hotl_support": "candidate",
+      "min_version": "Codex app 26.616",
+      "availability_conditions": ["Matching project available on the destination host", "Connected and trusted local or remote host"],
+      "observability": "partial",
+      "security_boundary": "Handoff moves host execution context but does not transfer HOTL controller ownership until the new controller explicitly claims or takes over the run.",
+      "fallback": "hotl-fallback:durable-state",
+      "sources": ["https://developers.openai.com/codex/changelog", "https://developers.openai.com/codex/app/worktrees"],
+      "verified_at": "2026-07-05"
+    },
+    {
+      "id": "remote-control",
+      "host": "codex",
+      "category": "automation",
+      "name": "Remote connections",
+      "provider_maturity": "stable",
+      "hotl_support": "candidate",
+      "min_version": null,
+      "availability_conditions": ["Codex Remote available for the active account", "Authenticated paired host and supported mobile or desktop client"],
+      "observability": "partial",
+      "security_boundary": "Remote control uses the connected host's project, credentials, permissions, and approval boundary; remote UI status is not a HOTL receipt.",
+      "fallback": "hotl-fallback:workflow-execution",
+      "sources": ["https://developers.openai.com/codex/changelog", "https://developers.openai.com/codex/app/remote-control"],
+      "verified_at": "2026-07-05"
     },
     {
       "id": "worktrees",
@@ -123,6 +153,36 @@
       "verified_at": "2026-06-29"
     },
     {
+      "id": "goal-loop",
+      "host": "claude-code",
+      "category": "orchestration",
+      "name": "Goal and loop continuation",
+      "provider_maturity": "stable",
+      "hotl_support": "candidate",
+      "min_version": "2.1.139",
+      "availability_conditions": ["Claude Code distribution exposing /goal and /loop", "Hooks and managed policy permit the selected continuation path"],
+      "observability": "partial",
+      "security_boundary": "Goal and loop commands continue host turns but do not replace HOTL iteration bounds, gates, ownership, or receipts.",
+      "fallback": "hotl-fallback:workflow-execution",
+      "sources": ["https://code.claude.com/docs/en/changelog"],
+      "verified_at": "2026-07-05"
+    },
+    {
+      "id": "background-subagents",
+      "host": "claude-code",
+      "category": "orchestration",
+      "name": "Background subagents",
+      "provider_maturity": "stable",
+      "hotl_support": "candidate",
+      "min_version": "2.1.198",
+      "availability_conditions": ["Claude Code session with Agent tool availability", "Background tasks not disabled by configuration"],
+      "observability": "partial",
+      "security_boundary": "Subagents run in the background by default but their completion notification is not verification or HOTL completion evidence.",
+      "fallback": "hotl-fallback:workflow-execution",
+      "sources": ["https://code.claude.com/docs/en/changelog", "https://code.claude.com/docs/en/sub-agents"],
+      "verified_at": "2026-07-05"
+    },
+    {
       "id": "dynamic-workflows",
       "host": "claude-code",
       "category": "orchestration",
@@ -174,13 +234,13 @@
       "name": "Agent view",
       "provider_maturity": "research_preview",
       "hotl_support": "candidate",
-      "min_version": null,
+      "min_version": "2.1.139",
       "availability_conditions": ["Agent view available in the active Claude Code distribution"],
       "observability": "partial",
-      "security_boundary": "Background sessions use subscription quota and isolated worktrees when editing.",
+      "security_boundary": "Background sessions continue without a terminal and may use isolated worktrees; agent-view row state is scheduling telemetry, not HOTL completion evidence.",
       "fallback": "hotl-fallback:workflow-execution",
       "sources": ["https://code.claude.com/docs/en/agent-view"],
-      "verified_at": "2026-06-29"
+      "verified_at": "2026-07-05"
     },
     {
       "id": "worktrees",
@@ -252,10 +312,10 @@
       "min_version": "2.18.0",
       "availability_conditions": ["HOTL runtime or inline executor available"],
       "observability": "full",
-      "security_boundary": "Uses the active host's shell sandbox and approval boundary.",
+      "security_boundary": "Uses the active host's shell sandbox and approval boundary while HOTL enforces controller ownership, workflow order, retry limits, aggregate budgets, gates, and effect evidence.",
       "fallback": null,
       "sources": ["https://github.com/yimwoo/hotl-plugin/blob/main/docs/workflow-format.md"],
-      "verified_at": "2026-06-29"
+      "verified_at": "2026-07-05"
     },
     {
       "id": "worktree-isolation",
@@ -282,10 +342,10 @@
       "min_version": "2.18.0",
       "availability_conditions": ["jq installed"],
       "observability": "full",
-      "security_boundary": "State remains local under the execution root and is gitignored by default.",
+      "security_boundary": "Serialized, revisioned state remains local under the execution root and is gitignored by default; explicit leased controller ownership prevents concurrent mutation and age alone never permits takeover.",
       "fallback": null,
       "sources": ["https://github.com/yimwoo/hotl-plugin/blob/main/docs/workflow-format.md#execution-state-hotlstate"],
-      "verified_at": "2026-06-29"
+      "verified_at": "2026-07-05"
     },
     {
       "id": "typed-verification",
@@ -327,10 +387,10 @@
       "min_version": "2.18.0",
       "availability_conditions": ["jq installed for state-managed reporting"],
       "observability": "full",
-      "security_boundary": "Reports default to concise successful output and captured failure evidence.",
+      "security_boundary": "Reports default to concise successful output and captured failure evidence; missing reports are reconstructed from authoritative state and completion remains false until disposition is recorded.",
       "fallback": null,
       "sources": ["https://github.com/yimwoo/hotl-plugin/blob/main/docs/contracts/execution-report-output.md"],
-      "verified_at": "2026-06-29"
+      "verified_at": "2026-07-05"
     }
   ]
 }

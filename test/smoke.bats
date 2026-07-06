@@ -1022,3 +1022,77 @@ print(match.group(1) if match else '')
     echo "$output" | grep -q "LINT PASSED:"
     ! echo "$output" | grep -q "SKIP:"
 }
+
+@test "historical slice suites do not recursively execute other Bats suites" {
+    for suite in \
+        test/slice-3-smoke.bats \
+        test/slice-4-smoke.bats \
+        test/slice-5-smoke.bats \
+        test/slice-6-smoke.bats; do
+        ! grep -Eq '^[[:space:]]*run[[:space:]]+bats[[:space:]]' "$REPO_ROOT/$suite"
+    done
+}
+
+# ── long-running execution ownership and effect lifecycle ───────────────────
+
+@test "execution skills require a claimed renewable controller" {
+    for skill in \
+        skills/governed-execution/SKILL.md \
+        skills/loop-execution/SKILL.md \
+        skills/executing-plans/SKILL.md \
+        skills/subagent-execution/SKILL.md \
+        skills/resuming/SKILL.md; do
+        grep -q 'owner claim' "$REPO_ROOT/$skill"
+        grep -q 'HOTL_OWNER_TOKEN' "$REPO_ROOT/$skill"
+        grep -q 'owner heartbeat' "$REPO_ROOT/$skill"
+    done
+    grep -q -- '--require-owner' "$REPO_ROOT/skills/loop-execution/SKILL.md"
+    grep -q -- '--require-owner' "$REPO_ROOT/skills/governed-execution/SKILL.md"
+}
+
+@test "execution mirrors preserve ownership and host liveness boundaries" {
+    for rule in cline/rules/hotl-execution.md cline/rules/hotl-subagent-execution.md; do
+        grep -q 'owner claim' "$REPO_ROOT/$rule"
+        grep -q 'HOTL_OWNER_TOKEN' "$REPO_ROOT/$rule"
+        grep -qi 'scheduling and liveness only' "$REPO_ROOT/$rule"
+    done
+}
+
+@test "execution skills persist effect intent and reconcile uncertain outcomes" {
+    for skill in \
+        skills/governed-execution/SKILL.md \
+        skills/loop-execution/SKILL.md \
+        skills/executing-plans/SKILL.md \
+        skills/subagent-execution/SKILL.md \
+        skills/finishing-a-development-branch/SKILL.md; do
+        grep -q 'action begin' "$REPO_ROOT/$skill"
+        grep -q 'action complete' "$REPO_ROOT/$skill"
+        grep -q 'action reconcile' "$REPO_ROOT/$skill"
+    done
+}
+
+@test "finalization is distinct from completed finish disposition" {
+    for file in \
+        skills/loop-execution/SKILL.md \
+        skills/executing-plans/SKILL.md \
+        skills/subagent-execution/SKILL.md \
+        skills/finishing-a-development-branch/SKILL.md \
+        docs/workflow-format.md \
+        docs/contracts/execution-report-output.md; do
+        grep -q 'ready_to_finish' "$REPO_ROOT/$file"
+    done
+}
+
+@test "recovery contracts forbid age-only controller takeover" {
+    ! grep -q 'update `last_update` immediately to claim ownership' "$REPO_ROOT/skills/resuming/SKILL.md"
+    grep -qi 'age alone.*takeover\|takeover.*age alone' "$REPO_ROOT/skills/resuming/SKILL.md"
+    grep -q 'owner takeover' "$REPO_ROOT/skills/resuming/SKILL.md"
+    grep -qi 'age alone.*takeover\|takeover.*age alone' "$REPO_ROOT/docs/contracts/policy-budget-recovery.md"
+}
+
+@test "user docs distinguish host continuation from HOTL completion authority" {
+    for file in README.md adapters/AGENTS.md.template docs/README.codex.md docs/README.cline.md docs/how-it-works.md; do
+        grep -qi 'scheduling and liveness only' "$REPO_ROOT/$file"
+        grep -q 'ready_to_finish' "$REPO_ROOT/$file"
+    done
+}

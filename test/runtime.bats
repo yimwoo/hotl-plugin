@@ -18,6 +18,16 @@ teardown() {
     rm -rf "$TEST_DIR"
 }
 
+complete_steps_through() {
+    local run_id="$1"
+    local final_step="$2"
+    local step
+    for ((step = 1; step <= final_step; step++)); do
+        "$HOTL_RT" step "$step" start --run-id "$run_id" >/dev/null
+        "$HOTL_RT" step "$step" verify --run-id "$run_id" >/dev/null
+    done
+}
+
 # ── init ────────────────────────────────────────────────────────────────────
 
 @test "init creates state JSON with correct step count" {
@@ -307,6 +317,7 @@ teardown() {
     echo "render ok" > artifacts/output.txt
     echo "# report" > artifacts/reports/summary.md
 
+    complete_steps_through "$RUN_ID" 2
     "$HOTL_RT" step 3 start
     "$HOTL_RT" step 3 verify
     STATE=".hotl/state/${RUN_ID}.json"
@@ -321,6 +332,7 @@ teardown() {
     echo "render ok" > artifacts/output.txt
     echo "# report" > artifacts/reports/summary.md
 
+    complete_steps_through "$RUN_ID" 3
     "$HOTL_RT" step 4 start
     "$HOTL_RT" step 4 verify
     STATE=".hotl/state/${RUN_ID}.json"
@@ -347,6 +359,7 @@ teardown() {
 
     jq '.steps[1].verify.assert.value = null' "$STATE" > "${STATE}.tmp" && mv "${STATE}.tmp" "$STATE"
 
+    complete_steps_through "$RUN_ID" 1
     "$HOTL_RT" step 2 start
     run "$HOTL_RT" step 2 verify
     [ "$status" -ne 0 ]
@@ -363,6 +376,7 @@ teardown() {
 
     jq '.steps[2].verify.assert.value = null' "$STATE" > "${STATE}.tmp" && mv "${STATE}.tmp" "$STATE"
 
+    complete_steps_through "$RUN_ID" 2
     "$HOTL_RT" step 3 start
     run "$HOTL_RT" step 3 verify
     [ "$status" -ne 0 ]
@@ -496,6 +510,7 @@ EOF
 
 @test "gate records approved decision" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    complete_steps_through "$RUN_ID" 1
     "$HOTL_RT" gate 1 approved
     STATE=".hotl/state/${RUN_ID}.json"
 
@@ -504,6 +519,7 @@ EOF
 
 @test "gate records auto approval mode" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    complete_steps_through "$RUN_ID" 1
     "$HOTL_RT" gate 1 approved --mode auto
     STATE=".hotl/state/${RUN_ID}.json"
 
@@ -512,6 +528,7 @@ EOF
 
 @test "gate records rejected decision" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    complete_steps_through "$RUN_ID" 1
     "$HOTL_RT" gate 1 rejected
     STATE=".hotl/state/${RUN_ID}.json"
 
@@ -525,8 +542,22 @@ EOF
     [[ "$output" == *"ERROR"* ]]
 }
 
+@test "gate rejects invalid or unfinished step targets" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+
+    run "$HOTL_RT" gate 0 approved --mode human --run-id "$RUN_ID"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"Invalid step number"* ]]
+
+    run "$HOTL_RT" gate 3 approved --mode human --run-id "$RUN_ID"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"must be done before its gate"* ]]
+    [ "$(jq -r '.steps[2].gate_result' ".hotl/state/${RUN_ID}.json")" = "null" ]
+}
+
 @test "gate updates report" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    complete_steps_through "$RUN_ID" 1
     "$HOTL_RT" gate 1 approved
     REPORT=".hotl/reports/${RUN_ID}.md"
 
@@ -569,16 +600,16 @@ EOF
 
 @test "finalize produces valid JSON summary" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
-    "$HOTL_RT" step 1 start
-    "$HOTL_RT" step 1 verify
+    complete_steps_through "$RUN_ID" 3
+    "$HOTL_RT" gate 3 approved --mode human --run-id "$RUN_ID" >/dev/null
     SUMMARY=$("$HOTL_RT" finalize --json)
 
     echo "$SUMMARY" | jq -r '.run_id' | grep -q "$RUN_ID"
-    echo "$SUMMARY" | jq -r '.status' | grep -qE '^(completed|blocked)$'
+    echo "$SUMMARY" | jq -r '.status' | grep -qE '^(ready_to_finish|blocked)$'
     echo "$SUMMARY" | jq -r '.total_steps' | grep -q '3'
 }
 
-@test "finalize sets completed status when all done" {
+@test "finalize sets ready_to_finish until disposition is recorded" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
     "$HOTL_RT" step 1 start
     "$HOTL_RT" step 1 verify
@@ -586,10 +617,12 @@ EOF
     "$HOTL_RT" step 2 verify
     "$HOTL_RT" step 3 start
     "$HOTL_RT" step 3 verify
+    "$HOTL_RT" gate 3 approved --mode human --run-id "$RUN_ID" >/dev/null
     SUMMARY=$("$HOTL_RT" finalize --json)
 
-    [ "$(echo "$SUMMARY" | jq -r '.status')" = "completed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "ready_to_finish" ]
     [ "$(echo "$SUMMARY" | jq -r '.completed_steps')" = "3" ]
+    [ "$(jq -r '.completed_at' ".hotl/state/${RUN_ID}.json")" = "null" ]
 }
 
 @test "finalize sets blocked status when steps failed" {
@@ -604,12 +637,12 @@ EOF
 
 @test "finalize updates report status" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
-    "$HOTL_RT" step 1 start
-    "$HOTL_RT" step 1 verify
+    complete_steps_through "$RUN_ID" 3
+    "$HOTL_RT" gate 3 approved --mode human --run-id "$RUN_ID" >/dev/null
     "$HOTL_RT" finalize --json > /dev/null
     REPORT=".hotl/reports/${RUN_ID}.md"
 
-    grep -Fq '**Status:** completed' "$REPORT" || grep -Fq '**Status:** blocked' "$REPORT"
+    grep -Fq '**Status:** ready_to_finish' "$REPORT" || grep -Fq '**Status:** blocked' "$REPORT"
 }
 
 @test "finalize completes after approved human-review step" {
@@ -620,7 +653,7 @@ EOF
     "$HOTL_RT" gate 1 approved
     SUMMARY=$("$HOTL_RT" finalize --json)
 
-    [ "$(echo "$SUMMARY" | jq -r '.status')" = "completed" ]
+    [ "$(echo "$SUMMARY" | jq -r '.status')" = "ready_to_finish" ]
     [ "$(echo "$SUMMARY" | jq -r '.completed_steps')" = "1" ]
     [ "$(echo "$SUMMARY" | jq -r '.blocked_steps')" = "0" ]
 }
@@ -633,6 +666,7 @@ EOF
     "$HOTL_RT" step 2 verify
     "$HOTL_RT" step 3 start
     "$HOTL_RT" step 3 verify
+    "$HOTL_RT" gate 3 approved --mode human --run-id "$RUN_ID" >/dev/null
     "$HOTL_RT" finalize --json > /dev/null
 
     SUMMARY=$("$HOTL_RT" finish kept --run-id "$RUN_ID" --branch-action kept --worktree-action kept --notes "Keep for follow-up")
@@ -647,6 +681,21 @@ EOF
     grep -q '## Finish Outcome' "$REPORT"
     grep -Fq '**Disposition:** kept' "$REPORT"
     grep -Fq '**Branch Action:** kept' "$REPORT"
+}
+
+@test "finalize is idempotent after finish and cannot regress completed state" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    complete_steps_through "$RUN_ID" 3
+    "$HOTL_RT" gate 3 approved --mode human --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" finalize --json --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" finish kept --run-id "$RUN_ID" >/dev/null
+
+    SUMMARY=$("$HOTL_RT" finalize --json --run-id "$RUN_ID")
+    STATE=".hotl/state/${RUN_ID}.json"
+
+    [ "$(jq -r '.status' <<< "$SUMMARY")" = "completed" ]
+    [ "$(jq -r '.status' "$STATE")" = "completed" ]
+    [ "$(jq -r '.finish.disposition' "$STATE")" = "kept" ]
 }
 
 @test "finish rejects published disposition for blocked runs" {
@@ -673,9 +722,10 @@ EOF
 
 @test "summary returns completed state" {
     RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
-    "$HOTL_RT" step 1 start
-    "$HOTL_RT" step 1 verify
+    complete_steps_through "$RUN_ID" 3
+    "$HOTL_RT" gate 3 approved --mode human --run-id "$RUN_ID" >/dev/null
     "$HOTL_RT" finalize --json > /dev/null
+    "$HOTL_RT" finish kept --run-id "$RUN_ID" >/dev/null
     SUMMARY=$("$HOTL_RT" summary "$RUN_ID" --json)
 
     echo "$SUMMARY" | jq -r '.status' | grep -qE '^(completed|blocked)$'
@@ -686,4 +736,153 @@ EOF
     run "$HOTL_RT" summary "nonexistent-run" --json
     [ "$status" -ne 0 ]
     [[ "$output" == *"ERROR"* ]]
+}
+
+# ── long-running execution invariants ──────────────────────────────────────
+
+@test "run ids remain unique when initializations share one timestamp" {
+    pids=()
+    for index in 1 2 3; do
+        "$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md > "run-$index.out" 2> "run-$index.err" &
+        pids+=("$!")
+    done
+
+    failures=0
+    for pid in "${pids[@]}"; do
+        wait "$pid" || failures=$((failures + 1))
+    done
+
+    [ "$failures" -eq 0 ]
+    [ "$(sort -u run-*.out | wc -l | tr -d ' ')" -eq 3 ]
+    [ "$(find .hotl/state -maxdepth 1 -name '*.json' | wc -l | tr -d ' ')" -eq 3 ]
+}
+
+@test "explicit run ids reject path traversal" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    cp ".hotl/state/${RUN_ID}.json" victim.json
+
+    run "$HOTL_RT" summary "../../victim" --json
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"invalid run id"* ]]
+}
+
+@test "state revision increases after every successful mutation" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    STATE=".hotl/state/${RUN_ID}.json"
+    initial_revision=$(jq -r '.revision' "$STATE")
+
+    "$HOTL_RT" step 1 start --run-id "$RUN_ID" >/dev/null
+    started_revision=$(jq -r '.revision' "$STATE")
+    "$HOTL_RT" step 1 verify --run-id "$RUN_ID" >/dev/null
+    verified_revision=$(jq -r '.revision' "$STATE")
+
+    [[ "$initial_revision" =~ ^[0-9]+$ ]]
+    [ "$started_revision" -gt "$initial_revision" ]
+    [ "$verified_revision" -gt "$started_revision" ]
+}
+
+@test "step start rejects out-of-order execution" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+
+    run "$HOTL_RT" step 2 start --run-id "$RUN_ID"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"step 1"*"must be done"* ]]
+    [ "$(jq -r '.steps[1].status' ".hotl/state/${RUN_ID}.json")" = "pending" ]
+}
+
+@test "step retry rejects attempts at the declared max iterations" {
+    cat > bounded-retry-workflow.md <<'EOF'
+---
+intent: Bound runtime retries
+success_criteria: Retry stops at the declared maximum
+risk_level: low
+auto_approve: true
+---
+
+## Steps
+
+- [ ] **Step 1: Fail twice**
+action: Exercise retry bounds
+loop: until pass
+max_iterations: 2
+verify: false
+EOF
+    RUN_ID=$("$HOTL_RT" init bounded-retry-workflow.md)
+
+    "$HOTL_RT" step 1 start --run-id "$RUN_ID" >/dev/null
+    run "$HOTL_RT" step 1 verify --run-id "$RUN_ID"
+    [ "$status" -ne 0 ]
+    "$HOTL_RT" step 1 retry --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" step 1 start --run-id "$RUN_ID" >/dev/null
+    run "$HOTL_RT" step 1 verify --run-id "$RUN_ID"
+    [ "$status" -ne 0 ]
+
+    run "$HOTL_RT" step 1 retry --run-id "$RUN_ID"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"maximum iterations (2)"* ]]
+    [ "$(jq -r '.steps[0].attempts' ".hotl/state/${RUN_ID}.json")" -eq 2 ]
+}
+
+@test "finalize rejects a run with unfinished steps" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+
+    run "$HOTL_RT" finalize --json --run-id "$RUN_ID"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"unfinished steps"* ]]
+    [ "$(jq -r '.status' ".hotl/state/${RUN_ID}.json")" != "completed" ]
+}
+
+@test "a mutation repairs a missing report from authoritative state" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    REPORT=".hotl/reports/${RUN_ID}.md"
+    rm "$REPORT"
+
+    run "$HOTL_RT" step 1 start --run-id "$RUN_ID"
+
+    [ "$status" -eq 0 ]
+    grep -Fq "# Execution Report: ${RUN_ID}" "$REPORT"
+    grep -Fq '→ Running' "$REPORT"
+}
+
+@test "report repair reconstructs completed status and finish disposition" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    complete_steps_through "$RUN_ID" 3
+    "$HOTL_RT" gate 3 approved --mode human --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" finalize --json --run-id "$RUN_ID" >/dev/null
+    "$HOTL_RT" finish kept --run-id "$RUN_ID" >/dev/null
+    REPORT=".hotl/reports/${RUN_ID}.md"
+    rm "$REPORT"
+
+    "$HOTL_RT" budget check --run-id "$RUN_ID" >/dev/null
+
+    grep -Fq '**Status:** completed' "$REPORT"
+    grep -Fq '## Finish Outcome' "$REPORT"
+    grep -Fq '**Disposition:** kept' "$REPORT"
+}
+
+@test "finalize rejects missing configured gate evidence" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md)
+    complete_steps_through "$RUN_ID" 3
+
+    run "$HOTL_RT" finalize --json --run-id "$RUN_ID"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"gate evidence"* ]]
+    [ "$(jq -r '.status' ".hotl/state/${RUN_ID}.json")" = "running" ]
+}
+
+@test "require-owner initialization blocks mutation until controller claim" {
+    RUN_ID=$("$HOTL_RT" init fixtures/hotl-workflow-runtime-sample.md --require-owner)
+
+    run "$HOTL_RT" step 1 start --run-id "$RUN_ID"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"claim controller ownership"* ]]
+
+    claim=$("$HOTL_RT" owner claim --owner controller-a --run-id "$RUN_ID")
+    HOTL_OWNER_TOKEN=$(jq -r '.token' <<< "$claim") "$HOTL_RT" step 1 start --run-id "$RUN_ID" >/dev/null
+    [ "$(jq -r '.steps[0].status' ".hotl/state/${RUN_ID}.json")" = "in_progress" ]
 }

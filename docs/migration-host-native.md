@@ -8,6 +8,9 @@ The preferred new execution entry point is `governed-execution`. Existing `loop-
 - Existing state and reports remain readable; new policy fields are additive.
 - Generic `hotl-rt` execution remains available when native capability is absent, unknown, disabled, or unsuitable.
 - Native drivers are opt-in and never change host permissions or settings.
+- Native continuation features provide scheduling and liveness only; HOTL controller ownership, runtime limits, effect reconciliation, and receipts remain authoritative.
+- New driver-managed runs require ownership. Existing state remains readable and can be claimed or explicitly taken over during verify-first resume.
+- Successful finalization now pauses at `ready_to_finish`; explicit finish disposition is required for `completed`.
 - No execution entry point is removed in this roadmap release.
 
 ## Adoption

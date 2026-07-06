@@ -22,7 +22,7 @@ Every execution report (`.hotl/reports/<run-id>.md`) must contain these 5 requir
 **Worktree:** /abs/path/to/worktree (optional)
 **Started:** <ISO 8601>
 **Updated:** <ISO 8601>
-**Status:** running | completed | paused | blocked
+**Status:** running | paused | blocked | ready_to_finish | completed
 ```
 
 ### 2. Summary Table
@@ -62,9 +62,9 @@ For Codex, the compact summary itself must appear as visible chat text in the fi
 
 What verification was performed across the run — test commands, linter results, artifacts inspected. Brief, just enough to show what informed the execution outcomes.
 
-### 6. Finish Outcome (Optional)
+### 6. Finish Outcome (Required For Successful Completion)
 
-If HOTL records a post-execution disposition, append:
+During execution this section is absent. After an explicit disposition, append:
 
 ```markdown
 ## Finish Outcome
@@ -97,21 +97,27 @@ These are step and run state indicators — status labels, not a severity system
 | `✗` | Failed | Step verification failure |
 | `✗` | Blocked | Executor stopped (max retries, gate denied, etc.) |
 
-**Run status values:** `running`, `completed`, `paused`, `blocked`
+**Run status values:** `running`, `paused`, `blocked`, `ready_to_finish`, `completed`
+
+- `ready_to_finish` means steps, verification, gates, sensitive-effect evidence, and budgets are terminal, but no branch/worktree disposition has been recorded.
+- `completed` means a successful `ready_to_finish` run also recorded an explicit finish disposition. Host session completion or a rendered summary cannot create this status.
 
 ## Report Lifecycle
 
 The `hotl-rt` runtime manages all report updates automatically via its subcommands:
 
-1. **`hotl-rt init`:** Create report with metadata and full table (all `· Pending`). Store `report_path` plus execution-root metadata in sidecar JSON.
-2. **`hotl-rt step N start --run-id <run-id>`:** Update table to `→ Running`, update `Updated:`, append event.
-3. **`hotl-rt step N verify --run-id <run-id>` (fail):** Update table, append captured stdout/stderr to event log.
-4. **`hotl-rt step N retry --run-id <run-id>`:** Update table to `↻ Retrying`, append retry event.
-5. **`hotl-rt step N verify --run-id <run-id>` (pass):** Update table to `✓ Done`, append completion event.
-6. **`hotl-rt gate N --run-id <run-id>`:** Update table to `⚡ Auto-approved` or `✓ Approved`.
-7. **`hotl-rt finalize --run-id <run-id>`:** Set status to `completed`, update `Updated:`, finalize report.
-8. **`hotl-rt step N block --run-id <run-id>`:** Set status to `blocked`, include report path in response.
-9. **`hotl-rt finish <disposition> --run-id <run-id>`:** Record the post-execution disposition, append the Finish Outcome section, and update `Updated:`.
+1. **`hotl-rt init --require-owner`:** Create report with metadata and full table (all `· Pending`). Store `report_path` plus execution-root metadata in sidecar JSON.
+2. **`hotl-rt owner claim|heartbeat|handoff|release|takeover`:** Record controller lifecycle without exposing the raw token.
+3. **`hotl-rt step N start --run-id <run-id>`:** Update table to `→ Running`, update `Updated:`, append event.
+4. **`hotl-rt step N verify --run-id <run-id>` (fail):** Update table, append captured stdout/stderr to event log.
+5. **`hotl-rt step N retry --run-id <run-id>`:** Update table to `↻ Retrying`, append retry event.
+6. **`hotl-rt step N verify --run-id <run-id>` (pass):** Update table to `✓ Done`, append completion event.
+7. **`hotl-rt gate N --run-id <run-id>`:** Update table to `⚡ Auto-approved` or `✓ Approved`.
+8. **`hotl-rt action request|decide|begin|complete|reconcile`:** Record bounded authorization, pre-effect intent, and observed effect outcome.
+9. **`hotl-rt finalize --run-id <run-id>`:** Validate terminal evidence. Set a successful run to `ready_to_finish`; blocked evidence remains `blocked`.
+10. **`hotl-rt step N block --run-id <run-id>`:** Set status to `blocked`, include report path in response.
+11. **`hotl-rt finish <disposition> --run-id <run-id>`:** Record the disposition, append Finish Outcome, and move successful `ready_to_finish` to `completed`.
+12. **`hotl-rt receipt <run-id>`:** Derive sufficiency from state. A successful completion claim requires `sufficiency.sufficient: true` after finish.
 
 ## Verify Output Policy
 
@@ -134,7 +140,7 @@ The executor must reference the report path in its response:
 
 ## Platform Rendering (Final Artifacts)
 
-These tables define how the final summary and durable report render per platform. Scoped to completed artifacts only.
+These tables define how the verified-step summary and durable report render per platform. A renderer formats evidence but does not change `ready_to_finish` into `completed`; completion still requires finish and a sufficient receipt.
 
 | Platform | Final Summary Format | Durable Report |
 |----------|---------------------|----------------|
@@ -146,7 +152,7 @@ These tables define how the final summary and durable report render per platform
 
 Use the repo-owned deterministic renderer at `scripts/render-execution-summary.sh` for final summary output. Do not freehand the final summary when the renderer is available. The renderer normalizes gate results before formatting, so `gate_result=approved` renders as `Approved` instead of raw `Done`.
 
-For Codex, use `scripts/finalize-codex-summary.sh` so finalize and render happen sequentially from one helper.
+For Codex, use `scripts/finalize-codex-summary.sh` so evidence finalization and rendering happen sequentially from one helper. Its successful output may represent `ready_to_finish`; record the explicit finish disposition and check the receipt before calling the run completed.
 
 ### Claude Code and Cline — Markdown Table
 

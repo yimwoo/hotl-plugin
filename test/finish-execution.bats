@@ -121,8 +121,22 @@ EOF
     REMOTE_DIR="$TEST_DIR/remote.git"
     git init --bare "$REMOTE_DIR" >/dev/null
     git -C "$REPO_DIR" remote add origin "$REMOTE_DIR"
+    action=$(
+        cd "$EXEC_ROOT"
+        "$HOTL_RT" action request external_write \
+            --target "publish $BRANCH to origin" \
+            --idempotency-key "$RUN_ID:publish:origin:$BRANCH" \
+            --run-id "$RUN_ID"
+    )
+    action_id=$(jq -r '.id' <<< "$action")
+    action_key=$(jq -r '.idempotency_key' <<< "$action")
+    (
+        cd "$EXEC_ROOT"
+        "$HOTL_RT" action decide "$action_id" approved --mode human --run-id "$RUN_ID" >/dev/null
+    )
 
-    run "$FINISH_EXEC" --run-id "$RUN_ID" --mode publish --remote origin
+    run "$FINISH_EXEC" --run-id "$RUN_ID" --mode publish --remote origin \
+        --effect-action-id "$action_id" --idempotency-key "$action_key"
     [ "$status" -eq 0 ]
 
     git -C "$REMOTE_DIR" show-ref --verify --quiet "refs/heads/$BRANCH"
@@ -133,4 +147,115 @@ EOF
     [ "$(jq -r '.finish.disposition' "$STATE")" = "published" ]
     [ "$(jq -r '.finish.remote' "$STATE")" = "origin" ]
     [ "$(jq -r '.finish.worktree_action' "$STATE")" = "kept" ]
+}
+
+@test "finish publish requires a governed external effect" {
+    prepare_completed_isolated_run
+
+    REMOTE_DIR="$TEST_DIR/remote.git"
+    git init --bare "$REMOTE_DIR" >/dev/null
+    git -C "$REPO_DIR" remote add origin "$REMOTE_DIR"
+
+    run "$FINISH_EXEC" --run-id "$RUN_ID" --mode publish --remote origin
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"requires --effect-action-id"* ]]
+    ! git -C "$REMOTE_DIR" show-ref --verify --quiet "refs/heads/$BRANCH"
+}
+
+@test "finish publish surfaces pull request creation failure without recording success" {
+    prepare_completed_isolated_run
+
+    REMOTE_DIR="$TEST_DIR/remote.git"
+    git init --bare "$REMOTE_DIR" >/dev/null
+    git -C "$REPO_DIR" remote add origin "$REMOTE_DIR"
+    FAKE_BIN="$TEST_DIR/fake-bin"
+    mkdir -p "$FAKE_BIN"
+    cat > "$FAKE_BIN/gh" <<'EOF'
+#!/usr/bin/env bash
+echo 'simulated gh failure' >&2
+exit 42
+EOF
+    chmod +x "$FAKE_BIN/gh"
+
+    action=$(
+        cd "$EXEC_ROOT"
+        "$HOTL_RT" action request external_write \
+            --target "publish $BRANCH to origin and create PR against feature/authoring" \
+            --idempotency-key "$RUN_ID:publish-pr:origin:$BRANCH" \
+            --run-id "$RUN_ID"
+    )
+    action_id=$(jq -r '.id' <<< "$action")
+    action_key=$(jq -r '.idempotency_key' <<< "$action")
+    (
+        cd "$EXEC_ROOT"
+        "$HOTL_RT" action decide "$action_id" approved --mode human --run-id "$RUN_ID" >/dev/null
+    )
+
+    run env PATH="$FAKE_BIN:$PATH" "$FINISH_EXEC" --run-id "$RUN_ID" --mode publish --remote origin --create-pr \
+        --effect-action-id "$action_id" --idempotency-key "$action_key"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"simulated gh failure"* ]]
+    [ "$(jq -r '.finish.disposition' "$EXEC_ROOT/.hotl/state/${RUN_ID}.json")" = "null" ]
+    [ "$(jq -r --arg id "$action_id" '.external_actions[] | select(.id==$id) | .effect.status' "$EXEC_ROOT/.hotl/state/${RUN_ID}.json")" = "in_progress" ]
+}
+
+@test "finish publish records begun external effect before successful disposition" {
+    prepare_completed_isolated_run
+
+    REMOTE_DIR="$TEST_DIR/remote.git"
+    git init --bare "$REMOTE_DIR" >/dev/null
+    git -C "$REPO_DIR" remote add origin "$REMOTE_DIR"
+
+    action=$(
+        cd "$EXEC_ROOT"
+        "$HOTL_RT" action request external_write \
+            --target "publish $BRANCH to origin" \
+            --idempotency-key "$RUN_ID:publish:origin:$BRANCH" \
+            --run-id "$RUN_ID"
+    )
+    action_id=$(jq -r '.id' <<< "$action")
+    action_key=$(jq -r '.idempotency_key' <<< "$action")
+    (
+        cd "$EXEC_ROOT"
+        "$HOTL_RT" action decide "$action_id" approved --mode human --run-id "$RUN_ID" >/dev/null
+    )
+
+    run "$FINISH_EXEC" --run-id "$RUN_ID" --mode publish --remote origin \
+        --effect-action-id "$action_id" --idempotency-key "$action_key"
+    [ "$status" -eq 0 ]
+
+    STATE="$EXEC_ROOT/.hotl/state/${RUN_ID}.json"
+    [ "$(jq -r --arg id "$action_id" '.external_actions[] | select(.id==$id) | .effect.status' "$STATE")" = "succeeded" ]
+    [ "$(jq -r '.finish.disposition' "$STATE")" = "published" ]
+}
+
+@test "finish publish rejects an approval for a different bounded target" {
+    prepare_completed_isolated_run
+
+    REMOTE_DIR="$TEST_DIR/remote.git"
+    git init --bare "$REMOTE_DIR" >/dev/null
+    git -C "$REPO_DIR" remote add origin "$REMOTE_DIR"
+    action=$(
+        cd "$EXEC_ROOT"
+        "$HOTL_RT" action request external_write \
+            --target 'publish a different branch to origin' \
+            --idempotency-key "$RUN_ID:publish:origin:$BRANCH" \
+            --run-id "$RUN_ID"
+    )
+    action_id=$(jq -r '.id' <<< "$action")
+    action_key=$(jq -r '.idempotency_key' <<< "$action")
+    (
+        cd "$EXEC_ROOT"
+        "$HOTL_RT" action decide "$action_id" approved --mode human --run-id "$RUN_ID" >/dev/null
+    )
+
+    run "$FINISH_EXEC" --run-id "$RUN_ID" --mode publish --remote origin \
+        --effect-action-id "$action_id" --idempotency-key "$action_key"
+
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"does not match the bounded finish effect"* ]]
+    [ "$(jq -r --arg id "$action_id" '.external_actions[] | select(.id==$id) | .effect.status' "$EXEC_ROOT/.hotl/state/${RUN_ID}.json")" = "not_started" ]
+    ! git -C "$REMOTE_DIR" show-ref --verify --quiet "refs/heads/$BRANCH"
 }
